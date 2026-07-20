@@ -1,0 +1,41 @@
+{
+  "name": "balance-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "npm@11.17.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check .",
+    "validate": "npm run check && npm test && npm run build"
+  },
+  "dependencies": {
+    "@preact/signals": "2.9.3",
+    "@tanstack/preact-query": "5.101.2",
+    "preact": "10.29.7",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.4",
+    "@preact/preset-vite": "2.10.5",
+    "@tailwindcss/vite": "4.3.1",
+    "@testing-library/preact": "3.2.4",
+    "@types/node": "^24.0.0",
+    "jsdom": "29.1.1",
+    "tailwindcss": "4.3.1",
+    "typescript": "6.0.3",
+    "vite": "8.1.5",
+    "vitest": "4.1.9"
+  }
+}
