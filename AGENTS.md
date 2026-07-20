@@ -1,48 +1,76 @@
-# Korea Monitor — Project Instructions
+# Balance Keeper Repository Instructions
 
 This repository rebuilds the Korea-focused real-time public-signal dashboard from a clean foundation.
+
+## Authority and approval
+
+docs/PROJECT-JOURNAL.md is the single source of truth for product decisions, Task scope, status, evidence, and regression results. The current execution mode is recorded there.
+
+- PROPOSED is not authorization.
+- Start a Task only when it is APPROVED and every dependency is ACCEPTED.
+- In approval mode, work on one Task at a time. Do not begin the next Task before the user accepts the current result.
+- A material scope or decision change requires renewed approval.
+- PASS means required verification succeeded; it does not mean ACCEPTED.
+- Only the user grants APPROVED or ACCEPTED and decides whether work is merged.
+- Mark unresolved conflicts, missing information, failed validation, unverified critical paths, or known regressions BLOCKED. Record the release condition and stop instead of guessing.
+
+The main agent serializes journal edits. Subagents may perform bounded research inside the active Task, but the main agent must verify their findings. Skill instructions never expand the approved scope; these approval rules override any generic instruction to commit.
+
+## Development workflow
+
+After approval, use:
+
+    brainstorm → plan → RED → GREEN → REFACTOR → verify → review
+
+Record Task-specific normal, failure, boundary, and regression evidence in the journal. APPROVED authorizes scoped edits and verification. In approval mode, wait for ACCEPTED before the final commit. A checkpoint commit is allowed only for an IN_PROGRESS Task after the user explicitly identifies that Task and requests an intermediate snapshot. Push or deploy only when explicitly requested.
 
 ## Runtime and language baseline
 
 - Node.js 24 and npm 11
 - TypeScript in strict mode
-- Preact, `@preact/signals`, and `@tanstack/preact-query`
+- Preact, @preact/signals, and @tanstack/preact-query
 - Vite and Tailwind CSS
 - Vitest and Testing Library
 - Vercel as the deployment target
 
-Use Preact-native packages first. Do not add `@tanstack/react-query`, React, or ReactDOM unless a reviewed third-party integration requires the compatibility layer.
+Use Preact-native packages first. Do not add React, ReactDOM, @tanstack/react-query, or a compatibility layer without an approved integration need.
 
-## Architecture baseline
+## Full FSD architecture
 
 Client imports flow downward:
 
-```text
-app → widgets → features → entities → shared
-```
+    app → pages → widgets → features → entities → shared
 
-- Keep domain types, queries, and UI inside the matching entity slice.
-- Keep external API calls behind server-side API routes.
-- Do not put remote server data in signals; TanStack Query owns it.
-- Signals own only transient client UI state.
-- Do not add a router until product navigation has been explicitly decided.
-- Load maps, media players, and large geographic datasets with dynamic imports only when activated.
+- app owns entry, providers, global boundaries, and global initialization.
+- pages composes complete screens from widget public APIs.
+- widgets own meaningful screen regions and their view states.
+- features express user actions.
+- entities own domain concepts, basic rules, and reusable representations.
+- shared contains domain-agnostic UI and infrastructure.
+- Do not import upward, between sibling slices, or through another slice's internals.
+- Expose each slice through index.ts.
+- Keep pages composition-only; queries, signals, and business policy belong below them.
+- Use pages/dashboard without a router until a separately approved second URL exists.
+- Keep client code separate from api and src/server.
 
-## Skills
+TanStack Query owns remote server state. Signals own only derived or transient UI state.
 
-Read the matching skill before acting:
+NAVER Maps GL is the primary map. Lazy-load the map SDK, HLS, charts, workers, and large geographic data. Do not add an alternate map engine without a separately approved, measured need.
 
-- Any implementation or bug fix: `.agents/skills/test-driven-development/SKILL.md`
-- Vitest/component/fetcher testing: `.agents/skills/testing-tdd-vitest/SKILL.md`
-- File placement and imports: `.agents/skills/fsd-lite-architecture/SKILL.md`
-- UI work: both `.agents/skills/frontend-design/SKILL.md` and `.agents/skills/web-design-guidelines/SKILL.md`
-- Tailwind styling and theme mechanics: `.agents/skills/styling-tailwind/SKILL.md`
-- Vercel routes or public-data fetchers: `.agents/skills/vercel-api-gateway/SKILL.md`
+## Required skills
 
-The legacy `preact-signals-query` and `map-deckgl-maplibre` skills are intentionally not installed yet. They target `@tanstack/react-query` and an eager deck.gl architecture that this rebuild does not adopt.
+Read every matching skill completely before acting:
 
-## Delivery gate
+- Task proposal, decomposition, status, scope, dependency, approval, BLOCKED handling, or journal changes: .agents/skills/planning-agent/SKILL.md
+- Any feature implementation or bug fix: .agents/skills/test-driven-development/SKILL.md
+- Vitest, component, query, or fetcher testing: .agents/skills/testing-tdd-vitest/SKILL.md
+- Client file placement, imports, public APIs, or architecture review: .agents/skills/full-fsd-architecture/SKILL.md
+- Any UI work: both .agents/skills/frontend-design/SKILL.md and .agents/skills/web-design-guidelines/SKILL.md
+- Tailwind, tokens, or theme mechanics: .agents/skills/styling-tailwind/SKILL.md
+- Vercel routes or public-data fetchers: .agents/skills/vercel-api-gateway/SKILL.md
 
-Run `npm run validate` before declaring work complete. Tests must be deterministic and offline unless a live smoke suite is explicitly gated.
+## Delivery and security gate
 
-Never copy or print values from a local `.env`. Only `VITE_*` identifiers may be exposed to browser code.
+Run Task-specific checks and npm run validate before declaring PASS. Tests are deterministic and offline unless a live smoke suite is explicitly approved and gated.
+
+Never copy, print, or commit values from local .env files. Only VITE_* identifiers may be exposed to browser code; provider credentials remain server-side.

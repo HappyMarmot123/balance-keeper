@@ -17,14 +17,18 @@
 
 ## Project skills
 
-프로젝트 전용 Codex 스킬은 `.agents/skills/`에 복사되어 있으며 `skills-lock.json`으로 출처와 해시를 추적합니다. TDD 스킬은 `obra/superpowers` 원본에서 내려받았고, 나머지는 레거시 프로젝트 규약 중 현재 스택과 일치하는 항목만 선별했습니다.
+프로젝트 스킬은 .agents/skills/에 있으며 skills-lock.json으로 설치 출처와 폴더 해시를 추적합니다. 외부에서 가져온 스킬은 원문과 라이선스를 유지하고, Planning Agent와 Full FSD 같은 저장소 전용 규칙은 이 프로젝트에서 관리합니다.
+
+## Development workflow
+
+[개발일지](docs/PROJECT-JOURNAL.md)가 제품 결정, Task 범위, 승인, 검증 결과의 단일 정본입니다. 현재는 승인모드이므로 APPROVED된 Task 하나만 수행하고, 검증 PASS를 보고한 뒤 사용자 ACCEPTED 전에는 다음 Task를 시작하지 않습니다.
+
+클라이언트는 app → pages → widgets → features → entities → shared Full FSD 방향을 사용합니다. 첫 화면은 pages/dashboard로 구성하되 두 번째 실제 URL이 승인되기 전에는 router를 추가하지 않습니다. 세부 실행 규칙은 [AGENTS.md](AGENTS.md)를 따릅니다.
 
 ## Commands
 
-```bash
-npm install
-npm run dev
-npm run validate
-```
+    npm ci
+    npm run dev
+    npm run validate
 
-환경변수는 `.env.example`을 기준으로 로컬 `.env`에 설정합니다. 서버 비밀값에는 `VITE_` 접두어를 사용하지 않습니다.
+환경변수는 .env.example을 기준으로 로컬 .env에 설정합니다. 서버 비밀값에는 VITE_ 접두어를 사용하지 않습니다.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planning Agent"
+  short_description: "승인 기반 기획·구현·회귀 검증을 단일 문서로 관리"
+  default_prompt: "Use $planning-agent to inspect docs/PROJECT-JOURNAL.md, confirm the current Task is approved, and work only within its authorized scope with PASS/BLOCKED evidence."

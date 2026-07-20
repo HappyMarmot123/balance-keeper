@@ -12,7 +12,7 @@ Utility-first Tailwind. Visual identity comes from **frontend-design** (palette,
 - **Utilities over custom CSS.** Reach for Tailwind classes; add a component only when a pattern repeats. Avoid inline `style={}` and ad-hoc CSS files.
 - **Tokens, not magic values.** Use theme tokens (`bg-surface`, `text-muted`, `accent`) defined from the frontend-design palette — never hardcode `#xxxxxx` in markup.
 - **Every color pairs with a `dark:` variant.** `bg-white dark:bg-zinc-900`, `text-zinc-900 dark:text-zinc-100`. Verify ≥4.5:1 contrast in both (see web-design-guidelines).
-- **Responsive grid via utilities** (mobile-first): `grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4`.
+- **Responsive mechanics.** Use a small-screen-safe base, then add breakpoints only when content and container space require them. The product experience still prioritizes the desktop dashboard.
 
 ## Dark mode (class strategy + signal)
 ```ts
@@ -35,4 +35,4 @@ effect(() => {
 - **Hardcoded hex in className/style.** Breaks theming and frontend-design's token system.
 - **Forgetting `dark:`.** Component looks right in one theme, unreadable in the other.
 - **Toggling theme per-component.** One central `effect` flips `<html class="dark">`; components only use `dark:` variants.
-- **Desktop-first widths.** Start at `grid-cols-1` and add `md:`/`xl:` up.
+- **Unsafe narrow layouts.** Desktop product priority does not permit clipped content or unreachable controls on a narrow screen.

@@ -1,51 +1,35 @@
 ---
 name: testing-tdd-vitest
-description: Use when implementing any feature, server fetcher, or component in this project, before writing implementation code. Covers the TDD loop with Vitest, fixture-based source tests, and jsdom component tests.
+description: Use when implementing any feature, server fetcher, query behavior, or component in this project, before implementation code. Covers the RED-GREEN-REFACTOR loop with Vitest, offline fixtures, injected adapters, and jsdom Preact tests.
 ---
 
-# Testing: TDD with Vitest
+# Testing with Vitest
 
-## Overview
-TDD is mandatory: write the failing test first, watch it fail, write minimal code to pass, refactor. This project uses **Vitest** (+ jsdom and `@testing-library/preact` for components). **REQUIRED BACKGROUND:** superpowers:test-driven-development for the full RED-GREEN-REFACTOR discipline.
+Read .agents/skills/test-driven-development/SKILL.md first for the full RED-GREEN-REFACTOR discipline. This skill adds project-specific Vitest and Preact practices.
 
-## The loop (per task)
-1. **RED** — write the test for the next behavior; run it; confirm it fails for the right reason.
-2. **GREEN** — minimal implementation to pass.
-3. **REFACTOR** — clean up with tests green.
-4. Commit.
+## Run the loop
 
-## Server fetcher test (fixture + mocked http/redis)
-```ts
-import { vi } from 'vitest';
-vi.mock('../../src/server/http', async (o) => ({ ...(await o()), getJson: vi.fn().mockResolvedValue(fixture) }));
-vi.mock('../../src/server/redis', () => ({
-  cachedFetch: async (_k: string, _t: number, f: () => Promise<unknown>) =>
-    ({ data: await f(), cached: false, fetchedAt: 1 }),
-}));
+1. **RED:** Write one test for the next observable behavior. Run it and confirm it fails for the intended reason rather than a setup error.
+2. **GREEN:** Add the smallest implementation that passes.
+3. **REFACTOR:** Improve names and structure while the test remains green.
+4. **VERIFY:** Run focused tests, relevant regression tests, and npm run validate.
 
-test('fetchWeather maps KMA fields to domain shape', async () => {
-  const { fetchWeather } = await import('../../src/server/sources/weather');
-  expect(await fetchWeather('seoul')).toMatchObject([{ region: 'seoul', tmp: expect.any(Number) }]);
-});
-```
+Commit and push only when the Planning Agent approval rules permit them.
 
-## Component test (jsdom)
-```ts
-// vite.config: test.environment = 'jsdom'
-import { render, screen } from '@testing-library/preact';
-test('Panel renders retry button on error', () => {
-  render(<Panel title="x" isLoading={false} error={new AppError('UPSTREAM_UNAVAILABLE')} />);
-  expect(screen.getByRole('button', { name: /재시도/ })).toBeTruthy();
-});
-```
+## Test at the right boundary
 
-## Rules
-- **Source/fetcher tests** mock `http` (with a real upstream fixture) and `redis` — assert the normalized domain shape, not the raw upstream JSON.
-- **Component tests** assert the 4 states (loading/error/empty/data — see web-design-guidelines), not styling.
-- Query hooks are verified at integration; unit-test the fetchers and components.
-- Gate: `npx tsc --noEmit && npx vitest run && npx vite build` before declaring done.
+- Test source normalizers and fetchers with realistic upstream fixtures and injected HTTP/cache adapters.
+- Assert the normalized domain or transport contract, not incidental raw provider JSON.
+- Keep default tests deterministic and offline. Put credentialed live smoke checks behind a separately approved environment gate.
+- Use jsdom and @testing-library/preact for component behavior and accessibility.
+- Test query integrations when query keys, enabled, polling profiles, cancellation, or focus/visibility recovery are important behavior.
+- Prefer observable outcomes over internal implementation details and fragile module mocks.
 
-## Common Mistakes
-- **Test after code.** Tests that pass immediately prove nothing about intent. Write them first.
-- **Asserting raw upstream JSON.** Test the normalized shape your domain consumes.
-- **Hitting the network.** Use fixtures + mocks; tests must be deterministic and offline.
+For data UI, cover loading, error, empty, stale/partial, and success. Also cover disabled or missing-credential states when the capability supports them. Verify accessible names and user actions rather than Tailwind classes.
+
+## Prevent false confidence
+
+- Do not write implementation before observing RED.
+- Do not accept a test that fails because imports, fixtures, or the environment are broken.
+- Do not hit production providers from the normal suite.
+- Do not declare PASS when a required path is untested, a test fails, or a known regression remains.

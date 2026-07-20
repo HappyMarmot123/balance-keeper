@@ -7,17 +7,23 @@
       "skillPath": ".agents/skills/frontend-design/SKILL.md",
       "computedHash": "36a53e9b31dd16797fdd16326b22a827502da7797d3b8f73ae5f99b08e5f89d6"
     },
-    "fsd-lite-architecture": {
+    "full-fsd-architecture": {
       "source": "HappyMarmot123/balance-keeper",
       "sourceType": "github",
-      "skillPath": ".agents/skills/fsd-lite-architecture/SKILL.md",
-      "computedHash": "8a1327afe85ad7f292f63d4e486370dcd208a13809e1c28d4d748af7e5fa6540"
+      "skillPath": ".agents/skills/full-fsd-architecture/SKILL.md",
+      "computedHash": "ee276cfe9ae9b0aa8e6bfa4032a8fca6a6f8c866fda9cad7b0afcd68eee3e188"
+    },
+    "planning-agent": {
+      "source": "HappyMarmot123/balance-keeper",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/planning-agent/SKILL.md",
+      "computedHash": "b6f31500c4bc49d258801d7a299ad3b1ee47ae8da9cffa66e12d5ed4ddfac310"
     },
     "styling-tailwind": {
       "source": "HappyMarmot123/balance-keeper",
       "sourceType": "github",
       "skillPath": ".agents/skills/styling-tailwind/SKILL.md",
-      "computedHash": "8be177fb837df778cbb38e69154829b8ddbcdfd4080bcb589164532585cdd216"
+      "computedHash": "282e5857762a95a6b2c97c1ed98f21855e08baa613b9745e2dab9352755d9ac2"
     },
     "test-driven-development": {
       "source": "obra/superpowers",
@@ -29,7 +35,7 @@
       "source": "HappyMarmot123/balance-keeper",
       "sourceType": "github",
       "skillPath": ".agents/skills/testing-tdd-vitest/SKILL.md",
-      "computedHash": "bcc9b01bab0fc6b0d151d851a22e1c4fc4e3e83a721803e3c66b1fdd632bb201"
+      "computedHash": "9ebd9b94b555bdc86d45c0da290d01c48e78341396db23af02c94df9ea160712"
     },
     "vercel-api-gateway": {
       "source": "HappyMarmot123/balance-keeper",
@@ -41,7 +47,7 @@
       "source": "HappyMarmot123/balance-keeper",
       "sourceType": "github",
       "skillPath": ".agents/skills/web-design-guidelines/SKILL.md",
-      "computedHash": "6e7548b3c88c3035516b57498d3f80bd62b5e3b8dc75c3947a00aaa20e92625b"
+      "computedHash": "f2ab66ca1e9180b45a91e7d337a131fd21dbcbeaf881731ff7af86017ef05c0c"
     }
   }
 }

@@ -1,46 +1,43 @@
 ---
 name: web-design-guidelines
-description: Use when building or restyling any UI, page, panel, or component in this project — covers accessibility, responsive layout, loading/error/empty states, dashboard data density, dark-mode contrast, and semantic HTML. Default-applied alongside frontend-design.
+description: Use when building or restyling any UI, page, panel, map control, or media view in this project. Covers accessibility, desktop-first dashboard layout, loading and degraded states, data density, dark-mode contrast, and semantic HTML. Apply alongside frontend-design.
 ---
 
 # Web Design Guidelines
 
-## Overview
-Enforceable UX-quality baseline for the Korea Monitor single-page dashboard. **frontend-design owns the aesthetic identity** (palette, typography, signature); this skill owns the **non-negotiable quality floor** every panel must clear. Both are default-applied to all UI work.
+Use frontend-design for aesthetic identity. Use this skill as the non-negotiable quality floor for every user-facing view.
 
-## When to Use
-- Building a new panel/component or restyling an existing one
-- Reviewing UI before calling it done
-- Deciding loading / error / empty behavior
+## Represent the full data lifecycle
 
-## Quality Floor (every component clears all)
-| Area | Rule |
-|---|---|
-| **States** | Every data view has 4 states: loading (skeleton/spinner), error (cause + retry), empty (actionable invitation), data. Never render bare `undefined`. |
-| **Freshness** | Time-sensitive panels show a freshness badge (relative time from `fetchedAt`) and a "지연/stale" marker when serving stale-on-error data. |
-| **Accessibility** | Semantic HTML (`<button>`, `<nav>`, `<section>`), visible keyboard focus, `aria-label` on icon-only controls, color never the sole signal (pair with text/icon). |
-| **Responsive** | Mobile-first. Grid collapses `grid-cols-1 md:grid-cols-2 xl:grid-cols-3`. No fixed pixel widths that overflow on 360px. |
-| **Dark mode** | Support light+dark via `dark:` variants. Verify text contrast ≥ 4.5:1 in BOTH themes. |
-| **Motion** | Respect `prefers-reduced-motion`; disable non-essential animation when set. |
-| **Density** | Dashboard = scannable. Lead with the number/status; label secondary. Align numeric columns. Don't bury the current value under chrome. |
+Every data view handles:
 
-## Panel state template
-```tsx
-// Every domain panel routes through these 4 states (see preact-signals-query for the hook)
-function WeatherPanel() {
-  const { data, isLoading, error, dataUpdatedAt } = useWeather(region);
-  return (
-    <Panel title="기상" isLoading={isLoading} error={error} fetchedAt={dataUpdatedAt}>
-      {data?.length
-        ? <WeatherCards items={data} />
-        : <Empty>표시할 관측값이 없습니다.</Empty>}  {/* empty = invitation, not blank */}
-    </Panel>
-  );
-}
-```
+- Loading with stable layout feedback
+- Error with a useful cause and retry when retry is possible
+- Empty with a clear explanation or next action
+- Stale or partial data with visible age and degraded-source status
+- Success with upstream fetchedAt or equivalent source freshness
 
-## Common Mistakes
-- **Only the happy path.** Shipping data state but no loading/error/empty → blank flicker and silent failures.
-- **Color-only status.** Red/green dot with no text fails colorblind users and dark mode.
-- **Stale shown as fresh.** Serving cached data on upstream error without a "지연" marker misleads.
-- **Aesthetics in this skill.** Palette/typography decisions belong to frontend-design — don't relitigate them here.
+Add disabled and missing-credential states when a capability can be unavailable by policy or configuration. Do not use TanStack Query's client update time as a substitute for upstream data freshness.
+
+## Meet the quality floor
+
+- Use semantic elements, visible focus, and accessible names for icon-only controls.
+- Never use color as the only status signal; pair it with text or an icon.
+- Check contrast on the actual composed background: 4.5:1 for normal text, 3:1 for large text, and 3:1 for interactive boundaries and focus indicators.
+- Use approved semantic OKLCH tokens; do not hardcode visual values in component markup.
+- Prioritize the desktop dashboard while keeping narrow screens free of clipping, inaccessible controls, and forced two-dimensional scrolling.
+- Let content and container space determine grid changes instead of applying one fixed breakpoint recipe everywhere.
+- Respect prefers-reduced-motion and stop non-essential animation.
+- Lead with the current number, status, and freshness; keep labels and chrome secondary.
+
+## Make maps and media operable
+
+- Make layer controls and data selectors keyboard operable.
+- Provide a list or detail alternative for information available only through map markers.
+- Give map controls and marker actions accessible names.
+- For CCTV or other dialogs, trap focus, close on Escape, and return focus to the trigger.
+- Never make hover the only way to reach critical information.
+
+## Review failure modes
+
+Reject happy-path-only panels, stale data presented as fresh, color-only alerts, low-contrast dark overlays, unlabelled controls, overflowing narrow layouts, and dialogs that lose keyboard focus.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Full FSD Architecture"
+  short_description: "Full FSD 계층·slice·import 경계를 일관되게 적용"
+  default_prompt: "Use $full-fsd-architecture to place this client code in the correct layer and preserve import boundaries."
