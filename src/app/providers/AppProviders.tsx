@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/preact-query';
 import type { ComponentChildren } from 'preact';
 
-import { queryClient } from '../../shared/api/queryClient';
+import { queryClient } from '../../shared/api';
 
 type AppProvidersProps = {
   children: ComponentChildren;

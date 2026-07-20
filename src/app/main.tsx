@@ -1,7 +1,7 @@
 import { render } from 'preact';
 
 import { App } from './App';
-import '../styles/index.css';
+import './styles/index.css';
 
 const root = document.getElementById('app');
 
