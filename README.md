@@ -15,6 +15,10 @@
 
 지도, CCTV, RSS, Redis 의존성은 해당 기능을 구현할 때 동적 로딩과 함께 추가합니다. 초기 번들에는 포함하지 않습니다.
 
+## Project skills
+
+프로젝트 전용 Codex 스킬은 `.agents/skills/`에 복사되어 있으며 `skills-lock.json`으로 출처와 해시를 추적합니다. TDD 스킬은 `obra/superpowers` 원본에서 내려받았고, 나머지는 레거시 프로젝트 규약 중 현재 스택과 일치하는 항목만 선별했습니다.
+
 ## Commands
 
 ```bash

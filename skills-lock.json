@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-design": {
+      "source": "HappyMarmot123/balance-keeper",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/frontend-design/SKILL.md",
+      "computedHash": "36a53e9b31dd16797fdd16326b22a827502da7797d3b8f73ae5f99b08e5f89d6"
+    },
+    "fsd-lite-architecture": {
+      "source": "HappyMarmot123/balance-keeper",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/fsd-lite-architecture/SKILL.md",
+      "computedHash": "8a1327afe85ad7f292f63d4e486370dcd208a13809e1c28d4d748af7e5fa6540"
+    },
+    "styling-tailwind": {
+      "source": "HappyMarmot123/balance-keeper",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/styling-tailwind/SKILL.md",
+      "computedHash": "8be177fb837df778cbb38e69154829b8ddbcdfd4080bcb589164532585cdd216"
+    },
+    "test-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/test-driven-development/SKILL.md",
+      "computedHash": "eee144aea35d783296d178017e9fe843c6d16cc8b240e106f5e50910f6caf329"
+    },
+    "testing-tdd-vitest": {
+      "source": "HappyMarmot123/balance-keeper",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/testing-tdd-vitest/SKILL.md",
+      "computedHash": "bcc9b01bab0fc6b0d151d851a22e1c4fc4e3e83a721803e3c66b1fdd632bb201"
+    },
+    "vercel-api-gateway": {
+      "source": "HappyMarmot123/balance-keeper",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/vercel-api-gateway/SKILL.md",
+      "computedHash": "ea09c1a01ad2c4f3785f26a6c4da5ff9fb53ce76d02dbdc6fd5d65488fc90655"
+    },
+    "web-design-guidelines": {
+      "source": "HappyMarmot123/balance-keeper",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/web-design-guidelines/SKILL.md",
+      "computedHash": "6e7548b3c88c3035516b57498d3f80bd62b5e3b8dc75c3947a00aaa20e92625b"
+    }
+  }
+}
