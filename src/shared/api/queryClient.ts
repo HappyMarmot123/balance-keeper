@@ -1,11 +1,13 @@
 import { QueryClient } from '@tanstack/preact-query';
 
+import { shouldRetryQuery } from './queryProfile';
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: shouldRetryQuery,
       refetchOnWindowFocus: true,
-      staleTime: 60_000,
+      refetchOnReconnect: true,
     },
   },
 });

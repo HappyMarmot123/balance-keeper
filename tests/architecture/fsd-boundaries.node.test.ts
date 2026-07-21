@@ -98,7 +98,7 @@ function locateModule(modulePath: string): ModuleLocation | undefined {
   }
 
   const typedLayer = layer as Layer;
-  const slice = typedLayer === 'app' ? undefined : segments[2];
+  const slice = typedLayer === 'app' || typedLayer === 'shared' ? undefined : segments[2];
 
   return {
     layer: typedLayer,
@@ -502,8 +502,23 @@ function inspectRequiredComposition(sourceOverrides: ReadonlyMap<string, string>
     },
     {
       file: 'src/shared/api/index.ts',
-      modules: ['./queryClient'],
-      bindings: [{ kind: 're-export', module: './queryClient', name: 'queryClient' }],
+      modules: ['./fetchJson', './queryClient', './queryProfile'],
+      bindings: [
+        { kind: 're-export', module: './fetchJson', name: 'fetchJson' },
+        { kind: 're-export', module: './queryClient', name: 'queryClient' },
+        { kind: 're-export', module: './queryProfile', name: 'createQueryProfile' },
+        { kind: 're-export', module: './queryProfile', name: 'QueryProfileInput' },
+      ],
+    },
+    {
+      file: 'src/shared/contracts/index.ts',
+      modules: ['./AppError', './transport'],
+      bindings: [
+        { kind: 're-export', module: './AppError', name: 'AppError' },
+        { kind: 're-export', module: './AppError', name: 'statusForApiErrorCode' },
+        { kind: 're-export', module: './transport', name: 'errorEnvelopeSchema' },
+        { kind: 're-export', module: './transport', name: 'successEnvelopeSchema' },
+      ],
     },
   ];
 
@@ -712,6 +727,10 @@ describe('FSD boundary rules', () => {
     expect(
       findImportViolation('src\\pages\\dashboard\\ui\\DashboardPage.tsx', '..\\..\\..\\widgets\\dashboard-shell'),
     ).toBeUndefined();
+  });
+
+  it('treats shared children as segments instead of sibling product slices', () => {
+    expect(findImportViolation('src/shared/api/fetchJson.ts', '../contracts')).toBeUndefined();
   });
 
   it.each([

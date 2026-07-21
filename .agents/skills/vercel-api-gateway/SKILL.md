@@ -1,44 +1,47 @@
 ---
 name: vercel-api-gateway
-description: Use when writing a Vercel serverless API route or server-side data fetcher in this project, or when calling the Korean public APIs (data.go.kr weather/air/earthquake, ITS traffic, disaster messages). Covers the gateway pattern, caching, and verified endpoint gotchas.
+description: Apply this project's coarse Vercel gateway, server-side public-data fetcher, cache-resilience, and CCTV media-delivery rules. Use when adding or reviewing API routes, provider calls, Korean public APIs, Upstash coordination, response envelopes, or provider-issued media URLs.
 ---
 
 # Vercel API Gateway
 
-## Overview
-Every external call goes through a server-side Vercel API Route acting as a lightweight gateway: inject the key, cache in Upstash, normalize, return a typed `Envelope`. The browser never holds keys and never calls upstreams directly.
+## Start from the accepted boundaries
 
-## Route pattern
-```ts
-// api/weather.ts
-import { defineRoute } from '../src/server/route';
-import { fetchWeather } from '../src/server/sources/weather';
+Read `docs/PROJECT-JOURNAL.md` decisions D-013 through D-015 and the relevant provider row before implementation. Treat volatile endpoint, quota, response-shape, and media facts marked `CONDITIONAL` as gated evidence, not defaults.
 
-export default defineRoute(async (req) => {
-  const region = String(req.query.region ?? 'seoul');
-  return fetchWeather(region); // returns normalized domain data
-});
-// defineRoute wraps: key injection (env) → cachedFetch (Upstash) → AppError→Envelope → Cache-Control + ETag
-```
+## Keep one gateway policy surface
 
-Gateway responsibilities (don't reimplement per route):
-1. **Key injection** from `process.env` (never shipped to client).
-2. **cachedFetch**: Upstash lookup → on miss, coalesce concurrent misses → upstream call → normalize → store with TTL → **negative cache** (cache null results) + **stale-on-error** (serve last good on upstream failure).
-3. **Circuit breaker**: 2 consecutive failures → cooldown.
-4. **Envelope + AppError**: success `{data, meta}`, failure `{error:{code}}`; client `fetchJson` rethrows as `AppError`.
-5. `Cache-Control` (`s-maxage`) + FNV-1a ETag → 304.
+- Expose product routes through one or a small number of coarse gateway Functions and an internal route registry. Do not create one Vercel Function file per product route.
+- Keep the reusable core shaped as `(request: Request, dependencies) => Promise<Response>`. Let thin Vercel and Node adapters own runtime-specific environment and lifecycle details.
+- Parse and validate the method, route, and normalized query before registry dispatch. Inject server-only credentials only after selecting an approved provider.
+- Return normalized JSON through the shared success or error envelope. Never include secrets, raw authorization, upstream error bodies, or stacks.
 
-## Verified endpoint gotchas (tested 2026-06-24 — get these exactly right)
-| API | Correct usage |
-|---|---|
-| **ITS traffic/CCTV** | `https://openapi.its.go.kr:9443/cctvInfo` — **port 9443**, path `/cctvInfo`, param `apiKey` (lowercase), `type`=ex/its/all, `cctvType`=1 HLS / 2 still-JPEG / 3 both, BBox lowercase `minX/maxX/minY/maxY`, `getType`=json. NOT `/api/NCCTVInfo`, no `ReqType`. |
-| **Disaster messages (DSSP-IF-00247)** | Host is `https://www.safetydata.go.kr/V2/api/DSSP-IF-00247` — NOT `apis.data.go.kr`. Returns `{header, body:[...]}`. |
-| **Earthquake (EqkInfoService)** | Operation is `getEqkMsg` (not `getEqkInfo`/`getEqkInfoList` → 404). Date range max **3 days** back or `resultCode 99`. |
-| **Air quality (ArpltnInforInqireSvc)** | `getCtprvnRltmMesureDnsty`, success `resultCode 00` / `NORMAL_CODE`; empty result still 200 with `totalCount 0`. |
-| **data.go.kr keys** | The hex `DATA_GO_KR_KEY` works URL-encoded; no extra decode needed. data.go.kr APIs are NOT geo-blocked (work from any region). |
+## Separate local optimization from fleet state
 
-## Common Mistakes
-- **Calling upstreams from the client.** Leaks keys, hits CORS/mixed-content. Always proxy through `api/`.
-- **ITS on port 443 / `/api/NCCTVInfo`.** Connection times out — use `:9443/cctvInfo`.
-- **Treating `resultCode 99`/empty as an outage.** It's a param/empty signal, not a key failure.
-- **No stale-on-error.** Upstream blips should serve last-good with a stale marker, not a hard error (see web-design-guidelines freshness).
+- Use a process-local promise map only to coalesce the same key inside one warm instance. It is not fleet-wide state.
+- Keep fresh and last-good records, distributed locks, rate counters, and breaker state in Upstash atomic operations with TTL.
+- Treat a distributed breaker as a recovery hint because Upstash replication has eventual consistency; tolerate rare duplicate upstream calls and prefer last-good fallback.
+- Leave thresholds, cooldowns, ETag algorithms, TTL values, and lock timing for T06 tests and route profiles. Do not freeze them in this skill.
+- Consider only a normal 2xx empty response for short negative caching. Never negative-cache a timeout, 4xx, 5xx, or schema failure.
+
+## Preserve the media byte exception
+
+- Send every upstream API, authentication, list, query, and media-metadata request through the gateway.
+- Allow the browser to fetch bytes only under the media-only exception: the gateway returned a provider-issued HTTPS media URL, the URL contains no server secret, and it passed the provider allowlist.
+- Validate the initial URL and every redirect final URL against protocol, host, and path rules. Confirm provider terms and CORS before enabling direct browser delivery.
+- Do not relay large image, video, or HLS segment bytes continuously through a standard Vercel Function.
+- If direct delivery cannot meet those conditions, render the capability unavailable and obtain approval for a separate media topology before implementing manifest, key, segment, or byte-range relay.
+
+## Gate Korean provider details
+
+- Treat current ITS CCTV values as candidates: `type=ex|its`, `cctvType=3` still image, and `cctvType=4` HTTPS-HLS.
+- Run a credentialed gated probe in T19 through T21 before freezing the CCTV host, path, port, parameter spelling, URL expiry, size, CORS, or display conditions. Run the equivalent T26 probe for ITS expansion routes. Do not promote an unauthenticated `:9443` reachability result to a production endpoint contract.
+- Use Safetydata `DSSP-IF-00247`, KMA `getEqkMsg`, and AirKorea `getCtprvnRltmMesureDnsty` only as documented candidates. Keep XML error branches, empty results, date windows, key encoding, quota, coordinates, and administrative-region behavior in their owning Task fixtures and gated probes.
+
+## Reject unsafe shortcuts
+
+- Reject browser calls to protected API or metadata endpoints.
+- Reject per-route copies of cache, error, and credential policy.
+- Reject process memory as a fleet lock or breaker source of truth.
+- Reject stale data presented without upstream freshness and degraded status.
+- Reject provider claims that exceed the evidence level recorded in the project journal.
