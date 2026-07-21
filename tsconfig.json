@@ -14,7 +14,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "skipLibCheck": true,
-    "types": ["vite/client", "vitest/globals", "node"]
+    "types": ["vite/client", "vitest/globals", "node", "navermaps"]
   },
   "include": ["src", "api", "tests", "vite.config.ts"]
 }

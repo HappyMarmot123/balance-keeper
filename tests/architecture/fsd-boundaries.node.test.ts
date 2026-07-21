@@ -352,7 +352,29 @@ function inspectDashboardPageComposition(sourceFile: ts.SourceFile): string[] {
     return ['DashboardPage must return DashboardShell directly'];
   }
 
-  return [];
+  const hasMapSlot = returns.every((returned) => {
+    if (!returned || !isJsxElementExpression(returned)) {
+      return false;
+    }
+
+    const attributes = ts.isJsxElement(returned)
+      ? returned.openingElement.attributes.properties
+      : returned.attributes.properties;
+    const mapSlot = attributes.find(
+      (attribute): attribute is ts.JsxAttribute =>
+        ts.isJsxAttribute(attribute) && ts.isIdentifier(attribute.name) && attribute.name.text === 'mapSlot',
+    );
+    const expression =
+      mapSlot?.initializer && ts.isJsxExpression(mapSlot.initializer) ? mapSlot.initializer.expression : undefined;
+
+    return (
+      expression !== undefined &&
+      ts.isJsxSelfClosingElement(expression) &&
+      getJsxTagName(expression, sourceFile) === 'KoreaMapWidget'
+    );
+  });
+
+  return hasMapSlot ? [] : ['DashboardShell must receive mapSlot={<KoreaMapWidget />}'];
 }
 
 function inspectAppProvidersComposition(sourceFile: ts.SourceFile): string[] {
@@ -491,14 +513,36 @@ function inspectRequiredComposition(sourceOverrides: ReadonlyMap<string, string>
     },
     {
       file: 'src/pages/dashboard/ui/DashboardPage.tsx',
-      modules: ['../../../widgets/dashboard-shell'],
-      bindings: [{ kind: 'import', module: '../../../widgets/dashboard-shell', name: 'DashboardShell' }],
+      modules: ['../../../widgets/dashboard-shell', '../../../widgets/korea-map'],
+      bindings: [
+        { kind: 'import', module: '../../../widgets/dashboard-shell', name: 'DashboardShell' },
+        { kind: 'import', module: '../../../widgets/korea-map', name: 'KoreaMapWidget' },
+      ],
       inspect: inspectDashboardPageComposition,
     },
     {
       file: 'src/widgets/dashboard-shell/index.ts',
       modules: ['./ui/DashboardShell'],
       bindings: [{ kind: 're-export', module: './ui/DashboardShell', name: 'DashboardShell' }],
+    },
+    {
+      file: 'src/widgets/korea-map/index.ts',
+      modules: ['./ui/KoreaMapWidget'],
+      bindings: [{ kind: 're-export', module: './ui/KoreaMapWidget', name: 'KoreaMapWidget' }],
+    },
+    {
+      file: 'src/entities/map/index.ts',
+      modules: ['./api/loadNaverMapsGl', './lib/createKoreaMapSession', './model/map'],
+      bindings: [
+        { kind: 're-export', module: './api/loadNaverMapsGl', name: 'getNaverMapsGlLoader' },
+        { kind: 're-export', module: './lib/createKoreaMapSession', name: 'createKoreaMapSession' },
+        { kind: 're-export', module: './model/map', name: 'KOREA_MAP_VIEWPORT' },
+      ],
+    },
+    {
+      file: 'src/shared/config/index.ts',
+      modules: ['./naverMaps'],
+      bindings: [{ kind: 're-export', module: './naverMaps', name: 'resolveNaverMapsConfig' }],
     },
     {
       file: 'src/shared/api/index.ts',
@@ -710,13 +754,29 @@ describe('FSD boundary rules', () => {
   it('accepts a component declared as an arrow function', () => {
     const pageSource = `
       import { DashboardShell } from '../../../widgets/dashboard-shell';
+      import { KoreaMapWidget } from '../../../widgets/korea-map';
 
-      export const DashboardPage = () => <DashboardShell />;
+      export const DashboardPage = () => <DashboardShell mapSlot={<KoreaMapWidget />} />;
     `;
     const violations = inspectRequiredComposition(new Map([['src/pages/dashboard/ui/DashboardPage.tsx', pageSource]]));
 
     expect(violations).not.toContain(
       'src/pages/dashboard/ui/DashboardPage.tsx: DashboardPage must return DashboardShell directly',
+    );
+  });
+
+  it('requires the page to compose the map widget through the dashboard shell slot', () => {
+    const pageSource = `
+      import { DashboardShell } from '../../../widgets/dashboard-shell';
+      import { KoreaMapWidget } from '../../../widgets/korea-map';
+
+      export function DashboardPage() {
+        return <DashboardShell />;
+      }
+    `;
+
+    expect(inspectDashboardPageComposition(parseSourceFile(pageSource, 'DashboardPage.tsx'))).toContain(
+      'DashboardShell must receive mapSlot={<KoreaMapWidget />}',
     );
   });
 

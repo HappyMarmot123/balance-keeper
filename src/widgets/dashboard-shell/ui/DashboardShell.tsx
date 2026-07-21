@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { ThemeSwitch } from '../../../features/theme-switch';
 import { Panel } from '../../../shared/ui';
 
@@ -6,7 +7,11 @@ const foundationFreshness = {
   label: 'SPEC · 2026-07-20',
 } as const;
 
-export function DashboardShell() {
+type DashboardShellProps = {
+  mapSlot: ComponentChildren;
+};
+
+export function DashboardShell({ mapSlot }: DashboardShellProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-foreground">
       <header className="border-b border-boundary bg-surface">
@@ -28,28 +33,11 @@ export function DashboardShell() {
 
       <main className="flex-1">
         <div className="mx-auto grid w-full max-w-screen-2xl gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <section aria-labelledby="app-title">
-            <h1 className="sr-only" id="app-title">
-              Korea Monitor
-            </h1>
+          <h1 className="sr-only" id="app-title">
+            Korea Monitor
+          </h1>
 
-            <figure className="relative isolate grid min-h-160 place-items-center overflow-hidden border border-boundary bg-surface-inset lg:min-h-192">
-              <div aria-hidden="true" className="absolute inset-x-4 top-1/2 h-px bg-boundary" />
-              <div aria-hidden="true" className="absolute inset-y-4 left-1/2 w-px bg-boundary" />
-              <div aria-hidden="true" className="absolute size-48 rounded-full border-2 border-boundary-strong" />
-              <div aria-hidden="true" className="absolute size-36 rotate-45 rounded-full border border-accent" />
-              <div
-                aria-hidden="true"
-                className="absolute size-24 -rotate-12 rounded-full border border-boundary-strong"
-              />
-              <div aria-hidden="true" className="absolute size-3 rounded-full border border-accent bg-surface-raised" />
-              <div className="absolute bottom-4 border-l-2 border-accent bg-surface px-3 py-2 text-center font-data text-xs text-muted">
-                <span className="block text-foreground">SEOUL DATUM</span>
-                37.5665°N / 126.9780°E
-              </div>
-              <figcaption className="sr-only">서울 좌표를 중심으로 표현한 Atlas Armillary 관측 기호</figcaption>
-            </figure>
-          </section>
+          {mapSlot}
 
           <section aria-labelledby="foundation-states-title">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-boundary pb-3">
