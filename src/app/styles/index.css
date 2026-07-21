@@ -2,9 +2,109 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme inline {
+  --color-*: initial;
+  --color-canvas: var(--bk-color-canvas);
+  --color-surface: var(--bk-color-surface);
+  --color-surface-raised: var(--bk-color-surface-raised);
+  --color-surface-inset: var(--bk-color-surface-inset);
+  --color-foreground: var(--bk-color-text);
+  --color-muted: var(--bk-color-text-muted);
+  --color-boundary: var(--bk-color-border);
+  --color-boundary-strong: var(--bk-color-border-strong);
+  --color-accent: var(--bk-color-accent);
+  --color-on-accent: var(--bk-color-on-accent);
+  --color-focus: var(--bk-color-focus);
+  --color-danger: var(--bk-color-danger);
+  --color-danger-soft: var(--bk-color-danger-soft);
+  --color-warning: var(--bk-color-warning);
+  --color-warning-soft: var(--bk-color-warning-soft);
+  --color-success: var(--bk-color-success);
+  --color-success-soft: var(--bk-color-success-soft);
+  --font-sans: var(--bk-font-sans);
+  --font-data: var(--bk-font-data);
+}
+
 :root {
-  color-scheme: light dark;
-  font-family: Inter, Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color-scheme: light;
+  --bk-color-canvas: oklch(0.955 0.012 250);
+  --bk-color-surface: oklch(0.985 0.006 250);
+  --bk-color-surface-raised: oklch(0.995 0.001 250);
+  --bk-color-surface-inset: oklch(0.925 0.015 250);
+  --bk-color-text: oklch(0.22 0.028 255);
+  --bk-color-text-muted: oklch(0.44 0.03 255);
+  --bk-color-border: oklch(0.6 0.035 250);
+  --bk-color-border-strong: oklch(0.51 0.045 250);
+  --bk-color-accent: oklch(0.47 0.1 238);
+  --bk-color-on-accent: oklch(0.985 0.006 250);
+  --bk-color-focus: oklch(0.54 0.15 250);
+  --bk-color-danger: oklch(0.46 0.16 28);
+  --bk-color-danger-soft: oklch(0.93 0.03 28);
+  --bk-color-warning: oklch(0.43 0.085 78);
+  --bk-color-warning-soft: oklch(0.94 0.05 88);
+  --bk-color-success: oklch(0.4 0.09 155);
+  --bk-color-success-soft: oklch(0.94 0.035 155);
+  --bk-font-sans:
+    "Pretendard Variable", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --bk-font-data: Bahnschrift, "DIN Alternate", "Segoe UI Variable", var(--bk-font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+.dark {
+  color-scheme: dark;
+  --bk-color-canvas: oklch(0.14 0.025 255);
+  --bk-color-surface: oklch(0.19 0.022 255);
+  --bk-color-surface-raised: oklch(0.235 0.024 255);
+  --bk-color-surface-inset: oklch(0.115 0.018 255);
+  --bk-color-text: oklch(0.94 0.01 245);
+  --bk-color-text-muted: oklch(0.75 0.025 245);
+  --bk-color-border: oklch(0.53 0.035 250);
+  --bk-color-border-strong: oklch(0.61 0.045 245);
+  --bk-color-accent: oklch(0.72 0.115 220);
+  --bk-color-on-accent: oklch(0.16 0.025 255);
+  --bk-color-focus: oklch(0.76 0.14 235);
+  --bk-color-danger: oklch(0.74 0.14 28);
+  --bk-color-danger-soft: oklch(0.29 0.065 25);
+  --bk-color-warning: oklch(0.82 0.12 88);
+  --bk-color-warning-soft: oklch(0.3 0.06 80);
+  --bk-color-success: oklch(0.76 0.105 155);
+  --bk-color-success-soft: oklch(0.285 0.055 155);
+}
+
+@layer base {
+  html,
+  body {
+    min-height: 100%;
+    background-color: var(--bk-color-canvas);
+    color: var(--bk-color-text);
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--bk-font-sans);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    background-color: var(--bk-color-accent);
+    color: var(--bk-color-on-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+  }
 }
