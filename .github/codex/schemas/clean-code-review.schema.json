@@ -1,16 +1,255 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["status", "summary", "findings", "verificationLimits"],
+  "required": ["status", "changeSummary", "summary", "regressionRisk", "reviewAreas", "findings", "verificationLimits"],
   "properties": {
     "status": {
       "type": "string",
       "enum": ["PASS", "CHANGES_REQUESTED", "BLOCKED"]
     },
+    "changeSummary": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 1000
+    },
     "summary": {
       "type": "string",
-      "minLength": 1,
+      "minLength": 20,
       "maxLength": 600
+    },
+    "regressionRisk": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 700
+    },
+    "reviewAreas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "userImpact",
+        "correctness",
+        "stateHandling",
+        "asyncFlow",
+        "accessibility",
+        "testCoverage",
+        "readability",
+        "predictability",
+        "cohesion",
+        "coupling",
+        "architecture",
+        "security",
+        "performance"
+      ],
+      "properties": {
+        "userImpact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "correctness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "stateHandling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "asyncFlow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "accessibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "testCoverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "readability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "predictability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "cohesion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "coupling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "architecture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        },
+        "performance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "evidence"],
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": ["PASS", "ISSUE", "NOT_APPLICABLE", "NOT_REVIEWED"]
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 30,
+              "maxLength": 500
+            }
+          }
+        }
+      }
     },
     "findings": {
       "type": "array",
@@ -18,8 +257,26 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["severity", "path", "line", "title", "reason", "impact", "recommendation"],
+        "required": ["category", "severity", "path", "line", "title", "reason", "impact", "recommendation"],
         "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "USER_IMPACT",
+              "CORRECTNESS",
+              "STATE_HANDLING",
+              "ASYNC_FLOW",
+              "ACCESSIBILITY",
+              "TEST_COVERAGE",
+              "READABILITY",
+              "PREDICTABILITY",
+              "COHESION",
+              "COUPLING",
+              "ARCHITECTURE",
+              "SECURITY",
+              "PERFORMANCE"
+            ]
+          },
           "severity": {
             "type": "string",
             "enum": ["HIGH", "MEDIUM", "LOW"]

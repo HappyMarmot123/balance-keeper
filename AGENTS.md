@@ -30,6 +30,8 @@ Record Task-specific normal, failure, boundary, and regression evidence in the j
 - Keep one change purpose per pull request and record its Task ID, verification evidence, regression risk, and unverified paths.
 - 병합 전 `quality-gate` 통과는 필수다. Codex 리뷰는 참고 의견이며, 사람의 최종 승인만 병합 여부와 Task `ACCEPTED`를 결정한다.
 - 자동 리뷰는 변경분만 검토하고 재현 가능한 문제만 보고한다. 취향과 단순 포맷, 근거 없는 추측, 불필요한 칭찬이나 요약은 제외한다.
+- 리뷰는 사용자 영향, 회귀 위험, 테스트 신뢰도, 유지보수성 순서로 판단한다. 변경 요약은 사실만 기록하며 항목별 판정 근거와 구분한다.
+- PASS에서도 상태·비동기·접근성·테스트와 readability·predictability·cohesion·coupling을 실제로 확인한 근거를 남긴다. 적용되지 않는 영역은 이유와 함께 명시한다.
 - Review readability, predictability, cohesion, coupling, security, accessibility, performance, regression risk, and the Full FSD dependency direction.
 - A review reports findings but does not modify code, approve, merge, commit, push, expose secrets, or expand the approved Task scope.
 
