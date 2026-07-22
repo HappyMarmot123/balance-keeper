@@ -151,14 +151,26 @@ jobs:
         env:
           CODEX_REVIEW_JSON: ${{ needs.codex-review.outputs.final-message }}
           CODEX_REVIEW_JOB_RESULT: ${{ needs.codex-review.result }}
+          REVIEWED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          REVIEWED_CHANGED_FILE_COUNT: ${{ github.event.pull_request.changed_files }}
           REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REVIEW_POLICY_SHA: ${{ github.event.pull_request.base.sha }}
         with:
           github-token: ${{ github.token }}
           script: |
             const marker = '<!-- balance-keeper:codex-review -->';
             const maximumBytes = 60_000;
-            const rootKeys = ['findings', 'status', 'summary', 'verificationLimits'];
+            const rootKeys = [
+              'changeSummary',
+              'findings',
+              'regressionRisk',
+              'reviewAreas',
+              'status',
+              'summary',
+              'verificationLimits',
+            ];
             const findingKeys = [
+              'category',
               'impact',
               'line',
               'path',
@@ -167,8 +179,62 @@ jobs:
               'severity',
               'title',
             ];
+            const findingCategories = [
+              'USER_IMPACT',
+              'CORRECTNESS',
+              'STATE_HANDLING',
+              'ASYNC_FLOW',
+              'ACCESSIBILITY',
+              'TEST_COVERAGE',
+              'READABILITY',
+              'PREDICTABILITY',
+              'COHESION',
+              'COUPLING',
+              'ARCHITECTURE',
+              'SECURITY',
+              'PERFORMANCE',
+            ];
+            const findingCategoryToArea = {
+              USER_IMPACT: 'userImpact',
+              CORRECTNESS: 'correctness',
+              STATE_HANDLING: 'stateHandling',
+              ASYNC_FLOW: 'asyncFlow',
+              ACCESSIBILITY: 'accessibility',
+              TEST_COVERAGE: 'testCoverage',
+              READABILITY: 'readability',
+              PREDICTABILITY: 'predictability',
+              COHESION: 'cohesion',
+              COUPLING: 'coupling',
+              ARCHITECTURE: 'architecture',
+              SECURITY: 'security',
+              PERFORMANCE: 'performance',
+            };
+            const reviewAreaKeys = [
+              'userImpact',
+              'correctness',
+              'stateHandling',
+              'asyncFlow',
+              'accessibility',
+              'testCoverage',
+              'readability',
+              'predictability',
+              'cohesion',
+              'coupling',
+              'architecture',
+              'security',
+              'performance',
+            ];
+            const blockedArea = {
+              evidence: '자동 리뷰 출력을 충분히 확인하지 못해 이 검토 영역을 판정할 수 없습니다.',
+              result: 'NOT_REVIEWED',
+            };
             const blockedReview = {
+              changeSummary: '자동 리뷰 실행 또는 출력 검증에 실패해 변경 내용을 충분히 확인하지 못했습니다.',
               findings: [],
+              regressionRisk: '검토 결과를 안전하게 해석할 수 없어 변경의 회귀 위험을 판정하지 못했습니다.',
+              reviewAreas: Object.fromEntries(
+                reviewAreaKeys.map((area) => [area, { ...blockedArea }]),
+              ),
               status: 'BLOCKED',
               summary: '자동 리뷰 결과를 안전하게 처리하지 못했습니다.',
               verificationLimits: [
@@ -189,19 +255,27 @@ jobs:
                 actualKeys.every((key, index) => key === sortedExpectedKeys[index])
               );
             };
-            const isBoundedText = (value, maximumLength) =>
-              typeof value === 'string' &&
-              value.trim().length > 0 &&
-              [...value].length <= maximumLength &&
-              !/[\u0000-\u001f\u007f-\u009f]/u.test(value) &&
-              !/(?:https?:\/\/|www\.)/iu.test(value);
-            const isSafePath = (value) => {
+            const isBoundedText = (value, maximumLength, minimumLength = 1) => {
+              if (typeof value !== 'string') {
+                return false;
+              }
+              const textLength = [...value.trim()].length;
+              return (
+                textLength >= minimumLength &&
+                textLength <= maximumLength &&
+                !/[\u0000-\u001f\u007f-\u009f]/u.test(value) &&
+                !/(?:https?:\/\/|www\.)/iu.test(value)
+              );
+            };
+            const isRepositoryPath = (value, maximumLength = 4096) => {
               if (
-                !isBoundedText(value, 260) ||
+                typeof value !== 'string' ||
+                [...value].length === 0 ||
+                [...value].length > maximumLength ||
+                /[\u0000-\u001f\u007f-\u009f]/u.test(value) ||
                 value.startsWith('/') ||
                 value.endsWith('/') ||
-                /^[A-Za-z]:/u.test(value) ||
-                /[\\`<>&@]/u.test(value)
+                /^[A-Za-z]:/u.test(value)
               ) {
                 return false;
               }
@@ -211,8 +285,9 @@ jobs:
             };
             const isFinding = (finding) =>
               hasExactKeys(finding, findingKeys) &&
+              findingCategories.includes(finding.category) &&
               ['HIGH', 'MEDIUM', 'LOW'].includes(finding.severity) &&
-              isSafePath(finding.path) &&
+              isRepositoryPath(finding.path, 260) &&
               Number.isSafeInteger(finding.line) &&
               finding.line >= 1 &&
               finding.line <= 10_000_000 &&
@@ -220,16 +295,27 @@ jobs:
               isBoundedText(finding.reason, 700) &&
               isBoundedText(finding.impact, 500) &&
               isBoundedText(finding.recommendation, 500);
+            const isReviewArea = (area) =>
+              hasExactKeys(area, ['evidence', 'result']) &&
+              ['PASS', 'ISSUE', 'NOT_APPLICABLE', 'NOT_REVIEWED'].includes(area.result) &&
+              isBoundedText(area.evidence, 500, 30);
+            const isReviewAreas = (areas) =>
+              hasExactKeys(areas, reviewAreaKeys) &&
+              reviewAreaKeys.every((area) => isReviewArea(areas[area]));
             const hasUniqueItems = (values) =>
               new Set(values.map((value) => JSON.stringify(value))).size === values.length;
-            const isReview = (review) => {
+            const isReview = (review, changedPaths) => {
               if (
                 !hasExactKeys(review, rootKeys) ||
                 !['PASS', 'CHANGES_REQUESTED', 'BLOCKED'].includes(review.status) ||
-                !isBoundedText(review.summary, 600) ||
+                !isBoundedText(review.changeSummary, 1000, 20) ||
+                !isBoundedText(review.summary, 600, 20) ||
+                !isBoundedText(review.regressionRisk, 700, 20) ||
+                !isReviewAreas(review.reviewAreas) ||
                 !Array.isArray(review.findings) ||
                 review.findings.length > 12 ||
                 !review.findings.every(isFinding) ||
+                !review.findings.every((finding) => changedPaths.has(finding.path)) ||
                 !hasUniqueItems(review.findings) ||
                 !Array.isArray(review.verificationLimits) ||
                 review.verificationLimits.length > 8 ||
@@ -238,15 +324,40 @@ jobs:
               ) {
                 return false;
               }
+              const areaResults = reviewAreaKeys.map((area) => review.reviewAreas[area].result);
+              const hasIssue = areaResults.includes('ISSUE');
+              const hasNotReviewed = areaResults.includes('NOT_REVIEWED');
+              const findingAreas = review.findings.map(
+                (finding) => findingCategoryToArea[finding.category],
+              );
+              const findingsMatchIssueAreas =
+                findingAreas.every((area) => review.reviewAreas[area].result === 'ISSUE') &&
+                reviewAreaKeys
+                  .filter((area) => review.reviewAreas[area].result === 'ISSUE')
+                  .every((area) => findingAreas.includes(area));
               if (review.status === 'PASS') {
-                return review.findings.length === 0 && review.verificationLimits.length === 0;
+                return (
+                  review.findings.length === 0 &&
+                  !hasIssue &&
+                  !hasNotReviewed
+                );
               }
               if (review.status === 'CHANGES_REQUESTED') {
-                return review.findings.length > 0 && review.verificationLimits.length === 0;
+                return (
+                  review.findings.length > 0 &&
+                  hasIssue &&
+                  !hasNotReviewed &&
+                  findingsMatchIssueAreas
+                );
               }
-              return review.findings.length === 0 && review.verificationLimits.length > 0;
+              return (
+                review.findings.length === 0 &&
+                review.verificationLimits.length > 0 &&
+                !hasIssue &&
+                hasNotReviewed
+              );
             };
-            const parseReview = () => {
+            const parseReview = (changedPaths) => {
               if (process.env.CODEX_REVIEW_JOB_RESULT !== 'success') {
                 return blockedReview;
               }
@@ -256,7 +367,7 @@ jobs:
               }
               try {
                 const candidate = JSON.parse(raw);
-                return isReview(candidate) ? candidate : blockedReview;
+                return isReview(candidate, changedPaths) ? candidate : blockedReview;
               } catch {
                 return blockedReview;
               }
@@ -272,48 +383,209 @@ jobs:
               }
               return escaped;
             };
-            const renderReview = (review, reviewedHeadSha) => {
+            const renderCode = (value) =>
+              `<code>${value
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;')
+                .replaceAll('@', '@\u200b')}</code>`;
+            const reviewAreaLabels = {
+              userImpact: '사용자 영향',
+              correctness: '정확성',
+              stateHandling: '상태 처리',
+              asyncFlow: '비동기 흐름',
+              accessibility: '접근성',
+              testCoverage: '테스트',
+              readability: '가독성',
+              predictability: '예측 가능성',
+              cohesion: '응집도',
+              coupling: '결합도',
+              architecture: '구조·FSD',
+              security: '보안',
+              performance: '성능',
+            };
+            const reviewResultLabels = {
+              PASS: '검토 완료',
+              ISSUE: '문제 발견',
+              NOT_APPLICABLE: '해당 없음',
+              NOT_REVIEWED: '미검토',
+            };
+            const findingCategoryLabels = {
+              USER_IMPACT: '사용자 영향',
+              CORRECTNESS: '정확성',
+              STATE_HANDLING: '상태 처리',
+              ASYNC_FLOW: '비동기 흐름',
+              ACCESSIBILITY: '접근성',
+              TEST_COVERAGE: '테스트',
+              READABILITY: '가독성',
+              PREDICTABILITY: '예측 가능성',
+              COHESION: '응집도',
+              COUPLING: '결합도',
+              ARCHITECTURE: '구조·FSD',
+              SECURITY: '보안',
+              PERFORMANCE: '성능',
+            };
+            const renderReview = (review, metadata) => {
               const bodyLines = [
                 marker,
                 '## Codex 자동 리뷰',
                 '',
                 `**상태:** ${review.status}`,
-                `**검토 커밋:** \`${reviewedHeadSha}\``,
+                `**검토 범위:** \`${metadata.reviewedBaseSha}...${metadata.reviewedHeadSha}\``,
+                `**검토 커밋:** \`${metadata.reviewedHeadSha}\``,
+                `**정책 커밋:** \`${metadata.reviewPolicySha}\``,
+                `**변경 파일:** ${metadata.changedFileCount}개`,
+                '',
+                '### 변경 요약',
+                '',
+                escapeText(review.changeSummary),
+                '',
+                '### 종합 판단',
                 '',
                 escapeText(review.summary),
+                '',
+                '### 회귀 위험',
+                '',
+                escapeText(review.regressionRisk),
+                '',
+                '### 검토 체크포인트',
+                '',
+                '| 항목 | 판정 | 근거 |',
+                '| --- | --- | --- |',
               ];
 
+              for (const area of reviewAreaKeys) {
+                const assessment = review.reviewAreas[area];
+                bodyLines.push(
+                  `| ${reviewAreaLabels[area]} | ${reviewResultLabels[assessment.result]} | ${escapeText(assessment.evidence)} |`,
+                );
+              }
+
+              bodyLines.push('', '### 발견된 문제');
               if (review.findings.length > 0) {
-                bodyLines.push('', '### 발견된 문제');
                 for (const [index, finding] of review.findings.entries()) {
                   bodyLines.push(
                     '',
                     `#### ${index + 1}. [${finding.severity}] ${escapeText(finding.title)}`,
-                    `- **위치:** \`${finding.path}:${finding.line}\``,
+                    `- **범주:** ${findingCategoryLabels[finding.category]} (${escapeText(finding.category)})`,
+                    `- **위치:** ${renderCode(`${finding.path}:${finding.line}`)}`,
                     `- **이유:** ${escapeText(finding.reason)}`,
                     `- **영향:** ${escapeText(finding.impact)}`,
                     `- **수정 방향:** ${escapeText(finding.recommendation)}`,
                   );
                 }
+              } else {
+                bodyLines.push('- 없음');
               }
 
+              bodyLines.push('', '### 검증 제한');
+              bodyLines.push(
+                '- **리뷰 방식:** 읽기 전용 정적 변경분 리뷰이며 프로젝트 명령, 브라우저와 외부 네트워크를 직접 실행하지 않습니다.',
+              );
               if (review.verificationLimits.length > 0) {
-                bodyLines.push('', '### 검증 제한');
                 for (const limit of review.verificationLimits) {
                   bodyLines.push(`- ${escapeText(limit)}`);
                 }
               }
+              bodyLines.push(
+                '',
+                '> 이 자동 리뷰는 참고 의견이며 사람의 최종 승인과 병합 판단을 대체하지 않습니다.',
+              );
               return bodyLines.join('\n');
             };
 
-            const review = parseReview();
+            const requestedBaseSha = process.env.REVIEWED_BASE_SHA ?? '';
             const requestedHeadSha = process.env.REVIEWED_HEAD_SHA ?? '';
-            const reviewedHeadSha = /^[0-9a-f]{40}$/u.test(requestedHeadSha)
-              ? requestedHeadSha
-              : '확인 불가';
-            let body = renderReview(review, reviewedHeadSha);
+            const requestedPolicySha = process.env.REVIEW_POLICY_SHA ?? '';
+            const requestedChangedFileCount = process.env.REVIEWED_CHANGED_FILE_COUNT ?? '';
+            if (
+              !/^[0-9a-f]{40}$/u.test(requestedBaseSha) ||
+              !/^[0-9a-f]{40}$/u.test(requestedHeadSha) ||
+              !/^[0-9a-f]{40}$/u.test(requestedPolicySha) ||
+              !/^(?:0|[1-9]\d*)$/u.test(requestedChangedFileCount)
+            ) {
+              throw new Error('Trusted review metadata is invalid');
+            }
+            const reviewedChangedFileCount = Number(requestedChangedFileCount);
+            if (!Number.isSafeInteger(reviewedChangedFileCount)) {
+              throw new Error('Trusted changed-file count is invalid');
+            }
+
+            const pullRequestParameters = {
+              ...context.repo,
+              pull_number: context.issue.number,
+            };
+            const pullRequestMatchesReviewedState = async () => {
+              const response = await github.rest.pulls.get(pullRequestParameters);
+              const pullRequest = response.data;
+              if (
+                !isPlainObject(pullRequest) ||
+                !isPlainObject(pullRequest.base) ||
+                !isPlainObject(pullRequest.head) ||
+                typeof pullRequest.base.sha !== 'string' ||
+                typeof pullRequest.head.sha !== 'string' ||
+                !Number.isSafeInteger(pullRequest.changed_files)
+              ) {
+                throw new Error('Pull request metadata is invalid');
+              }
+              return (
+                pullRequest.base.sha === requestedBaseSha &&
+                pullRequest.head.sha === requestedHeadSha &&
+                pullRequest.changed_files === reviewedChangedFileCount
+              );
+            };
+            if (!(await pullRequestMatchesReviewedState())) {
+              return;
+            }
+
+            const pullFileParameters = {
+              ...pullRequestParameters,
+              per_page: 100,
+            };
+            const pullRequestFiles = await github.paginate(
+              github.rest.pulls.listFiles,
+              pullFileParameters,
+            );
+            const changedPaths = new Set();
+            let manifestIsValid = true;
+            for (const file of pullRequestFiles) {
+              if (!isPlainObject(file) || !isRepositoryPath(file.filename)) {
+                manifestIsValid = false;
+                continue;
+              }
+              changedPaths.add(file.filename);
+            }
+            if (!(await pullRequestMatchesReviewedState())) {
+              return;
+            }
+
+            const manifestIsComplete =
+              manifestIsValid &&
+              pullRequestFiles.length === reviewedChangedFileCount &&
+              changedPaths.size === reviewedChangedFileCount;
+            const incompleteManifestReview = {
+              ...blockedReview,
+              changeSummary: '변경 파일 목록을 완전하게 확인하지 못해 자동 리뷰 범위를 확정할 수 없습니다.',
+              regressionRisk: '일부 변경 파일이 검토 범위에서 빠질 수 있어 회귀 위험을 안전하게 판정할 수 없습니다.',
+              summary: 'GitHub가 보고한 변경 파일 수와 검증 가능한 파일 목록이 일치하지 않습니다.',
+              verificationLimits: [
+                '변경 파일 목록을 완전하게 확인하지 못했습니다. PR 규모와 Actions 로그를 확인해 주세요.',
+              ],
+            };
+            const review = manifestIsComplete
+              ? parseReview(changedPaths)
+              : incompleteManifestReview;
+            const metadata = {
+              changedFileCount: reviewedChangedFileCount,
+              reviewedBaseSha: requestedBaseSha,
+              reviewedHeadSha: requestedHeadSha,
+              reviewPolicySha: requestedPolicySha,
+            };
+            let body = renderReview(review, metadata);
             if (Buffer.byteLength(body, 'utf8') > maximumBytes) {
-              body = renderReview(blockedReview, reviewedHeadSha);
+              body = renderReview(blockedReview, metadata);
             }
             if (Buffer.byteLength(body, 'utf8') > maximumBytes) {
               throw new Error('Generated review feedback exceeds the byte limit');
@@ -325,6 +597,9 @@ jobs:
             };
 
             const comments = await github.paginate(github.rest.issues.listComments, parameters);
+            if (!(await pullRequestMatchesReviewedState())) {
+              return;
+            }
             const ownedComments = comments
               .filter(
                 (comment) =>
