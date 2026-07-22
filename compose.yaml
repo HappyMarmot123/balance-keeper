@@ -1,0 +1,49 @@
+name: balance-keeper
+
+services:
+  api:
+    build:
+      args:
+        VITE_NAVER_MAPS_KEY_ID: ${VITE_NAVER_MAPS_KEY_ID:-}
+        VITE_NAVER_MAP_STYLE_ID: ${VITE_NAVER_MAP_STYLE_ID:-}
+      context: .
+      target: api
+    environment:
+      BK_API_HOST: 0.0.0.0
+      BK_API_ORIGIN: http://127.0.0.1:8787
+      BK_API_PORT: 8787
+      BK_SHUTDOWN_TIMEOUT_MS: 10000
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REQUEST_TIMEOUT_MS: ${UPSTASH_REQUEST_TIMEOUT_MS:-2500}
+    expose:
+      - "8787"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 12s
+
+  web:
+    build:
+      args:
+        VITE_NAVER_MAPS_KEY_ID: ${VITE_NAVER_MAPS_KEY_ID:-}
+        VITE_NAVER_MAP_STYLE_ID: ${VITE_NAVER_MAP_STYLE_ID:-}
+      context: .
+      target: web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BK_WEB_PORT:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

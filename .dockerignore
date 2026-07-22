@@ -1,0 +1,13 @@
+.git/
+.github/
+.vercel/
+node_modules/
+dist/
+dist-server/
+coverage/
+docs/
+*.log
+.env*
+**/.env*
+.idea/
+.vscode/

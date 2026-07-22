@@ -11,9 +11,10 @@
 - Vite 8 + Tailwind CSS 4
 - Vitest + Testing Library
 - Biome for linting and formatting
-- Vercel deployment target
+- Vercel Node 24 deployment target
+- Docker Compose with non-root Node API + Nginx web runtime
 
-지도, CCTV, RSS, Redis 의존성은 해당 기능을 구현할 때 동적 로딩과 함께 추가합니다. 초기 번들에는 포함하지 않습니다.
+지도 SDK와 provider route는 해당 기능 Task에서 추가합니다. 공용 gateway core와 Upstash adapter는 준비돼 있지만 실제 provider route 목록은 아직 비어 있습니다.
 
 ## Project skills
 
@@ -31,4 +32,21 @@
     npm run dev
     npm run validate
 
-환경변수는 .env.example을 기준으로 로컬 .env에 설정합니다. 서버 비밀값에는 VITE_ 접두어를 사용하지 않습니다.
+전체 로컬 스택은 Docker Compose 한 명령으로 실행합니다.
+
+    docker compose up --build --wait
+
+브라우저에서 `http://127.0.0.1:8080`을 열고, 종료할 때는 다음 명령을 사용합니다.
+
+    docker compose down
+
+Docker 없이 API와 Vite를 나눠 실행하려면 API 터미널에서 서버 번들을 먼저 만들고 실행합니다.
+
+    npm run build:server
+    npm run start:api
+
+다른 터미널에서 `npm run dev`를 실행하면 `/api/*`와 `/healthz`가 `127.0.0.1:8787`로 same-origin proxy됩니다.
+
+환경변수는 .env.example을 기준으로 로컬 .env에 설정합니다. Docker build에는 브라우저에 공개되는
+`VITE_NAVER_MAPS_KEY_ID`와 `VITE_NAVER_MAP_STYLE_ID`만 전달하며, 서버 비밀값에는 VITE_ 접두어를
+사용하거나 build argument로 전달하지 않습니다.

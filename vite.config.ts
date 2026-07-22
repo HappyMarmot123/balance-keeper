@@ -3,9 +3,19 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 
 const testExcludes = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
+const createApiProxy = () => ({
+  '^/api(?:/|\\?|$)': { changeOrigin: false, target: 'http://127.0.0.1:8787' },
+  '^/healthz(?:\\?|$)': { changeOrigin: false, target: 'http://127.0.0.1:8787' },
+});
 
 export default defineConfig({
   plugins: [preact(), tailwindcss()],
+  preview: {
+    proxy: createApiProxy(),
+  },
+  server: {
+    proxy: createApiProxy(),
+  },
   test: {
     projects: [
       {

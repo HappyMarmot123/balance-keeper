@@ -16,5 +16,5 @@
     "skipLibCheck": true,
     "types": ["vite/client", "vitest/globals", "node", "navermaps"]
   },
-  "include": ["src", "api", "tests", "vite.config.ts"]
+  "include": ["src", "api", "tests", "vite.config.ts", "vite.server.config.ts"]
 }
