@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-22 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T09-R1 development 원격 시험 PR — IN_PROGRESS |
-| 다음 단계 | T09 final commit → `development` push → `feature/t09-pr-smoke` PR → Actions 결과 확인 |
+| 현재 단계 | T09-R1 Codex 실제 리뷰 재시험 — IN_PROGRESS |
+| 다음 단계 | enable variable 활성화 → PR synchronize → Codex·feedback 실제 결과 확인 |
 
 ---
 
@@ -1843,7 +1843,7 @@ flowchart LR
 
 ### T09-R1 — development 원격 시험 PR
 
-- 상태: IN_PROGRESS — 사용자 명령으로 승인됐으며 원격 사전 조건과 안전 경계를 확인했다.
+- 상태: IN_PROGRESS — 최초 no-secret 시험은 품질 PASS·Codex 안전 skip으로 끝났으나, 사용자 ACCEPTED 전에 `OPENAI_API_KEY` 등록 후 실제 Codex 리뷰 재시험을 요청해 기존 PASS 판정을 확장 범위로 supersede했다.
 - 선행 조건: T09 ACCEPTED. 원격 `development`와 open PR은 없고 GitHub Actions는 활성화돼 있다.
 - 목적: 검증된 T09 workflow를 원격 `development`에 게시하고 문서 전용 feature PR로 실제 GitHub Actions trigger와 job 결과를 확인한다.
 - 포함 범위:
@@ -1851,23 +1851,38 @@ flowchart LR
   - 사용자 소유 `.env.example`을 제외한 T09 artifact의 final commit과 `development` push
   - `feature/t09-pr-smoke` 생성, 무해한 문서 전용 smoke 변경 commit·push와 `development` 대상 PR 생성
   - `branch-validation`과 PR `quality-gate` 결과·skip 사유 확인
+  - 사용자 등록 `OPENAI_API_KEY`의 이름·존재만 확인하고 `CODEX_REVIEW_ENABLED=true` repository variable 활성화
+  - 기존 PR #1의 `synchronize` 재실행에서 Codex read-only review와 feedback 댓글 실제 동작 확인
 - 명시적 제외:
   - `main` push, PR merge/close, branch 삭제와 default branch 변경
-  - `OPENAI_API_KEY`, `CODEX_REVIEW_ENABLED`, ruleset/branch protection과 Actions 권한 변경
+  - `OPENAI_API_KEY` 값의 읽기·출력·변경, ruleset/branch protection과 Actions 권한 변경
   - 제품 source·API·UI 변경과 Vercel 배포
 - 원격 사전 점검:
   - `gh 2.94.0`과 `HappyMarmot123` 인증·`repo`/`workflow` 권한이 정상이다.
-  - repository secret·variable은 비어 있고 Actions는 enabled, default workflow permission은 read다.
-  - 따라서 이번 PR에서 quality는 실행하고 Codex·feedback job은 enable variable 부재로 skip되는 것이 기대 결과다.
+  - 최초 시험 당시 repository secret·variable은 비어 있어 Codex·feedback job이 안전하게 skip됐다.
+  - 사용자의 재시험 요청 시점에는 `OPENAI_API_KEY` Secret 이름이 등록됐고 `CODEX_REVIEW_ENABLED` Variable만 비어 있다. 값은 조회하지 않는다.
 - 완료 조건:
   - 두 원격 branch와 open PR이 생성되고 base가 `development`, head가 `feature/t09-pr-smoke`다.
   - `development` push의 `branch-validation`과 PR의 `quality-gate`가 PASS한다.
-  - Codex 관련 job이 설정 부재 때문에 안전하게 skip되고 secret 값은 요청·조회·출력하지 않는다.
+  - 확장 시험에서는 `quality-gate`, `codex-review`, `post-feedback`이 모두 성공하고 PR에 marker 기반 Codex 댓글 하나가 생성된다.
+  - 댓글이 정확한 head SHA를 가리키며 review 결과가 schema와 한국어 출력 계약을 지킨다.
+  - Secret 값은 요청·조회·출력하지 않는다.
   - `.env.example`은 읽기·수정·stage·commit하지 않고 로컬 사용자 변경으로 남는다.
 - 검증 방법:
   - 명시적 stage 목록과 `git diff --cached --name-only`, commit tree, branch tracking을 확인한다.
   - `gh run`/`gh pr checks`로 정상 trigger, 실패 log, job conclusion과 PR base/head를 확인한다.
   - 실패 시 원인을 재현 가능한 workflow 범위에서만 수정하고, secret/variable 또는 병합이 필요하면 중단한다.
+- 실행·검증 증거:
+  - T09 final commit은 `7790380 ci: establish development PR review workflow`이며 명시한 10개 파일만 포함했다. `.env.example`은 commit tree와 stage에서 제외됐다.
+  - 원격 `development`는 `7790380`을 추적한다. push workflow [run 29884590263](https://github.com/HappyMarmot123/balance-keeper/actions/runs/29884590263)의 `branch-validation`이 install과 전체 `npm run validate`를 포함해 35초에 PASS했다.
+  - `feature/t09-pr-smoke`의 문서 전용 commit은 `3b2dd44 test: exercise development PR workflow`다.
+  - [시험 PR #1](https://github.com/HappyMarmot123/balance-keeper/pull/1)은 OPEN·MERGEABLE이며 base=`development`, head=`feature/t09-pr-smoke`다.
+  - PR [run 29884690268](https://github.com/HappyMarmot123/balance-keeper/actions/runs/29884690268)에서 `quality-gate`의 checkout, pinned npm, install, check, 763 tests, typecheck, client/server build가 37초에 PASS했다.
+  - repository variable·secret을 만들지 않은 상태에서 `codex-review`와 `post-feedback`은 모두 `SKIPPED`였다. 이는 unconfigured secret job의 fail-closed 계약과 일치한다.
+  - 원격 두 branch SHA와 local tracking이 일치하고 working tree에는 사용자 소유 `.env.example` 변경과 이 PASS 개발일지 기록만 남는다. PR은 merge·close하지 않았다.
+- 1차 회귀 판정: 정상 trigger·전체 quality, 설정 부재 실패 경계, base/head와 문서 전용 변경, 기존 push validation은 `PASS`다.
+- 1차 결과: `PASS`였으나 사용자 ACCEPTED 전 실제 Codex review까지 범위가 확장되어 superseded. PR은 열린 상태로 보존하며 merge/close하지 않는다.
+- 확장 승인: 사용자가 `OPENAI_API_KEY` 미설정을 바로잡은 뒤 “다시 PR”을 요청해 enable variable 활성화, 기존 PR synchronize, 실제 Codex·feedback 검증을 승인했다.
 
 ---
 
@@ -2048,3 +2063,5 @@ flowchart LR
 | 2026-07-22 | 사용자가 “진행”으로 T09 repository artifact 범위와 D-012·D-038~D-041을 승인; remote activation·commit은 제외하고 workflow architecture RED부터 착수 | T09 |
 | 2026-07-22 | T09 PR quality gate·base-trusted read-only Codex review·safe feedback를 RED→GREEN으로 구현; focused 42, 전체 763 tests·build, isolated npm ci, attested actionlint와 독립 감사 3개 PASS. repository artifacts verified, remote inactive이며 사용자 ACCEPTED 대기 | T09 |
 | 2026-07-22 | 사용자가 T09 결과를 승인하고 `development` 전환, 테스트 feature branch와 시험 PR 생성을 지시; T09 final commit 및 두 branch push·PR 생성만 승인하고 secret/variable·ruleset·merge·main push는 제외 | T09→T09-R1 |
+| 2026-07-22 | T09 final commit `7790380`을 원격 `development`에 게시해 branch validation PASS; `feature/t09-pr-smoke` commit `3b2dd44`와 PR #1 생성, PR quality PASS·Codex/feedback 안전 skip 확인. PR은 OPEN 상태로 사용자 ACCEPTED 대기 | T09-R1 |
+| 2026-07-22 | 사용자 ACCEPTED 전에 `OPENAI_API_KEY` Secret을 등록하고 실제 리뷰 재시험을 요청; 1차 no-secret PASS를 확장 범위로 supersede하고 `CODEX_REVIEW_ENABLED` 활성화·PR synchronize·Codex/feedback live 검증 착수 | T09-R1 |
