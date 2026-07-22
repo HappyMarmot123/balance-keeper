@@ -6,7 +6,7 @@ import { createLocalCoalescer } from '../resilience';
 import { type RuntimeEnvironment, readFleetStateConfig } from './runtimeConfig';
 import { createUnavailableFleetStateStore } from './unavailableFleetStateStore';
 
-const productionGatewayRoutes: readonly GatewayRoute[] = Object.freeze([]);
+const defaultGatewayRoutes: readonly GatewayRoute[] = Object.freeze([]);
 
 export type CreateGatewayRuntimeOptions = Readonly<{
   clock?: () => number;
@@ -40,7 +40,7 @@ const createConfiguredFleetStateStore = (environment: RuntimeEnvironment): Fleet
 };
 
 export function createGatewayRuntime(options: CreateGatewayRuntimeOptions = {}): GatewayRuntime {
-  const registry: RouteRegistry = createRouteRegistry(options.routes ?? productionGatewayRoutes);
+  const registry: RouteRegistry = createRouteRegistry(options.routes ?? defaultGatewayRoutes);
   const handler = createGatewayHandler(registry);
   const clock = options.clock ?? Date.now;
   const dependencies = Object.freeze({
