@@ -1,0 +1,358 @@
+name: Frontend PR Review
+
+on:
+  pull_request:
+    branches:
+      - development
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  quality-gate:
+    if: ${{ github.event.pull_request.draft != true }}
+    name: quality-gate
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout merge result
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Activate pinned npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/corepack-shims"
+          corepack enable npm --install-directory "${RUNNER_TEMP}/corepack-shims"
+          corepack install --global npm@11.17.0
+          npm_version="$("${RUNNER_TEMP}/corepack-shims/npm" --version)"
+          test "${npm_version}" = '11.17.0'
+          echo "${RUNNER_TEMP}/corepack-shims" >> "${GITHUB_PATH}"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting and lint
+        run: npm run check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build client and server
+        run: npm run build
+
+  codex-review:
+    if: >-
+      ${{
+        needs.quality-gate.result == 'success' &&
+        github.event.pull_request.draft != true &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.type != 'Bot' &&
+        github.event.sender.type != 'Bot' &&
+        vars.CODEX_REVIEW_ENABLED == 'true'
+      }}
+    name: codex-review
+    needs: quality-gate
+    outputs:
+      final-message: ${{ steps.codex.outputs.final-message }}
+      reviewed-head-sha: ${{ github.event.pull_request.head.sha }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout review target
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare trusted review policy
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TRUSTED_CODEX_HOME: ${{ runner.temp }}/balance-keeper-codex-home
+          TRUSTED_POLICY_DIR: ${{ runner.temp }}/balance-keeper-review-policy
+        run: |
+          set -euo pipefail
+          [[ "${BASE_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${HEAD_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          mkdir -p "${TRUSTED_CODEX_HOME}" "${TRUSTED_POLICY_DIR}"
+          git show "${BASE_SHA}:.github/codex/prompts/clean-code-review.md" \
+            > "${TRUSTED_POLICY_DIR}/clean-code-review.md"
+          git show "${BASE_SHA}:.github/codex/schemas/clean-code-review.schema.json" \
+            > "${TRUSTED_POLICY_DIR}/clean-code-review.schema.json"
+          test -s "${TRUSTED_POLICY_DIR}/clean-code-review.md"
+          test -s "${TRUSTED_POLICY_DIR}/clean-code-review.schema.json"
+          printf '%s\n' \
+            'project_doc_max_bytes = 0' \
+            'project_doc_fallback_filenames = []' \
+            'web_search = "disabled"' \
+            '' \
+            '[features]' \
+            'hooks = false' \
+            > "${TRUSTED_CODEX_HOME}/config.toml"
+
+      - name: Review changed code
+        id: codex
+        uses: openai/codex-action@52fe01ec70a42f454c9d2ebd47598f9fd6893d56 # v1.11
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REVIEW_WORKSPACE: ${{ github.workspace }}
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: ${{ runner.temp }}/balance-keeper-review-policy/clean-code-review.md
+          output-schema-file: ${{ runner.temp }}/balance-keeper-review-policy/clean-code-review.schema.json
+          codex-home: ${{ runner.temp }}/balance-keeper-codex-home
+          working-directory: ${{ runner.temp }}/balance-keeper-review-policy
+          permission-profile: ":read-only"
+          safety-strategy: drop-sudo
+          codex-version: "0.145.0"
+          model: gpt-5.6-sol
+          effort: high
+
+  post-feedback:
+    if: ${{ always() && !cancelled() && needs.codex-review.result != 'skipped' }}
+    name: post-feedback
+    needs: codex-review
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish review feedback
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CODEX_REVIEW_JSON: ${{ needs.codex-review.outputs.final-message }}
+          CODEX_REVIEW_JOB_RESULT: ${{ needs.codex-review.result }}
+          REVIEWED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const marker = '<!-- balance-keeper:codex-review -->';
+            const maximumBytes = 60_000;
+            const rootKeys = ['findings', 'status', 'summary', 'verificationLimits'];
+            const findingKeys = [
+              'impact',
+              'line',
+              'path',
+              'reason',
+              'recommendation',
+              'severity',
+              'title',
+            ];
+            const blockedReview = {
+              findings: [],
+              status: 'BLOCKED',
+              summary: '자동 리뷰 결과를 안전하게 처리하지 못했습니다.',
+              verificationLimits: [
+                '자동 리뷰 실행 또는 출력 검증에 실패했습니다. Actions 로그를 확인해 주세요.',
+              ],
+            };
+
+            const isPlainObject = (value) =>
+              value !== null && typeof value === 'object' && !Array.isArray(value);
+            const hasExactKeys = (value, expectedKeys) => {
+              if (!isPlainObject(value)) {
+                return false;
+              }
+              const actualKeys = Object.keys(value).sort();
+              const sortedExpectedKeys = [...expectedKeys].sort();
+              return (
+                actualKeys.length === sortedExpectedKeys.length &&
+                actualKeys.every((key, index) => key === sortedExpectedKeys[index])
+              );
+            };
+            const isBoundedText = (value, maximumLength) =>
+              typeof value === 'string' &&
+              value.trim().length > 0 &&
+              [...value].length <= maximumLength &&
+              !/[\u0000-\u001f\u007f-\u009f]/u.test(value) &&
+              !/(?:https?:\/\/|www\.)/iu.test(value);
+            const isSafePath = (value) => {
+              if (
+                !isBoundedText(value, 260) ||
+                value.startsWith('/') ||
+                value.endsWith('/') ||
+                /^[A-Za-z]:/u.test(value) ||
+                /[\\`<>&@]/u.test(value)
+              ) {
+                return false;
+              }
+              return value
+                .split('/')
+                .every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+            };
+            const isFinding = (finding) =>
+              hasExactKeys(finding, findingKeys) &&
+              ['HIGH', 'MEDIUM', 'LOW'].includes(finding.severity) &&
+              isSafePath(finding.path) &&
+              Number.isSafeInteger(finding.line) &&
+              finding.line >= 1 &&
+              finding.line <= 10_000_000 &&
+              isBoundedText(finding.title, 120) &&
+              isBoundedText(finding.reason, 700) &&
+              isBoundedText(finding.impact, 500) &&
+              isBoundedText(finding.recommendation, 500);
+            const hasUniqueItems = (values) =>
+              new Set(values.map((value) => JSON.stringify(value))).size === values.length;
+            const isReview = (review) => {
+              if (
+                !hasExactKeys(review, rootKeys) ||
+                !['PASS', 'CHANGES_REQUESTED', 'BLOCKED'].includes(review.status) ||
+                !isBoundedText(review.summary, 600) ||
+                !Array.isArray(review.findings) ||
+                review.findings.length > 12 ||
+                !review.findings.every(isFinding) ||
+                !hasUniqueItems(review.findings) ||
+                !Array.isArray(review.verificationLimits) ||
+                review.verificationLimits.length > 8 ||
+                !review.verificationLimits.every((limit) => isBoundedText(limit, 300)) ||
+                !hasUniqueItems(review.verificationLimits)
+              ) {
+                return false;
+              }
+              if (review.status === 'PASS') {
+                return review.findings.length === 0 && review.verificationLimits.length === 0;
+              }
+              if (review.status === 'CHANGES_REQUESTED') {
+                return review.findings.length > 0 && review.verificationLimits.length === 0;
+              }
+              return review.findings.length === 0 && review.verificationLimits.length > 0;
+            };
+            const parseReview = () => {
+              if (process.env.CODEX_REVIEW_JOB_RESULT !== 'success') {
+                return blockedReview;
+              }
+              const raw = process.env.CODEX_REVIEW_JSON ?? '';
+              if (Buffer.byteLength(raw, 'utf8') === 0 || Buffer.byteLength(raw, 'utf8') > maximumBytes) {
+                return blockedReview;
+              }
+              try {
+                const candidate = JSON.parse(raw);
+                return isReview(candidate) ? candidate : blockedReview;
+              } catch {
+                return blockedReview;
+              }
+            };
+            const escapeText = (value) => {
+              let escaped = value
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('@', '@\u200b');
+              for (const character of ['\\', '`', '*', '_', '[', ']', '{', '}', '(', ')', '#', '+', '!', '|', '~']) {
+                escaped = escaped.replaceAll(character, `\\${character}`);
+              }
+              return escaped;
+            };
+            const renderReview = (review, reviewedHeadSha) => {
+              const bodyLines = [
+                marker,
+                '## Codex 자동 리뷰',
+                '',
+                `**상태:** ${review.status}`,
+                `**검토 커밋:** \`${reviewedHeadSha}\``,
+                '',
+                escapeText(review.summary),
+              ];
+
+              if (review.findings.length > 0) {
+                bodyLines.push('', '### 발견된 문제');
+                for (const [index, finding] of review.findings.entries()) {
+                  bodyLines.push(
+                    '',
+                    `#### ${index + 1}. [${finding.severity}] ${escapeText(finding.title)}`,
+                    `- **위치:** \`${finding.path}:${finding.line}\``,
+                    `- **이유:** ${escapeText(finding.reason)}`,
+                    `- **영향:** ${escapeText(finding.impact)}`,
+                    `- **수정 방향:** ${escapeText(finding.recommendation)}`,
+                  );
+                }
+              }
+
+              if (review.verificationLimits.length > 0) {
+                bodyLines.push('', '### 검증 제한');
+                for (const limit of review.verificationLimits) {
+                  bodyLines.push(`- ${escapeText(limit)}`);
+                }
+              }
+              return bodyLines.join('\n');
+            };
+
+            const review = parseReview();
+            const requestedHeadSha = process.env.REVIEWED_HEAD_SHA ?? '';
+            const reviewedHeadSha = /^[0-9a-f]{40}$/u.test(requestedHeadSha)
+              ? requestedHeadSha
+              : '확인 불가';
+            let body = renderReview(review, reviewedHeadSha);
+            if (Buffer.byteLength(body, 'utf8') > maximumBytes) {
+              body = renderReview(blockedReview, reviewedHeadSha);
+            }
+            if (Buffer.byteLength(body, 'utf8') > maximumBytes) {
+              throw new Error('Generated review feedback exceeds the byte limit');
+            }
+            const parameters = {
+              ...context.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            };
+
+            const comments = await github.paginate(github.rest.issues.listComments, parameters);
+            const ownedComments = comments
+              .filter(
+                (comment) =>
+                  typeof comment.body === 'string' &&
+                  comment.body.startsWith(`${marker}\n`) &&
+                  comment.user?.type === 'Bot' &&
+                  comment.user.login === 'github-actions[bot]',
+              )
+              .sort((left, right) => left.id - right.id);
+            const canonicalComment = ownedComments[0];
+
+            if (canonicalComment && canonicalComment.body !== body) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: canonicalComment.id,
+                body,
+              });
+            } else if (!canonicalComment) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+            for (const duplicate of ownedComments.slice(1)) {
+              await github.rest.issues.deleteComment({
+                ...context.repo,
+                comment_id: duplicate.id,
+              });
+            }

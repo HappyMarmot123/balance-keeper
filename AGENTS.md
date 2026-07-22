@@ -24,6 +24,15 @@ After approval, use:
 
 Record Task-specific normal, failure, boundary, and regression evidence in the journal. APPROVED authorizes scoped edits and verification. In approval mode, wait for ACCEPTED before the final commit. A checkpoint commit is allowed only for an IN_PROGRESS Task after the user explicitly identifies that Task and requests an intermediate snapshot. Push or deploy only when explicitly requested.
 
+## Pull request and code review
+
+- Develop each approved feature on a `feature/*` branch and open its pull request against `development`.
+- Keep one change purpose per pull request and record its Task ID, verification evidence, regression risk, and unverified paths.
+- 병합 전 `quality-gate` 통과는 필수다. Codex 리뷰는 참고 의견이며, 사람의 최종 승인만 병합 여부와 Task `ACCEPTED`를 결정한다.
+- 자동 리뷰는 변경분만 검토하고 재현 가능한 문제만 보고한다. 취향과 단순 포맷, 근거 없는 추측, 불필요한 칭찬이나 요약은 제외한다.
+- Review readability, predictability, cohesion, coupling, security, accessibility, performance, regression risk, and the Full FSD dependency direction.
+- A review reports findings but does not modify code, approve, merge, commit, push, expose secrets, or expand the approved Task scope.
+
 ## Runtime and language baseline
 
 - Node.js 24 and npm 11

@@ -2,27 +2,46 @@ name: CI
 
 on:
   push:
-  pull_request:
+    branches:
+      - main
+      - development
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate:
+  branch-validation:
+    name: branch-validation
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Activate pinned npm
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/corepack-shims"
+          corepack enable npm --install-directory "${RUNNER_TEMP}/corepack-shims"
+          corepack install --global npm@11.17.0
+          npm_version="$("${RUNNER_TEMP}/corepack-shims/npm" --version)"
+          test "${npm_version}" = '11.17.0'
+          echo "${RUNNER_TEMP}/corepack-shims" >> "${GITHUB_PATH}"
 
       - name: Install dependencies
         run: npm ci
