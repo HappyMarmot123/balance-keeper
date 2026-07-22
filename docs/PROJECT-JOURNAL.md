@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-22 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T09-R1 실질적 Frontend Clean Code 리뷰 계약 — IN_PROGRESS |
-| 다음 단계 | `.env.example` 제외 checkpoint commit·기존 PR synchronize → quality와 bootstrap feedback 확인 |
+| 현재 단계 | T09-R1 stage 2 rich review smoke — ACCEPTED |
+| 다음 단계 | PR #2 `development` 병합 → 검증된 `development`를 `main`에 반영하고 main 작업 재개 |
 
 ---
 
@@ -1843,7 +1843,7 @@ flowchart LR
 
 ### T09-R1 — development 원격 시험 PR
 
-- 상태: IN_PROGRESS — local prompt·schema·renderer와 회귀 계약은 TDD·전체 검증을 통과했다. 사용자가 “PR 다시 한번”을 요청해 `.env.example`을 제외한 checkpoint commit·push와 기존 PR #1 synchronize를 승인했다. `development` merge와 후속 smoke PR은 이번 승인에 포함하지 않는다.
+- 상태: ACCEPTED — local contract, stage 1 bootstrap, PR #1 merge와 갱신된 base의 stage 2 rich review live 검증이 모두 완료됐고, 사용자가 “작업 내용들 다 병합하고 main에서 다시 작업 재개”를 지시해 결과·final journal commit·PR #2 merge와 main 반영을 승인했다.
 - 선행 조건: T09 ACCEPTED. 원격 `development`와 open PR은 없고 GitHub Actions는 활성화돼 있다.
 - 목적: 검증된 T09 workflow를 원격 `development`에 게시하고 문서 전용 feature PR로 실제 GitHub Actions trigger와 job 결과를 확인한다.
 - 포함 범위:
@@ -1924,7 +1924,26 @@ flowchart LR
   - 안전한 순서는 (1) 현재 contract 변경을 quality gate와 사람 검토 후 `development`에 반영하고, (2) 갱신된 `development`에서 새 smoke feature PR을 생성해 rich PASS/CHANGES/BLOCKED 댓글을 live 검증하는 것이다.
   - 사용자 재시험 승인 전까지 사용자 소유 `.env.example`을 제외한 commit·push·merge·새 PR 생성은 수행하지 않았다.
   - 사용자의 원격 재시험 요청으로 stage 1 checkpoint commit·기존 PR push 차단은 해제됐다. 이 PR의 Codex 결과는 base의 legacy policy 때문에 bootstrap `BLOCKED`가 예상되며, rich 출력의 live 검증은 merge 승인 후 stage 2에서만 가능하다.
-- 현재 판정: `IN_PROGRESS` — stage 1 PR synchronize와 원격 quality/bootstrap feedback을 확인한다.
+- stage 1·merge 증거:
+  - checkpoint `f1b0cca ci: enrich codex pull request feedback`을 기존 [PR #1](https://github.com/HappyMarmot123/balance-keeper/pull/1)에 push했다. [run 29888611754](https://github.com/HappyMarmot123/balance-keeper/actions/runs/29888611754)의 quality-gate·codex-review·post-feedback은 모두 SUCCESS다.
+  - marker 댓글은 reviewed head=`f1b0cca`, policy SHA=`7790380`, 변경 파일 7개를 표시하고 legacy JSON을 예상 bootstrap `BLOCKED`로 안전하게 축소했다. job 실패나 Secret 노출은 없었다.
+  - 사용자 승인 후 PR #1을 squash merge해 원격 `development@cc4b4ea`가 rich prompt·schema·renderer와 52개 contract tests를 포함한다. `main`, 배포 설정, Secret 값과 branch protection은 변경하지 않았다.
+- stage 2 포함 범위:
+  - `origin/development@cc4b4ea`에서 독립 worktree와 `feature/t09-rich-review-smoke` branch 생성
+  - 이 개발일지 상태 갱신만 commit·push하고 `development` 대상 non-draft PR 생성
+  - branch validation, PR quality-gate·codex-review·post-feedback과 marker 댓글의 exact SHA·13개 근거·검증 제한 확인
+  - PR merge·close, branch/worktree 삭제, 제품 코드·설정 변경은 사용자 후속 승인 전 제외
+- stage 2 원격 증거:
+  - `feature/t09-rich-review-smoke`의 문서 전용 commit은 `d8921f5 test: verify rich Codex review output`이며 [PR #2](https://github.com/HappyMarmot123/balance-keeper/pull/2)는 base=`development@cc4b4ea`, head=`d8921f5`, OPEN·MERGEABLE이다.
+  - merge 직후 [branch validation run 29891199196](https://github.com/HappyMarmot123/balance-keeper/actions/runs/29891199196)은 전체 `npm run validate`를 포함해 SUCCESS다.
+  - [PR run 29891259683](https://github.com/HappyMarmot123/balance-keeper/actions/runs/29891259683)의 quality-gate·codex-review·post-feedback이 모두 SUCCESS다.
+  - [rich marker 댓글](https://github.com/HappyMarmot123/balance-keeper/pull/2#issuecomment-5041887165)은 상태 PASS, 범위=`cc4b4ea...d8921f5`, policy SHA=`cc4b4ea`, 변경 파일 1개를 정확히 표시한다. 변경 요약·종합 판단·회귀 위험, 13개 영역별 30자 이상 근거, finding 없음과 고정·모델 검증 제한이 모두 렌더링됐다.
+- 회귀 판정:
+  - 정상 흐름: 새 base 정책으로 rich PASS 생성, exact SHA와 13개 checklist 확인 — PASS.
+  - 실패 흐름: stage 1 legacy schema를 고정 BLOCKED로 축소하고 stage 2에서 정상 복구 — PASS.
+  - 경계값: 문서 한 파일·NOT_APPLICABLE/PASS 혼합·비차단 verification limits·finding 0건 — PASS.
+  - 기존 영향: branch validation과 PR quality 전체 성공, 제품 코드·설정·Secret 값·main 무변경 — PASS.
+- 현재 판정: `ACCEPTED` — 완료 조건을 모두 충족했고 알려진 회귀나 미검증 핵심 경로가 없다. final journal commit과 PR #2 merge, 검증된 `development`의 `main` 반영을 진행한다.
 
 ---
 
@@ -2110,3 +2129,6 @@ flowchart LR
 | 2026-07-22 | `CODEX_REVIEW_ENABLED=true` 활성화 후 checkpoint `4ef3a9a`를 PR #1에 push; run 29886728621의 quality·Codex·feedback 전부 SUCCESS, reviewed SHA가 일치하는 marker 댓글 PASS 생성. 사용자 최종 ACCEPTED 대기 | T09-R1 |
 | 2026-07-22 | 사용자가 한 문장 PASS 리뷰를 품질 미달로 판정하고 Frontend Clean Code 기준서를 제공; 직전 PASS를 supersede하고 summary·risk·13개 review area evidence·finding category를 강제하는 prompt/schema/renderer TDD 개선 착수 | T09-R1 |
 | 2026-07-22 | 사용자가 “PR 다시 한번”을 요청해 rich review contract의 checkpoint commit·기존 PR #1 push를 승인; `.env.example`, `development` merge와 후속 smoke PR은 제외하고 stage 1 원격 재시험 착수 | T09-R1 |
+| 2026-07-22 | checkpoint `f1b0cca`의 run 29888611754는 세 job 모두 SUCCESS, base legacy policy는 예상 bootstrap BLOCKED로 안전하게 축소됨; 사용자가 “승인”해 PR #1 squash merge와 갱신된 `development@cc4b4ea` 기반 stage 2 smoke PR 착수 | T09-R1 |
+| 2026-07-22 | PR #2 head `d8921f5`에서 run 29891259683의 quality·Codex·feedback 모두 SUCCESS; rich PASS 댓글이 exact SHA, 변경 요약·위험·13개 영역 근거·검증 제한을 렌더링해 stage 2 완료 조건 충족, 사용자 ACCEPTED 대기 | T09-R1 |
+| 2026-07-22 | 사용자가 “작업 내용들 다 병합하고 main에서 다시 작업 재개”를 지시해 T09-R1 결과를 ACCEPTED; final journal commit, PR #2 `development` merge와 검증된 development의 main 반영·main 전환 승인 | T09-R1→main |
