@@ -3,11 +3,12 @@ import type { ComponentChildren } from 'preact';
 import { ThemeSwitch } from '../../../features/theme-switch';
 
 type DashboardShellProps = {
+  airQualitySlot: ComponentChildren;
   mapSlot: ComponentChildren;
   weatherSlot: ComponentChildren;
 };
 
-export function DashboardShell({ mapSlot, weatherSlot }: DashboardShellProps) {
+export function DashboardShell({ airQualitySlot, mapSlot, weatherSlot }: DashboardShellProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-foreground">
       <header className="border-b border-boundary bg-surface">
@@ -35,7 +36,10 @@ export function DashboardShell({ mapSlot, weatherSlot }: DashboardShellProps) {
 
           {mapSlot}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{weatherSlot}</div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {weatherSlot}
+            {airQualitySlot}
+          </div>
         </div>
       </main>
 
