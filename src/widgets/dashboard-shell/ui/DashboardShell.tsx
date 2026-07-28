@@ -6,10 +6,17 @@ type DashboardShellProps = {
   airQualitySlot: ComponentChildren;
   earthquakeSlot: ComponentChildren;
   mapSlot: ComponentChildren;
+  macroSlot: ComponentChildren;
   weatherSlot: ComponentChildren;
 };
 
-export function DashboardShell({ airQualitySlot, earthquakeSlot, mapSlot, weatherSlot }: DashboardShellProps) {
+export function DashboardShell({
+  airQualitySlot,
+  earthquakeSlot,
+  mapSlot,
+  macroSlot,
+  weatherSlot,
+}: DashboardShellProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-foreground">
       <header className="border-b border-boundary bg-surface">
@@ -37,10 +44,11 @@ export function DashboardShell({ airQualitySlot, earthquakeSlot, mapSlot, weathe
 
           {mapSlot}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {weatherSlot}
             {airQualitySlot}
             {earthquakeSlot}
+            {macroSlot}
           </div>
         </div>
       </main>

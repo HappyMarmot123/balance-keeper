@@ -100,11 +100,13 @@ describe('server build contract', () => {
     const contractEntries = [
       resolve(workspaceRoot, 'src/entities/air-quality/contract.ts'),
       resolve(workspaceRoot, 'src/entities/earthquake/contract.ts'),
+      resolve(workspaceRoot, 'src/entities/macro/contract.ts'),
       resolve(workspaceRoot, 'src/entities/weather/contract.ts'),
     ];
     const browserBarrels = [
       resolve(workspaceRoot, 'src/entities/air-quality/index.ts'),
       resolve(workspaceRoot, 'src/entities/earthquake/index.ts'),
+      resolve(workspaceRoot, 'src/entities/macro/index.ts'),
       resolve(workspaceRoot, 'src/entities/weather/index.ts'),
     ];
     const browserQueryDependencies = [...graph.entries()]
