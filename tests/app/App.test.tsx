@@ -2,14 +2,48 @@ import { render, screen } from '@testing-library/preact';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../src/app/App';
+import { queryClient } from '../../src/shared/api';
+
+const weatherEnvelope = {
+  data: {
+    observedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+    precipitationLastHourMm: 0,
+    precipitationType: 'none',
+    region: 'seoul',
+    relativeHumidityPercent: 72,
+    temperatureCelsius: 27.4,
+    windDirectionDegrees: 250,
+    windSpeedMetersPerSecond: 2.3,
+  },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: Date.parse('2026-07-22T14:09:00+09:00'),
+    requestId: 'app-weather-request',
+    source: 'KMA',
+  },
+} as const;
 
 beforeEach(() => {
+  queryClient.clear();
   vi.stubEnv('VITE_NAVER_MAPS_KEY_ID', '');
   vi.stubEnv('VITE_NAVER_MAP_STYLE_ID', '');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify(weatherEnvelope), {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        }),
+      ),
+    ),
+  );
 });
 
 afterEach(() => {
+  queryClient.clear();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe('application bootstrap', () => {
@@ -30,28 +64,27 @@ describe('application bootstrap', () => {
     expect(screen.getByRole('region', { name: '대한민국 상황 지도' })).toBeTruthy();
   });
 
-  it('composes the Atlas foundation controls and all panel lifecycle states', () => {
+  it('composes the theme control and live weather panel without foundation specimens', () => {
     render(<App />);
 
     expect(screen.getByRole('group', { name: '화면 테마' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: '서울 기상 실황' })).toBeTruthy();
 
-    const panelTitles = [
-      '시맨틱 토큰',
-      '신선도 보존',
-      '신호 수집',
-      '업스트림 오류',
-      '관측 결과',
-      '제한 레이어',
-      '지도 연결',
-    ];
+    expect(screen.queryByText('STATE MATRIX')).toBeNull();
+    expect(screen.queryByRole('region', { name: '시맨틱 토큰' })).toBeNull();
+    expect(screen.queryByRole('region', { name: '신선도 보존' })).toBeNull();
+    expect(screen.queryByRole('region', { name: '업스트림 오류' })).toBeNull();
+  });
 
-    for (const title of panelTitles) {
-      expect(screen.getByRole('region', { name: title })).toBeTruthy();
-    }
+  it('renders the normalized KMA observation through the application query provider', async () => {
+    render(<App />);
 
-    expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByText('FOUNDATION_UPSTREAM')).toBeTruthy();
-    expect(screen.getByText('연결 설정이 필요합니다. 관리자에게 문의하세요.')).toBeTruthy();
+    expect(await screen.findByText('27.4 °C')).toBeTruthy();
+    expect(screen.getByText('14:00 기준')).toBeTruthy();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/weather?region=seoul',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it('lets the map canvas own the entire foundation row', () => {

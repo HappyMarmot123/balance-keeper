@@ -1,8 +1,50 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, extname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
+
+const localModuleSpecifiers = (source: string): string[] => {
+  const specifiers: string[] = [];
+  const pattern = /(?:import|export)\s+(?:type\s+)?(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]/g;
+  for (const match of source.matchAll(pattern)) {
+    const specifier = match[1];
+    if (specifier?.startsWith('.')) {
+      specifiers.push(specifier);
+    }
+  }
+  return specifiers;
+};
+
+const resolveLocalModule = (importer: string, specifier: string): string | undefined => {
+  const base = resolve(dirname(importer), specifier);
+  const candidates =
+    extname(base).length > 0
+      ? [base]
+      : [`${base}.ts`, `${base}.tsx`, resolve(base, 'index.ts'), resolve(base, 'index.tsx')];
+  return candidates.find(existsSync);
+};
+
+const collectLocalModuleGraph = (entry: string): Map<string, string> => {
+  const graph = new Map<string, string>();
+  const pending = [entry];
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (file === undefined || graph.has(file)) {
+      continue;
+    }
+
+    const source = readFileSync(file, 'utf8');
+    graph.set(file, source);
+    for (const specifier of localModuleSpecifiers(source)) {
+      const dependency = resolveLocalModule(file, specifier);
+      if (dependency !== undefined) {
+        pending.push(dependency);
+      }
+    }
+  }
+  return graph;
+};
 
 describe('server build contract', () => {
   it('defines an explicit bundled Node entry and lifecycle scripts', () => {
@@ -51,5 +93,18 @@ describe('server build contract', () => {
     expect(contexts.some((context) => context.test('/healthz?source=probe'))).toBe(true);
     expect(contexts.some((context) => context.test('/apiary'))).toBe(false);
     expect(contexts.some((context) => context.test('/healthzfoo'))).toBe(false);
+  });
+
+  it('keeps the browser query runtime outside the bundled server dependency graph', () => {
+    const graph = collectLocalModuleGraph(resolve(workspaceRoot, 'src/server/runtime/nodeMain.ts'));
+    const contractEntry = resolve(workspaceRoot, 'src/entities/weather/contract.ts');
+    const browserBarrel = resolve(workspaceRoot, 'src/entities/weather/index.ts');
+    const browserQueryDependencies = [...graph.entries()]
+      .filter(([, source]) => source.includes('@tanstack') || source.includes('QueryClient'))
+      .map(([file]) => file.replaceAll('\\', '/').replace(`${workspaceRoot.replaceAll('\\', '/')}/`, ''));
+
+    expect(graph.has(contractEntry)).toBe(true);
+    expect(graph.has(browserBarrel)).toBe(false);
+    expect(browserQueryDependencies).toEqual([]);
   });
 });
