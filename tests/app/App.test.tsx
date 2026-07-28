@@ -129,6 +129,52 @@ const earthquakeEnvelope = {
   },
 } as const;
 
+const macroEnvelope = {
+  data: {
+    series: [
+      {
+        cycle: 'D',
+        displayUnit: '원',
+        id: 'usd-krw',
+        itemCode: '0000001',
+        label: '원/미국달러',
+        observation: { period: '20260728', sourceValue: 1382.4, value: 1382.4 },
+        sourceUnit: '원',
+        statCode: '731Y001',
+        status: 'available',
+      },
+      {
+        cycle: 'D',
+        displayUnit: '%',
+        id: 'base-rate',
+        itemCode: '0101000',
+        label: '한국은행 기준금리',
+        observation: { period: '20260728', sourceValue: 2.5, value: 2.5 },
+        sourceUnit: '연%',
+        statCode: '722Y001',
+        status: 'available',
+      },
+      {
+        cycle: 'M',
+        displayUnit: '억 달러',
+        id: 'fx-reserves',
+        itemCode: '99',
+        label: '외환보유액',
+        observation: { period: '202606', sourceValue: 418_300_000, value: 4183 },
+        sourceUnit: '천달러',
+        statCode: '732Y001',
+        status: 'available',
+      },
+    ],
+  },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: earthquakeSnapshotTo,
+    requestId: 'app-macro-request',
+    source: 'ECOS',
+  },
+} as const;
+
 beforeEach(() => {
   queryClient.clear();
   vi.stubEnv('VITE_NAVER_MAPS_KEY_ID', '');
@@ -141,7 +187,9 @@ beforeEach(() => {
         ? airQualityEnvelope
         : requestUrl === '/api/earthquake'
           ? earthquakeEnvelope
-          : weatherEnvelope;
+          : requestUrl === '/api/macro'
+            ? macroEnvelope
+            : weatherEnvelope;
 
       return Promise.resolve(
         new Response(JSON.stringify(envelope), {
@@ -184,6 +232,7 @@ describe('application bootstrap', () => {
     expect(screen.getByRole('region', { name: '서울 기상 실황' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '서울 대기질' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '동아시아 지진' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: '한국 거시경제' })).toBeTruthy();
 
     expect(screen.queryByText('STATE MATRIX')).toBeNull();
     expect(screen.queryByRole('region', { name: '시맨틱 토큰' })).toBeNull();
@@ -220,6 +269,17 @@ describe('application bootstrap', () => {
     expect(screen.getByText('충북 가상군 남남서쪽 9km 지역')).toBeTruthy();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/earthquake',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('renders the fixed ECOS macro snapshot through the application query provider', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('1,382.4 원')).toBeTruthy();
+    expect(screen.getByText('4,183 억 달러')).toBeTruthy();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/macro',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });

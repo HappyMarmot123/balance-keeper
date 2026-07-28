@@ -6,11 +6,11 @@
 | --- | --- |
 | 문서 역할 | 제품 기획·기술 결정·Task·검증·개발일지의 단일 정본 |
 | 실행 모드 | 승인모드 |
-| 기준일 | 2026-07-22 (Asia/Seoul) |
+| 기준일 | 2026-07-28 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T10 KMA 초단기실황 — PASS · 사용자 최종 승인 대기 |
-| 다음 단계 | 승인 시 T10 commit 후 main 반영, 다음 Task 기획 |
+| 현재 단계 | T13 ECOS 거시 — development 병합 승인, live release gate BLOCKED |
+| 다음 단계 | T13 commit·PR quality gate·development 병합 후 `ECOS_API_KEY` live smoke |
 
 ---
 
@@ -260,6 +260,10 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-040 | Codex 출력은 JSON Schema로 `PASS | CHANGES_REQUESTED | BLOCKED`, verification limit과 `severity`, `path`, `line`, `title`, `reason`, `impact`, `recommendation` finding 필드를 강제한다. 별도 no-checkout feedback job만 `pull-requests: write`를 가지고 고정 marker와 bot 작성자를 함께 확인해 댓글 하나를 갱신한다. | ACCEPTED | 모델 출력을 신뢰하지 않고 parse·길이 제한·상태 불변식·중복 거부·안전한 fallback을 적용하며, 리뷰 job에 쓰기 권한을 주지 않고 중복 댓글과 marker 탈취를 방지한다. 사용자가 T09 진행을 승인했다. |
 | D-041 | T09를 repository artifact·offline 검증과 remote activation으로 나눈다. 전자는 승인 후 로컬 구현하고, 후자의 push·`development` 생성·secret/variable·ruleset·시험 PR은 별도 외부 변경 승인 후 수행한다. | ACCEPTED | 현재 원격은 main보다 9 commits 뒤이고 development, `OPENAI_API_KEY`, protection/ruleset이 모두 없다. 로컬 workflow 작성이 원격 병합 정책 활성화를 의미하지 않게 한다. 사용자가 T09 진행을 승인했다. |
 | D-042 | KMA 초단기실황은 공공데이터포털 HTTPS `getUltraSrtNcst`, canonical `DATA_GO_KR_SERVICE_KEY`, KST 기준 20분 안전 지연 뒤 정시 slot을 사용한다. Entity의 7개 지역 격자를 단일 출처로 두고 production assembly만 `/api/weather`를 등록하며 fresh 10분·CDN 5분·stale 60분·empty 60초·client refetch 10분으로 운용한다. | ACCEPTED | 사용자가 T10 범위를 승인했고 값 미출력 실키 probe에서 최근 10분 후보 요청도 실제 정시 자료를 반환했다. 요청 slot과 응답 slot 불일치, 지역 불일치, raw provider 오류와 browser/server 번들 혼합을 실패로 고정한다. |
+| D-043 | AirKorea 대기질은 HTTPS 시도별 실시간 측정정보와 측정소정보를 server에서 결합한다. 측정은 `KOREA_AIR_QUALITY_BASE_URL/KEY`, 측정소정보는 `KOREA_AIR_STATION_BASE_URL/KEY`의 분리된 server-only 계약을 사용하고 각 base를 공식 service family로 allowlist한다. `*_EXPIRES_AT`은 T11 runtime·contract gate에서 사용하지 않는다. domain-owned 7개 지역 ID와 한국어 alias를 하나의 cache identity로 정규화하고 `dmX=위도`, `dmY=경도`를 고정한다. PM10·PM2.5 농도 등급은 공식 경계로 파생하되 `khaiGrade`와 혼용하지 않으며 지도 overlay는 T30까지 제외한다. | ACCEPTED | 사용자가 T11 상세안과 service별 환경계약 분리를 승인한 뒤 “expires_at은 일단 무시”라고 명시해 만료일 metadata를 현재 범위에서 제외했다. 공식 API는 서비스별 활용승인과 개발 500건 quota가 필요하다. |
+| D-044 | T11 수동 화면 완료 조건은 반응형·테마 기능과 기존 지도·서울 기상 실황 Panel 존재 확인으로 고정한다. theme keyboard 전환의 별도 수동 검증은 현재 필요하지 않으며 T11 release gate에서 제외한다. 기존 native control과 자동 접근성 테스트는 제거하지 않는다. | ACCEPTED | 사용자가 반응형·테마 기능을 직접 PASS로 보고한 뒤 keyboard 전환은 지금 필요하지 않고 지도·서울 기상 실황 Panel이 존재한다고 명시했다. |
+| D-045 | 승인모드에 Fast Track을 추가한다. 동일 목적·최대 3개 product/test/config 파일이며 dependency·public API/schema·architecture·migration·secret 값·제품 정책을 바꾸지 않는 수정은 시작 승인 한 번으로 RED→GREEN, focused test, 최종 validate, commit과 기존 승인 PR branch push까지 연속 수행한다. merge·deploy는 별도 승인한다. | ACCEPTED | 사용자가 간단한 작업에 대형 workflow가 반복되는 문제를 지적했고, 제안한 Fast Track 규칙에 “진행”으로 승인했다. 범위 확대·검증 실패·secret 또는 사용자 변경 충돌이 생기면 즉시 full workflow로 복귀한다. |
+| D-046 | T12의 공개 범위는 KMA가 공식 제공하는 최근 3일 통보와 USGS `2.5_week.geojson` 최근 7일 자료를 KMA 공식 동아시아 범위 `21~45°N, 110~145°E`에서 결합하는 고정 `/api/earthquake`로 둔다. snapshot은 source별 조회 시작시각을 노출해 3일 KMA 자료를 7일 자료로 오인하지 않게 한다. provider-native ID·revision·magnitude와 양쪽 출처를 보존하고, KMA 수정 통보를 먼저 정리한 뒤 발생시각 90초 이내·거리 50km 이내·규모 차이 0.7 이하를 모두 만족하는 사건만 보수적으로 dedup한다. 한 source만 실패하면 유효 source를 명시적 partial 상태로 제공하고 둘 다 실패할 때만 last-good/error 경계로 전환한다. 지도 overlay는 T30까지 제외한다. KMA provider는 data.go.kr HTTPS `getEqkMsg`와 실제 정상 동작이 확인된 소문자 `serviceKey`를 사용한다. 지진 전용 server credential identifier는 사용자가 설정한 `KOREA_EARTHQUAKE_KEY`이며 기존 기상 adapter의 `DATA_GO_KR_SERVICE_KEY` 계약은 바꾸지 않는다. | ACCEPTED | 사용자가 T12 진행과 keyed contract 확인을 승인했고, 2026-07-28 값 미출력 gate에서 `serviceKey` 요청이 HTTP 200·`resultCode=00`·1 item을 반환했다. 공식 활용가이드는 서비스 갱신을 수시, 자료 범위를 현재일 기준 최근 3일로 명시한다. 2.5 feed는 레거시의 M2.5 동아시아 신호 밀도와 60초 polling payload 예산을 보존하고, KMA 국내 M2.0 이상 통보가 더 낮은 국내 신호를 보완한다. 경계값은 RED 테스트로 고정한다. |
 
 ---
 
@@ -577,7 +581,8 @@ Vercel Node runtime은 Node API와 표준 Web `Request`/`Response`를 지원하�
 | --- | --- | --- |
 | `VITE_NAVER_MAPS_KEY_ID` | browser-visible ID | 등록 host 제한, Dynamic Map 선택, quota monitoring 필수 |
 | `VITE_NAVER_MAP_STYLE_ID` | browser-visible metadata ID | 발행된 GL style만 사용, 누락 시 명시적 fallback |
-| `DATA_GO_KR_SERVICE_KEY` | server-only secret | KMA·AirKorea route adapter에서만 읽고 query log에서 redact |
+| `DATA_GO_KR_SERVICE_KEY` | server-only secret | KMA 기상·AirKorea route adapter에서만 읽고 query log에서 redact |
+| `KOREA_EARTHQUAKE_KEY` | server-only secret | T12 `EqkInfoService/getEqkMsg` adapter에서만 읽고 query log에서 redact |
 | `SAFETY_DATA_SERVICE_KEY` | server-only secret | 이용신청·license 확인 후 disaster adapter에서만 사용 |
 | `ECOS_API_KEY` | server-only secret | T13 통계코드 gated probe 이후 사용 |
 | `KRX_API_KEY`, `FRED_API_KEY` | server-only secret | 승인된 지연 시장 source에만 사용; Yahoo 대체키가 아님 |
@@ -680,8 +685,8 @@ primitive OKLCH
 | A02 | 기상 단기·시간별 예보 | MISSING | NOT_STARTED | `getVilageFcst`, 하루 8회 KST 발표 확인; 자정·누락 slot keyed probe | T22 |
 | A03 | 기상특보 | MISSING | NOT_STARTED | `WthrWrnInfoService` 확인; 목록+현황으로 발효·해제·지역 계약 검증 | T23 |
 | A04 | `/api/air` PM10/PM2.5 | PARTIAL | NOT_STARTED | 개발 500/일·심사 후 운영 10,000/일 안내, 2026 행정구역·결측·측정시각과 측정소 `dmX=위도/dmY=경도` 보강 | T11 |
-| A05 | `/api/earthquake` KMA+USGS | PARTIAL | NOT_STARTED | USGS `GO`, KMA `getEqkMsg` conditional; 수정 통보·dedup 신규 구현 | T12 |
-| A06 | `/api/macro` | PARTIAL | NOT_STARTED | ECOS table→item→search discovery 뒤 레거시 3개 후보 코드·단위·정렬·시계열 실키 검증 | T13 |
+| A05 | `/api/earthquake` KMA+USGS | PARTIAL | ACCEPTED | KMA 3일+USGS 7일, 수정 통보·보수적 dedup·partial/stale·500건 상한과 keyed live smoke PASS | T12 |
+| A06 | `/api/macro` | PARTIAL | IN_PROGRESS | 공식 코드·항목은 `731Y001/0000001/D/원`, `722Y001/0101000/D/연%`, `732Y001/99/M/천달러`로 확정; offline 구현·전체 회귀 PASS, 발급키 live smoke 대기 | T13 |
 | A07 | `/api/markets` | MVP | NOT_STARTED | Yahoo는 `NO_GO`; KRX+권리 승인된 지연 미국/환율 source로 재기획 | T14 |
 | A08 | `/api/news` | PARTIAL | NOT_STARTED | 직접 publisher RSS만 conditional, Google/우회 feed 제거, 부분 실패·권리 확인 | T15 |
 | A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
@@ -1950,7 +1955,7 @@ flowchart LR
 
 ### T10 — KMA 초단기실황
 
-- 상태: `PASS` — 구현·전체 회귀·credential-gated live smoke와 독립 리뷰가 통과했다. 승인모드에 따라 commit 없이 사용자 최종 승인을 기다린다.
+- 상태: `ACCEPTED` — 구현·전체 회귀·credential-gated live smoke와 독립 리뷰가 통과했고, 사용자가 커밋과 다음 단계 진행을 승인했다. `6329e02 feat: add kma weather nowcast`로 commit해 `main`에 fast-forward 반영했다.
 - 선행 조건:
   - T04 공통 Panel과 T06 gateway/cache는 `ACCEPTED`다.
   - T08 production adapter와 T09 검증 workflow도 `ACCEPTED`이며 `main`, `development`, 원격 두 branch는 기준 commit `feb085f`에서 동기화됐다.
@@ -2051,7 +2056,318 @@ flowchart LR
 - production output은 client JS `148.26 kB / gzip 45.58 kB`, CSS `14.97 kB / gzip 4.05 kB`, server `367.01 kB / gzip 72.06 kB`다. server graph의 `QueryClient`, `@tanstack`과 browser query 참조는 0건이다.
 - credential-gated live test는 main ignored `.env`의 기존 key를 temporary canonical process variable로만 전달해 실제 production gateway→서울 KMA 요청→strict envelope를 통과했다. 첫 실행은 제품 8초 timeout보다 짧은 Vitest 기본 5초에 종료돼 live test 한정 timeout을 15초로 조정했고, 재실행은 provider 요청 1건·`200 MISS`·source `KMA`·서울 정규화로 PASS했다. 두 시도에서 key·raw URL·원문 body는 출력하지 않았으며 quota는 최대 2건을 추가 소비했다.
 - fixture browser QA에서 실제 날씨 Panel의 light/dark, 390px 폭, 6개 측정값·자료시각, 수평 overflow 없음과 native radio focus-visible을 확인했다. 현 local host는 NAVER 등록 주소와 일치하지 않아 지도는 기존의 안전한 인증 오류를 표시했고 console error는 없었다. 지도 live 성공은 주장하지 않으며 T10이 변경한 map lifecycle은 자동 회귀로 통과했다. 임시 server·log·browser compatibility junction은 모두 제거했다.
-- 현재 판정: 요구 범위, 근거, 기존 결정, 문서 이해성, 정상·실패·경계와 회귀 검증을 모두 충족해 `PASS`; 알려진 T10 회귀나 실패한 필수 검증은 없고 사용자 최종 승인만 남았다.
+- 현재 판정: 요구 범위, 근거, 기존 결정, 문서 이해성, 정상·실패·경계와 회귀 검증을 모두 충족해 `ACCEPTED`; 알려진 T10 회귀나 실패한 필수 검증은 없다.
+
+### T11 — AirKorea 대기질
+
+- 상태: `ACCEPTED` — 분리된 두 service 계약, offline TDD 구현, 전체 품질 게이트와 값 미출력 production gateway live smoke가 통과했다. 사용자가 로컬 화면의 반응형·테마 기능과 기존 지도·서울 기상 실황 Panel 존재를 확인했고, D-044에 따라 keyboard 전환의 별도 수동 검증은 현재 release gate에서 제외했다. 사용자가 최종 결과를 “네”로 승인해 feature commit `7e3bcb9`를 생성했다.
+- 선행 조건:
+  - T04 공통 Panel, T06 gateway/cache와 T10의 production route·server-safe Entity contract 패턴은 `ACCEPTED`다.
+  - `main@6329e02`에 T10이 반영됐고 main worktree의 `.env.example`, `.github/codex/prompts/clean-code-review.md`는 계속 사용자 소유 미커밋 변경으로 보존한다.
+- 목적: AirKorea 시도별 실시간 PM10·PM2.5 관측과 측정소 WGS84 좌표를 server-only credential 경계에서 검증·결합하고, 서울의 고농도 측정소와 자료 신선도가 명확한 대기질 Panel을 제공한다.
+- 공식·코드베이스 근거:
+  - 현재 production registry에는 `/api/weather`만 있고 `/api/air`, AirKorea provider, air-quality Entity/Widget은 없다. T10의 pure `contract.ts`, production-only route registration과 5상태 Panel 패턴을 재사용할 수 있다.
+  - 공식 대기오염정보 `getCtprvnRltmMesureDnsty`와 측정소정보 `getMsrstnList`는 각각 개발계정 500건, 운영계정 별도 심의를 안내한다. 두 서비스는 별도의 활용승인·endpoint·server-only base/key 계약을 사용한다. [대기오염정보](https://www.data.go.kr/data/15073861/openapi.do), [측정소정보](https://www.data.go.kr/data/15073877/openapi.do)
+  - 측정소정보의 WGS84 샘플은 `dmX=37.572025`가 위도, `dmY=127.005028`이 경도다. 이름만 보고 축을 뒤집지 않는다.
+  - 2026-06-30부터 `getCtprvnRltmMesureDnsty`는 `전남`, `광주`, `전남광주`를 허용하지만 `전국` 응답은 `전남광주` 기준이다. T11은 quota와 cache cardinality를 제한하기 위해 전국 조회를 쓰지 않고 승인된 7개 지역만 직접 조회한다. [행정구역 변경 공지](https://www.data.go.kr/bbs/ntc/selectNotice.do?originId=NOTICE_0000000004805)
+  - AirKorea의 PM 농도 등급은 PM10 `0~30 / 31~80 / 81~150 / 151+`, PM2.5 `0~15 / 16~35 / 36~75 / 76+`다. [AirKorea 미세먼지 등급](https://m.airkorea.or.kr/info/behaviorInfo1)
+  - 레거시 `api/air.ts`, `src/server/sources/air.ts`, `entities/air`는 endpoint·fixture와 `- → null` 정도만 참고한다. HTTP/raw secret URL, `seoul` pass-through, `khaiGrade`를 PM 등급으로 사용, 첫 4개 upstream 순서 표시, 좌표·자료시각·header 검증 누락과 합성 지도 PM은 이식하지 않는다.
+
+#### T11 결정
+
+1. **요청·지역**
+   - public contract는 `GET /api/air?region=<id-or-ko>`다. 누락 시 `seoul`; `seoul | busan | incheon | daegu | gwangju | daejeon | jeju`와 `서울 | 부산 | 인천 | 대구 | 광주 | 대전 | 제주`를 허용하고 응답·cache identity는 semantic ID 하나로 정규화한다.
+   - 중복 `region`, 빈 값, unknown, 대소문자·공백 정규화 뒤 충돌, 추가 query와 prototype key는 upstream 전에 `BAD_REQUEST`로 거부한다. Air region mapping은 날씨 격자 Entity를 import하지 않고 air-quality domain이 독립 소유한다.
+   - 첫 Panel은 명시적으로 서울을 사용한다. selector, 전국 조회, 전남광주 통합 UI와 지도 클릭 지역 선택은 T11에서 제외한다.
+2. **두 provider 계약·결합**
+   - production measurement는 `KOREA_AIR_QUALITY_BASE_URL/KEY`, station directory는 `KOREA_AIR_STATION_BASE_URL/KEY`를 사용한다. 두 base는 query·credential·operation이 없는 HTTPS `apis.data.go.kr/B552584`의 해당 service family만 허용하고 각각 `getCtprvnRltmMesureDnsty`, `getMsrstnList`를 코드에서 결합한다. `*_EXPIRES_AT`은 T11에서 읽거나 검증하지 않는다.
+   - key, raw URL/body/resultMsg는 응답·cache key·ETag·log·fixture에 넣지 않는다. 한 서비스의 base/key를 다른 서비스 fallback으로 사용하지 않고 legacy `DATA_GO_KR_SERVICE_KEY`, `KOREA_EARTHQUAKE_KEY` alias도 지원하지 않는다.
+   - 실시간 항목의 `stationName`, `mangName`, `sidoName`, `dataTime`, `pm10Value`, `pm25Value`와 두 응답의 header/body/pagination을 strict schema로 검증한다. 측정소 항목은 `stationName`, `addr`, `mangName`, `dmX`, `dmY`를 검증한다.
+   - 측정소명과 측정망을 정규화한 안정 key로 결합하며 duplicate·ambiguous join을 임의 선택하지 않는다. `dmX`를 latitude, `dmY`를 longitude로 변환해 한국 bounds와 finite number를 검증한다. 일부 station metadata가 실제로 누락되는지는 승인 후 probe로 확인해 nullable 또는 provider failure 정책을 고정한다.
+   - 한 지역은 `numOfRows=100` 한 페이지로 제한하고 `totalCount`가 이를 넘으면 조용히 잘라내지 않고 실패시킨다. 두 fetch에 같은 `AbortSignal`을 전달하며 measurement failure, station-directory failure와 malformed body는 gateway last-good stale 또는 안전한 `UPSTREAM_UNAVAILABLE`로 끝낸다.
+3. **도메인·등급·시각**
+   - public station은 canonical `regionId`, provider `sidoName`, station name/network/address, latitude/longitude, KST `observedAt`, PM10·PM2.5의 `µg/m³` 농도와 `good | moderate | bad | very-bad` 등급을 가진다.
+   - `-`, 빈 문자열과 provider null은 관측 결측 `null`로만 정규화하고 0은 유효값이다. 음수·non-finite와 정해진 상한 밖 값은 조용히 null로 바꾸지 않고 provider failure로 처리한다.
+   - PM 등급은 농도에서 공식 경계로 결정한다. `khaiGrade`는 통합대기환경지수이므로 PM10·PM2.5 등급의 fallback으로 사용하지 않는다. 관측값이 null이면 해당 등급도 null이다.
+   - `dataTime`은 명시적으로 KST epoch로 파싱한다. station마다 시각을 보존하고 응답은 최신 `observedAt`과 유효/전체 station 수를 제공한다. AirKorea 자료는 미확정·결측 가능성이 있음을 source 설명에 유지한다.
+4. **cache·quota·query**
+   - 초기 profile은 fresh 30분, CDN 15분, last-good stale 2시간, 정상 empty 5분, client stale 15분·foreground refetch 30분, background polling off다. probe에서 실제 갱신 지연이 더 길면 cadence를 느리게 조정한다.
+   - provider upstream budget은 canonical region 최대 7개와 개발 500건 한도 아래인 `350/일`, admission은 `60/분/subject`, upstream timeout은 두 요청 전체 `8초` 후보로 둔다. 정확한 lock/breaker 수치는 T06/T10 profile 대조 테스트로 고정한다.
+   - Entity query key는 `['air-quality', regionId]`이고 Shared retry/focus/reconnect 정책과 취소 signal을 사용한다. `seoul`과 `서울`은 동일 route cache identity와 query 결과를 만들어야 한다.
+5. **UI·FSD**
+   - `entities/air-quality`는 pure public contract, region mapping, grade·summary selector와 query option을 소유한다. `server/providers/airkorea`는 두 raw schema·fetch·normalize/join, `server/routes/air`는 query·cache identity·route profile을 소유한다.
+   - `widgets/air-quality`가 공통 Panel로 loading/error+retry/empty/stale/success와 missing credential을 완결한다. 서울의 PM10·PM2.5는 ‘지역 평균’으로 오인되지 않도록 각각 측정소 최고 관측값·측정소명·관측 coverage를 명시하고, 같은 위험도에서는 농도와 station name으로 결정적으로 정렬한다.
+   - `DashboardPage`가 Weather와 AirQuality Widget public API를 `DashboardShell`의 독립 slot으로 조합한다. 측정소 marker, heatmap, clustering, 지도 legend와 합성 PM 데이터는 T30까지 넣지 않는다.
+
+#### 포함·제외 범위
+
+- 포함:
+  - 두 AirKorea fixture, strict raw/output schema, 7-region alias와 공식 PM 등급 경계
+  - HTTPS measurement+station fetch, 좌표축·KST 시각·결측·join 검증
+  - 분리된 `KOREA_AIR_QUALITY_BASE_URL/KEY`·`KOREA_AIR_STATION_BASE_URL/KEY` server config validation과 missing/invalid-base 상태
+  - `/api/air` route/production registry, air-quality Entity query·Widget·Dashboard slot
+  - offline TDD, cache/transport/component/FSD 회귀, 승인 credential-gated 서울 live smoke와 개발일지 증거
+- 제외:
+  - 대기질 예보·오존/NO2/CO/SO2/CAI UI, 경보·건강행동 추천
+  - 전국·전남광주 통합 selector, geolocation과 전역 region Signal
+  - 지도 측정소 marker·heatmap·layer registry, 합성 PM 데이터와 Worker/Canvas
+  - `*_EXPIRES_AT` lifecycle 검증, generic key alias·새 dependency, 사용자 `.env*` 값 편집, commit·push·PR·deploy
+
+#### Contract gate·TDD·회귀
+
+1. 승인 뒤 독립 `feature/t11-air-quality` worktree를 `main@6329e02`에서 만든다. 값은 출력하지 않고 분리된 두 service의 base/key 존재, allowlisted family와 활용승인만 확인한다. `*_EXPIRES_AT`은 gate 대상이 아니다.
+2. 각 service config가 있으면 서울 measurement 1회와 station list 1회, 최대 2-call probe로 HTTPS, success header, API version/필드, `totalCount`, dataTime cadence, 결측 token, join coverage와 `dmX/dmY` 축을 확인한다. 한 service의 key를 다른 service에 임시 매핑하지 않는다.
+3. 두 서비스 중 하나라도 미승인·schema 충돌·100건 초과·좌표축/지역 계약 불명확이면 코드로 추측하지 않고 `BLOCKED`로 보고한다.
+4. `RED`: region alias/cache identity, PM10 `30/31/80/81/150/151`, PM2.5 `15/16/35/36/75/76`, 0·null·invalid와 좌표축·KST parser를 실패시킨다.
+5. `GREEN`: injected two-fetch provider, strict query/route/profile, server-safe Entity contract와 query, Panel 6상태를 최소 구현한다. 정상, normal empty, partial pollutant null, logical/HTTP/network/JSON/schema/timeout/abort, duplicate/ambiguous station과 stale을 검증한다.
+6. `VERIFY`: focused test → `npm run validate` → 값 미출력 production gateway live smoke → 사용자 수동 반응형·light/dark theme와 기존 map/weather 화면 회귀를 확인한다. D-044에 따라 keyboard 전환의 별도 수동 검증은 현재 완료 조건에서 제외한다.
+- 완료 조건: `seoul`과 `서울`이 동일 strict envelope/cache identity를 만들고 좌표가 뒤집히지 않으며, 서울 PM 고농도 station과 자료시각·coverage가 실제 Panel에 표시된다.
+- `BLOCKED`: 활용승인/실키 없음, 두 provider 계약 충돌, 실패한 필수 테스트, secret 노출, 미검증 좌표/등급/시각, 기존 map/weather/gateway 회귀가 하나라도 남으면 `PASS`로 종료하지 않는다.
+- 기획 가드레일 자체는 범위, 공식·코드 근거, 기존 결정과의 정합성, 정상·실패·경계·회귀 방법이 명시되어 `PASS`다. 사용자 승인 뒤 수행한 contract gate의 실행 판정은 아래와 같이 `BLOCKED`다.
+
+#### Contract gate 결과 — PASS
+
+- `feature/t11-air-quality@6329e02` worktree를 만들었고 제품 코드·fixture·테스트는 변경하지 않았다.
+- 최초 probe 당시 분리 계약이 승인되기 전이라 사용자가 알려준 기존 local secret을 값 미출력 runner process에서만 전달했다. 이 임시 매핑은 superseded됐으며 production 계약이나 재시도에 사용하지 않는다.
+- 승인된 최대 2-call 서울 probe를 한 번 실행했다. key, query가 포함된 raw URL, 응답 body, `resultMsg`와 station 식별정보는 출력하지 않았다.
+- 대기오염정보 `getCtprvnRltmMesureDnsty`: HTTPS 200, JSON, `resultCode=00`, `totalCount=40`, item 40개와 필수 측정 필드·`sidoName=서울`을 확인했다. 모든 `dataTime`은 `2026-07-27 16:00`, PM10 결측 3개·PM2.5 결측 4개였다.
+- 측정소정보 `getMsrstnList`: HTTPS 403과 non-JSON 응답이었다. raw 오류 본문을 노출하지 않았고 coordinate item·`dmX/dmY`·pagination·station join을 검증할 수 없었다.
+- 사용자가 기존 `KOREA_AIR_QUALITY_BASE_URL`과 측정소정보 endpoint가 다름을 지적했다. 값 자체는 출력하지 않고 판별한 결과 local 변수는 대기오염 측정 서비스 계열이고, 공식 측정소정보는 별도 `MsrstnInfoInqireSvc` 계열이다. 현재 제품 코드에는 이 local base 변수의 참조가 없다.
+- 측정값과 측정소정보의 base/key/만료일을 별도 이름으로 관리하는 material scope amendment를 사용자가 “네”로 승인했다. 이후 “expires_at은 일단 무시”라는 명시적 지시로 두 `*_EXPIRES_AT`을 T11 runtime·contract gate 범위에서 제외했다. 사용자 `.env*` 값은 수정하지 않고 존재·형식만 값 미출력으로 확인한다.
+- 모든 local `.env*`와 현재 process environment를 값 미출력으로 재확인한 결과 measurement와 station base는 각각 공식 HTTPS service family로 유효하고 `KOREA_AIR_STATION_KEY`도 non-empty다. 현재 남은 config blocker는 비어 있는 `KOREA_AIR_QUALITY_KEY` 하나다.
+- 대기오염정보 활용신청 뒤 사용자가 다시 설정 완료를 알렸지만 값 미출력 재검사에서 root `.env`의 `KOREA_AIR_QUALITY_KEY`는 빈 선언이고 `.env.example`에는 선언되지 않았으며 현재 process environment에도 없다. 이 재검사의 provider 호출은 0건이다.
+- 만료일 gate 제거 뒤 현재 station base/key로 서울 `getMsrstnList`를 1회 재검증했으나 8초 동안 HTTP 응답을 받지 못하고 `TimeoutError`로 끝났다. 자동 재시도하지 않았고 key·raw URL/body·station 식별정보는 출력하지 않았다.
+- 사용자의 세 번째 설정 완료 알림 뒤 네 base/key가 모두 non-empty이고 두 base가 공식 HTTPS service family임을 값 미출력으로 확인했다.
+- 승인된 서울 2-call gate를 실행한 결과 measurement와 station 모두 HTTPS 200·JSON·`resultCode=00`, `totalCount=40`, item 40건, 100건 이하 한 페이지로 통과했다. measurement는 필수 필드·서울 지역·단일 관측 slot이 모두 유효했고 PM10 결측 2건·PM2.5 결측 3건·음수/non-finite 0건이었다. station은 필수 필드·서울 주소·`dmX=위도/dmY=경도` 한국 bounds가 40/40건 유효하고 duplicate pair가 0건이었다.
+- 측정소명+측정망 normalized pair 결합은 unique 40건, unmatched 0건, ambiguous 0건이었다. key·query 포함 raw URL·응답 body·`resultMsg`·station 식별정보는 출력하지 않았다.
+- contract gate 판정은 `PASS`, T11 상태는 `IN_PROGRESS`다. 검증된 계약을 fixture로 고정하되 live body나 식별정보를 복사하지 않고 synthetic offline fixture로 TDD RED를 시작한다.
+
+#### 구현·검증 결과 — PASS
+
+- `feature/t11-air-quality@6329e02`에서 synthetic fixture만 사용해 `entities/air-quality`, `server/providers/airkorea`, `server/routes/air`, `widgets/air-quality`와 production registry·Dashboard slot을 구현했다. 측정소 marker·heatmap·selector 등 제외 범위는 추가하지 않았다.
+- 공식 2026-06-30 기술문서와 승인된 live contract를 대조해 measurement `ver=1.5`, PM 필드 최대 10자리, station API의 기존 `dmX=latitude`·`dmY=longitude` 계약을 고정했다. station directory의 모든 행은 지역 주소·metadata·좌표·duplicate를 검증하고 measurement와 측정소명+측정망으로 유일 결합한다.
+- RED에서 region alias/cache identity, PM10·PM2.5 공식 경계, 0·결측·음수·non-finite·상한, KST 시각, 좌표축·한국 bounds, pagination, duplicate/unmatched/지역 불일치, provider transport·logical/schema 실패, stale, Panel 6상태와 Dashboard 조합 누락을 각각 재현했다. 마지막 station 주소 지역 불일치 테스트도 구현 전 1 fail을 확인한 뒤 GREEN으로 전환했다.
+- GREEN 결과는 서울 PM10·PM2.5 최고 관측소·텍스트 등급·`µg/m³`·coverage·upstream 관측시각을 표시하고, loading/error+retry/empty/stale/success/missing-credential과 부분 결측을 공통 Panel에서 완결한다. `seoul`과 `서울`은 하나의 canonical cache identity를 사용한다.
+- `npm run validate` PASS: Biome 185 files, Vitest 77 files PASS·2 skipped / 1,030 tests PASS·2 skipped, strict TypeScript, client build 155.12 kB(gzip 46.85 kB)·CSS 15.38 kB(gzip 4.12 kB), server build 388.11 kB(gzip 75.93 kB).
+- 네 local base/key를 runner process에만 주입한 production gateway live smoke는 measurement 1회+station 1회 상한에서 1 test PASS했다. key 값, query가 포함된 raw URL, raw body, `resultMsg`와 station 식별정보는 출력·fixture·source에 넣지 않았다.
+- 독립 contract/security 리뷰는 최신 수정 기준 5 files·117 tests PASS, 별도 최종 user-impact/accessibility/performance/FSD 리뷰도 PASS해 재현 가능한 finding은 0건이다. `git diff --check`, focused-test/suppression marker 검사와 local key 값의 source·test 부재 검사도 PASS했다.
+- 브라우저 제어 연결을 초기화한 뒤 사용 가능한 browser 목록이 비어 있음을 확인했다. 다른 실행기를 browser 검증으로 대체하지 않았으므로 fixture light/dark, theme keyboard, 390px horizontal overflow와 기존 map/weather 화면 회귀는 **미검증**이다.
+- 2026-07-28 사용자가 지정한 `http://localhost:5173/`는 HTTP 200·HTML로 정상 응답했지만, 재연결 뒤에도 제어 가능한 browser 목록은 0개였다. 서버 도달성을 시각·상호작용 검증의 대체 증거로 사용하지 않는다.
+- 사용자가 같은 로컬 화면에서 “반응형 작업, 테마 기능은 완벽해”라고 수동 검증 결과를 제공했다. 이를 responsive layout·light/dark theme 기능 PASS로 기록하며, 제어 브라우저 부재 때문에 별도로 확인하지 못한 keyboard 조작과 기존 map/weather 화면 회귀까지 확인한 것으로 확대 해석하지 않는다.
+- 사용자가 keyboard 테마 전환은 지금 필요하지 않다고 범위를 명시하고, 지도와 서울 기상 실황 Panel이 존재한다고 수동 회귀 결과를 제공했다. D-044에 따라 미실행 keyboard 수동 검증은 release blocker가 아니며, 기존 native control과 자동 접근성 검증은 유지한다.
+- 최종 판정은 `ACCEPTED`다. 정상·실패·경계·보안·FSD·live source와 승인된 수동 UI 회귀가 모두 통과했고 알려진 회귀는 없다. 사용자의 최종 승인 뒤 제품 변경을 `7e3bcb9 feat: add airkorea air quality`로 커밋했다. push·PR·merge·deploy는 수행하지 않았고 main의 사용자 소유 `.env.example`, `.github/codex/prompts/clean-code-review.md` 변경은 건드리지 않았다.
+
+### T11-R1 — AirKorea development PR 게시
+
+- 상태: `ACCEPTED` — T10 replacement가 merge된 최신 `development`에 T11 단일 목적 PR을 게시하고 필수 quality-gate를 통과했다. 사용자가 다음 작업 진행을 지시해 PR #5 병합을 승인했고 merge commit `955f6e5`로 `development`에 반영했다.
+- 선행 조건: T10과 T11은 `ACCEPTED`; T11 제품 commit은 `feature/t11-air-quality@7e3bcb9`다.
+- 착수 당시 원격 근거:
+  - `origin/development@feb085f`는 `origin/main@6329e02`보다 accepted T10 commit 한 개 뒤다.
+  - 현재 T11 branch를 바로 `development`에 비교하면 T10 28 files·2,426 insertions와 T11 변경이 한 PR에 함께 포함돼 one-purpose 정책을 위반한다.
+  - open PR은 0개이며 GitHub 인증과 repository workflow는 사용 가능하다.
+- 목적: 이미 승인된 T10 기준선을 먼저 `development`에 동기화한 뒤 T11만 포함하는 feature PR을 만들어 quality-gate와 Codex review를 거친다.
+- 포함:
+  - remote `main → development` T10 기준선 sync PR 생성과 checks 확인
+  - sync PR이 사람에 의해 병합된 뒤 `feature/t11-air-quality` push와 `development` 대상 T11 PR 생성
+  - Task ID, 검증 증거, 회귀 위험과 미검증 경로를 PR 본문에 기록
+- 제외:
+  - sync/T11 PR 자동 병합, force push, main push, deploy
+  - 사용자 소유 `.env.example`, `.github/codex/prompts/clean-code-review.md`의 stage·commit
+- 완료 조건:
+  - sync PR은 T10 commit만 포함하고 품질 게이트 결과를 보존한다.
+  - T11 PR diff는 `7e3bcb9` 목적만 포함하고 base가 최신 `development`이며 필수 checks가 실행된다.
+  - 병합 여부는 사용자 최종 판단에 맡긴다.
+- 실패·BLOCKED:
+  - base mismatch, unrelated diff, failed quality gate, secret 노출, 원격 branch 비-fast-forward 또는 권한 오류가 있으면 추측하거나 우회 병합하지 않고 중단한다.
+
+#### PR #5 실행 결과 — PASS
+
+- 사용자가 “다음단계 진행”으로 PR #4 merge를 승인했다. merge commit `44dc5a7`로 `development`에 반영했고 `6329e02`, `667b05e`, `bcd4548` ancestry가 모두 보존됨을 확인했다.
+- [PR #5](https://github.com/HappyMarmot123/balance-keeper/pull/5)는 최신 `development@44dc5a7 ← feature/t11-air-quality@7e3bcb9`이며 AirKorea commit 1개, T11 목적의 28 files·3,413 insertions·13 deletions만 포함한다.
+- merge-result `quality-gate`의 install·Biome·tests·typecheck·client/server build는 모두 PASS했다. base mismatch, unrelated T10 diff, secret 노출과 merge conflict는 없다.
+- `codex-review`는 변경 분석 전에 OpenAI API `Quota exceeded`로 실패했고 `post-feedback`은 안전한 `BLOCKED` fallback을 게시했다. 코드 finding은 생성되지 않았으며 D-012에 따른 advisory 실행 제한으로 기록한다. quota가 해제되면 failed job만 재실행할 수 있다.
+- 제품 T11은 이미 ACCEPTED이고 필수 quality gate가 통과했다. 사용자의 후속 진행 지시에 따라 PR #5를 merge commit `955f6e5`로 `development`에 병합했으며 `7e3bcb9` ancestry와 `origin/development@955f6e5`를 확인했다.
+
+#### PR #3 실행 결과 — BLOCKED
+
+- [PR #3](https://github.com/HappyMarmot123/balance-keeper/pull/3)은 `development@feb085f ← main@6329e02`이며 T10 commit 한 개·28 files만 포함한다. T11, local journal commit `0efe550`과 사용자 소유 변경은 원격에 게시하지 않았다.
+- `quality-gate`, `codex-review`, `post-feedback` job 자체는 모두 SUCCESS이고 merge state는 CLEAN이다. 그러나 job 성공을 review `PASS`로 해석하지 않는다.
+- Codex의 실제 structured output은 `CHANGES_REQUESTED`와 MEDIUM finding을 만들었다. `normalizeKmaUltraShortNowcast`는 `totalCount > 0`인데 `items`가 빈 모순 응답도 즉시 `null`로 반환한다. route는 이를 정상 empty로 negative cache에 저장할 수 있어, provider truncation 동안 기존 last-good stale 관측값이 사라질 수 있다.
+- 코드에서 `totalCount`는 nonnegative 형식만 검증하고 empty 반환 전에 item count와 일관성을 확인하지 않는다. 기존 empty test helper는 항상 `totalCount=items.length`로 맞추므로 모순 경계를 검증하지 않는다. 독립 read-only 리뷰도 같은 경로를 재현 가능 finding으로 확인했다.
+- 게시 댓글은 실제 `CHANGES_REQUESTED` 대신 fallback `BLOCKED`를 표시했다. feedback validator가 모든 `ISSUE` review area마다 별도 category finding을 요구해, 하나의 correctness finding이 user impact·state handling·test coverage·predictability에도 영향을 준 유효 출력을 거부한 것이 원인이다. 이는 별도 T09-R2 후보이며 제품 finding을 무효화하지 않는다.
+- T10-R1이 ACCEPTED되고 replacement PR #4가 생성된 뒤 PR #3에는 대체 사유를 기록하고 미병합 상태로 닫았다.
+
+### T10-R1 — KMA pagination consistency
+
+- 상태: `ACCEPTED` — PASS 보고 뒤 사용자가 “진행”으로 최종 수락과 승인된 후속 게시를 지시했다.
+- 목적: KMA pagination metadata와 실제 items가 모순될 때 정상 empty를 만들지 않고 provider failure로 처리해 last-good stale을 보존한다.
+- 선행 조건: T10 `ACCEPTED`; PR #3 finding이 source·test 대조로 재현 가능하다.
+- 포함:
+  - `origin/main@6329e02` 기준 독립 `feature/t10-kma-pagination-consistency` branch/worktree
+  - `totalCount > 0 + empty items`, item count 불일치와 명시적 `totalCount=0 + empty items` RED
+  - 최소 provider consistency validation과 gateway stale regression
+  - focused tests, `npm run validate`, 독립 리뷰
+  - 사용자 ACCEPTED 뒤 PR #3을 대체하는 `development` 대상 one-purpose T10 baseline PR
+- 제외:
+  - AirKorea T11 코드 변경, KMA API cadence·UI·cache profile 변경
+  - PR #3 close/merge, push·PR·merge는 각 승인 단계 전까지 수행하지 않음
+- 완료 조건:
+  - 명시적 정상 empty만 `null`; pagination 모순은 안전한 `UPSTREAM_UNAVAILABLE` 또는 기존 stale 응답으로 끝난다.
+  - T10 기존 정상·실패·경계와 T11 build base에 회귀가 없다.
+- 검증: provider unit, production route stale, 전체 validate와 변경분 독립 review.
+
+#### T10-R1 실행 결과 — PASS
+
+- `origin/main@6329e02`에서 `feature/t10-kma-pagination-consistency` 독립 worktree를 만들었고 provider와 해당 단위·production integration test 3개 파일만 변경했다. AirKorea, UI, cache profile, workflow, 사용자 소유 파일은 변경하지 않았다.
+- RED:
+  - `totalCount > 0 + empty items`, 첫 페이지 item count 모순과 production `MISS → 만료 → 모순 응답`을 추가했을 때 새 assertion 3개만 실패하고 기존 46개는 통과했다.
+  - 일반 pagination 계산이 실제 고정 요청 계약을 우회할 수 있다는 독립 리뷰 finding 뒤, 응답 `pageNo`와 `numOfRows` guard를 각각 단독 변형하는 테스트에서 guard 제거 mutation이 정확히 2개 assertion RED를 만들었다.
+  - `totalCount=items.length=1001` fixture로 단일 페이지 용량 guard를 제거한 mutation이 새 assertion 1개만 RED가 되는 것을 확인했다.
+- GREEN·REFACTOR:
+  - fetch와 normalize가 같은 `pageNo=1`, `numOfRows=1000` 상수를 사용한다. 응답 page metadata 불일치, 단일 페이지 용량 초과 또는 `totalCount !== items.length`를 모두 `KmaProviderError`로 fail-closed 처리한 뒤에만 명시적 `totalCount=0 + empty items`를 `null`로 허용한다.
+  - production runtime에서 모순 응답은 정상 empty/negative cache가 아니라 upstream failure가 되어 이전 positive 관측값과 `fetchedAt`을 `STALE`로 유지한다.
+- 회귀 증거:
+  - 정상: 기존 KMA success와 partial observation, 명시적 정상 empty 유지.
+  - 실패: positive count+empty, partial first page, 요청과 다른 page number/size, 1,001개 초과 결과가 pagination error로 종료.
+  - 경계: 고정 first-page request/response 결합과 단일 페이지 최대 용량을 독립 테스트로 고정.
+  - 기존 영향: focused provider+production tests `52/52` PASS; 전체 `npm run validate`에서 `904 passed`, gated live `1 skipped`, Biome·TypeScript·client build·server build PASS.
+- 두 차례 독립 read-only 리뷰가 request/response contract, stale 회귀, 테스트 격리와 capacity guard를 재검토했다. 중간 finding을 모두 수정하고 mutation RED로 보강한 최신 diff의 최종 판정은 `PASS`, 미해결 finding은 없다.
+- deterministic offline 범위라 live provider call과 브라우저 QA는 실행하지 않았다. secret·raw provider payload 노출, 외부 호출, 성능상 유의미한 증가와 알려진 회귀는 없다.
+- 사용자 `ACCEPTED` 뒤 제품 변경을 `667b05e fix: validate kma pagination metadata`로 커밋하고 feature branch를 push해 replacement T10 baseline PR #4를 생성했다. PR #3은 대체 사유를 남기고 미병합 상태로 닫았다.
+
+#### Replacement PR #4 최초 실행 결과 — BLOCKED
+
+- [PR #4](https://github.com/HappyMarmot123/balance-keeper/pull/4)는 `development@feb085f ← feature/t10-kma-pagination-consistency@667b05e`이며 accepted T10 `6329e02`와 T10-R1 `667b05e` 두 commit, 동일 T10 목적의 28 files만 포함한다. local main·T11·사용자 소유 변경은 게시하지 않았다.
+- `quality-gate`, `codex-review`, `post-feedback` job은 모두 SUCCESS이고 merge state는 CLEAN이다. quality job의 install·Biome·tests·typecheck·client/server build도 모두 통과했다.
+- Codex 실제 structured output은 `CHANGES_REQUESTED`와 MEDIUM finding을 만들었다. runtime은 canonical `DATA_GO_KR_SERVICE_KEY`만 읽지만 PR HEAD의 추적된 `.env.example`은 사용되지 않는 legacy `DATA_GO_KR_KEY`만 안내한다. 저장소 예시대로 배포하면 `/api/weather`가 `MISSING_CREDENTIALS`로 끝나 Dashboard 날씨 Panel이 설정 필요 상태에 머문다.
+- 값은 읽거나 출력하지 않고 identifier만 대조했다. PR HEAD `.env.example`에는 `DATA_GO_KR_KEY`만 있고, source·live test·production integration과 D-042는 `DATA_GO_KR_SERVICE_KEY`만 사용한다. legacy 이름은 저널의 과거 점검 기록 외 실제 코드 참조가 없어 finding은 재현 가능하다.
+- 게시 댓글은 실제 `CHANGES_REQUESTED` 대신 다시 fallback `BLOCKED`를 표시했다. 하나의 finding이 user impact·correctness·test coverage 세 `ISSUE` area에 영향을 준 유효 출력을 feedback validator가 거부한 동일 T09-R2 결함이며, 제품 finding을 무효화하지 않는다.
+- PR #4는 open·미병합 상태로 유지한다. release 조건은 별도 T10-R2 승인 뒤 tracked environment example과 runtime canonical name을 정렬하고 회귀 테스트·전체 validate·독립 리뷰·PR checks를 다시 통과하는 것이다.
+
+### T10-R2 — KMA tracked environment contract alignment
+
+- 상태: `ACCEPTED · FAST_TRACK` — PASS 보고 뒤 사용자가 “다음단계 진행”으로 최종 수락과 PR #4 merge를 승인했다.
+- 목적: 저장소의 배포 예시와 production runtime이 동일한 canonical KMA credential identifier를 사용하게 해 표준 구성 배포의 `MISSING_CREDENTIALS` 회귀를 막는다.
+- 포함:
+  - `feature/t10-kma-pagination-consistency@667b05e`의 격리 worktree에서 추적된 `.env.example`의 legacy `DATA_GO_KR_KEY`를 `DATA_GO_KR_SERVICE_KEY`로 교체
+  - environment example identifier와 `readKmaWeatherCredential` 계약 일치 RED, 전체 validate와 독립 리뷰
+  - 기존 PR #4 head에 별도 commit push, quality/Codex/feedback 실제 판정 재확인
+- 제외:
+  - local `.env*` 값 읽기·출력·수정, main worktree의 사용자 소유 `.env.example` 변경·stage
+  - legacy fallback 추가, 다른 provider 환경 변수 정리, T09-R2 validator 수정, PR merge
+- 완료 조건:
+  - tracked example만 따라도 canonical KMA credential이 production assembly로 전달된다.
+  - secret 값은 browser·응답·log·commit에 포함되지 않고 PR #4에 새 재현 가능 finding이 없다.
+- 검증: identifier-only contract test RED→GREEN, focused runtime/provider tests, 최종 `npm run validate`와 PR checks. Fast Track이므로 별도 subagent와 중간 승인 pause는 생략한다.
+
+#### T10-R2 실행 결과 — PASS
+
+- RED: tracked `.env.example`에서 `DATA_GO_KR*` identifier만 추출해 canonical 이름 하나를 요구하는 테스트를 추가했고, legacy `DATA_GO_KR_KEY` 수신으로 새 assertion 1개만 실패하고 기존 47개는 통과했다.
+- GREEN: 격리 feature worktree의 tracked example 한 줄을 `DATA_GO_KR_SERVICE_KEY`로 교체했다. local `.env*` 값과 main worktree의 사용자 소유 `.env.example`은 읽기·수정·stage하지 않았다.
+- focused `48/48`, 전체 `npm run validate`에서 `905 passed`, gated live `1 skipped`, Biome·TypeScript·client/server build PASS다. 포맷 검사는 첫 실행에서 새 테스트 포맷만 지적했고 targeted formatter 적용 후 전체 command를 재실행해 통과했다.
+- Fast Track commit은 `bcd4548 fix: align KMA environment contract`이며 기존 PR #4 branch에 push했다. PR 본문도 canonical identifier와 최신 test count로 갱신했다.
+- PR #4 재실행에서 필수 `quality-gate`는 PASS했다. `codex-review`는 변경 분석 전에 `Quota exceeded`로 실패했고 `post-feedback`은 안전한 `BLOCKED` fallback을 게시했다. 이는 코드 finding이 아니라 외부 advisory 실행 제한이며 D-012에 따라 quality PASS와 사람 판단을 대체하지 않는다. quota가 해제되면 failed advisory job만 재실행할 수 있다.
+- 변경은 `.env.example`과 provider contract test 2개 파일뿐이며 prior MEDIUM finding의 identifier 불일치는 제거됐다. 사용자의 후속 승인 뒤 PR #4를 merge commit `44dc5a7`로 `development`에 병합했다.
+
+### T12 — KMA+USGS 지진
+
+- 상태: `ACCEPTED` — `origin/development@955f6e5` 기준 `feature/t12-earthquake` worktree에서 구현·회귀 검증·독립 리뷰를 완료했고, 사용자가 PASS 보고 뒤 “계속 진행”으로 결과와 최종 커밋·development 대상 PR 진행을 승인했다.
+- 선행 조건:
+  - T04 공통 Panel, T06 gateway/cache와 T11 development 반영은 완료됐다.
+  - T30이 지도 layer registry를 소유하므로 T12는 strict Entity·gateway route·Query·목록 Panel까지만 포함한다.
+- 승인된 목적: KMA 수정 통보와 USGS 사건을 최근 regional snapshot으로 결합해 bbox·결정적 정렬·중복 제거·source 부분 실패를 안전하게 제공한다.
+- 조사 근거:
+  - KMA `getEqkMsg`는 소문자 `serviceKey`, pagination과 `YYYYMMDD` 발표일 범위를 받고 발표·발생시각, 위경도, 규모, 깊이, 통보 횟수와 월별 발표 일련번호·수정사항을 제공한다. stable global event ID와 응답 정렬은 보장하지 않는다. [지진정보 조회서비스](https://www.data.go.kr/data/15000420/openapi.do)
+  - KMA 공식 동아시아 범위는 `21~45°N, 110~145°E`이며 국내와 역외 통보 threshold가 서로 다르므로 완전한 지진 catalog로 표시하지 않는다. [KMA API Hub 지진](https://apihub.kma.go.kr/apiList.do?seqApi=7)
+  - USGS는 자동화 화면에 1분 갱신 GeoJSON feed를 권장한다. 좌표는 `[longitude, latitude, depth]`, `time/updated`는 epoch milliseconds이고 `ids` alias와 current preferred ID를 제공한다. feed 순서는 보장된 것으로 가정하지 않는다. [USGS GeoJSON](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php)
+  - 레거시는 USGS FDSN 단일 source, 고정 bbox `20~48/110~150`, M2.5와 provider 순서만 사용한다. KMA·dedup·revision·partial state가 없고 `mag:null → 0`, `place:null → ""`로 숨기므로 구현은 이식하지 않는다.
+- 구현 경계:
+  - `GET /api/earthquake`는 query를 받지 않고 고정 recent-regional cache identity를 사용한다. Entity가 strict event/source coverage·bbox·정렬 계약과 60초 foreground refetch를 소유한다.
+  - server provider는 KMA notice revision과 USGS feature를 각각 strict fixture로 정규화한다. provider-native record는 보존하고 KMA correction collapse 뒤 cross-source heuristic을 적용한다.
+  - route는 두 provider를 같은 AbortSignal로 병렬 호출한다. 한쪽 success는 partial snapshot으로 cache하되 UI가 누락 source를 표시하고, 둘 다 실패할 때만 `UPSTREAM_UNAVAILABLE`/last-good STALE을 사용한다.
+  - Widget은 loading/error+retry/empty/stale/success와 partial-source notice, 최신 사건의 규모·위치·발생시각·깊이·출처를 제공한다. marker·impact ring·지도 overlay는 제외한다.
+- 검증 계획:
+  - 정상: KMA+USGS fixture 결합, provider-native revision/provenance, 최신순과 stable tie-break.
+  - 실패: KMA-only, USGS-only, missing KMA credential, 양쪽 transport/schema 실패와 last-good stale.
+  - 경계: bbox 포함/제외, KST→UTC, negative USGS depth, null magnitude/place, KMA correction, USGS alias와 cross-source threshold 안/밖.
+  - 회귀: coarse registry, ETag/cache identity, server-safe Entity contract, Dashboard map/weather/air composition, FSD public API와 전체 `npm run validate`.
+
+#### T12 contract gate 결과 — PASS
+
+- local `KOREA_EARTHQUAKE_KEY`가 선언·non-empty임만 확인했고 값, 길이, raw URL/body와 `resultMsg`는 출력하지 않았다.
+- USGS `2.5_week.geojson` public probe는 HTTPS 200·`FeatureCollection`, 398 features와 공식 feature/property 경계를 반환해 public source 도달성을 확인했다. 이 숫자를 고정 fixture나 SLA로 사용하지 않는다.
+- 초기 진단은 공식 문서 표기의 대문자 `ServiceKey`를 그대로 사용해 HTTP 200·`resultCode=99`를 받았다. 이를 credential 유형 문제로 해석해 KMA API Hub를 시도한 판단은 잘못이었으며 아래 정상 gate로 폐기한다.
+- 사용자가 제공한 실제 동작 요청과 동일하게 data.go.kr HTTPS `getEqkMsg`에 소문자 `serviceKey`, `pageNo=1`, `numOfRows=100`, `dataType=JSON`, 최근 날짜 범위를 전달해 재검증했다. HTTP 200·`resultCode=00`, `totalCount=1`, item 1건과 `cnt/dep/fcTp/img/inT/lat/loc/lon/mt/rem/stnId/tmEqk/tmFc/tmSeq` 필드를 확인했다.
+- keyed fixture의 scalar encoding은 `img/inT/loc/rem`이 string, 나머지 관측 필드가 number였다. 공식 공개 계약에는 선택 필드 `tmMsc`와 `cor`도 있으므로 fixture와 schema는 string/number 혼용과 선택 필드 누락을 모두 검증한다.
+- 공공데이터포털 공개 상세는 `getEqkMsg`가 발표일 범위, pagination, JSON/XML과 지점·통보·시각·좌표·규모·진도·깊이·수정 정보를 제공하고 개발계정 10,000건, 실시간 갱신임을 표시한다. 로그인 계정 화면의 4개 상세기능 중 T12는 `getEqkMsg`만 사용하며 지진해일 기능은 범위를 확장하지 않는다.
+- 공식 활용가이드의 상세기능 4개는 `getEqkMsg`, `getEqkMsgList`, `getTsunamiMsg`, `getTsunamiMsgList`다. 목록 2개는 사건 정규화 원문이 아니고 지진해일 2개는 별도 도메인이므로 모두 T12에서 제외한다. 같은 가이드가 자료 제공 범위를 현재일 기준 최근 3일로 명시하므로 KMA 3일·USGS 7일의 source별 window를 transport와 UI에서 구분한다.
+- gate 해제 조건은 충족됐다. KMA API Hub credential 재발급이나 3.2 별도 승인 요구는 T12 계약이 아니며 적용하지 않는다.
+
+#### T12 구현·검증 결과 — PASS
+
+- 구현:
+  - strict Earthquake Entity와 고정 `/api/earthquake` Query, KMA `getEqkMsg`·USGS `2.5_week.geojson` provider, 수정 통보 정리·cross-source reconciliation, coarse gateway runtime 등록을 추가했다.
+  - Dashboard에 loading/error+retry/empty/stale/success와 source partial 상태를 완결하는 지진 Panel을 추가했다. KMA 최근 3일과 USGS M2.5+ 최근 7일을 구분하고 null 규모·위치·깊이를 0이나 빈 문자열로 위장하지 않는다.
+  - 공개 snapshot은 최대 500개의 결정적으로 정렬된 사건과 provider-native ID·alias·측정값·source window를 보존한다. 지도 overlay는 승인 범위대로 T30에 남겼다.
+- TDD 증거:
+  - 최초 Entity/provider/reconciliation RED는 누락 모듈로 5 files·12 tests가 실패했고, route/runtime RED는 17 tests, Widget·Dashboard RED는 3 tests가 각각 구현 전에 실패했다.
+  - 독립 리뷰에서 월별 `tmSeq` 충돌, 501건 정상 feed의 schema 상한 실패, USGS에 존재할 수 없는 `missing-credential` 상태 허용을 재현했다. 세 경계 테스트가 각각 RED임을 확인한 뒤 KMA ID에 발표 `YYYYMM`, 최신 500건 deterministic truncation, provider별 source status schema를 적용했다.
+  - 보강 직후 관련 4 files·40 tests가 PASS했다. test-after로 처음부터 통과한 경계는 없다.
+- 최종 검증:
+  - 실키 smoke는 값·raw URL·원문 응답을 출력하지 않고 KMA+USGS 실제 호출 1 test를 PASS했다.
+  - `npm run validate`는 Biome, 88 passed files·3 skipped, 1,106 passed tests·3 skipped, strict typecheck, client build `165.20 kB`/gzip `49.71 kB`, server build `428.21 kB`/gzip `84.26 kB`를 모두 PASS했다.
+  - `git diff --check`와 configured credential literal 비출력 scan이 PASS했다. secret 값은 source·fixture·문서·출력에 포함되지 않았다.
+- 회귀·리뷰:
+  - 정상: 두 source 결합, KMA 수정 alias, 보수적 dedup, 최신순·stable tie-break, source provenance — PASS.
+  - 실패: KMA key 누락, 한 source transport/schema 실패의 positive partial, 양쪽 실패의 gateway error/last-good STALE, caller abort — PASS.
+  - 경계: 고정 bbox, KST/UTC, null magnitude/place, negative USGS depth, dedup threshold 안/밖, 월말 동일 `tmSeq`, 501건 feed, invalid USGS credential 상태 — PASS.
+  - 회귀: map/weather/air Dashboard 조합, FSD public API와 하향 import, browser/server graph 격리, 기존 gateway/cache/ETag 계약 — 전체 validate PASS.
+  - 리뷰의 “KMA도 7일이어야 한다”는 주장은 공식 활용가이드의 최근 3일 제한과 충돌해 반영하지 않았다. credential 지적은 T10 기상 문맥의 과거 기록과 T12 지진 전용 identifier를 혼동한 것으로, D-046과 identifier 표에 `KOREA_EARTHQUAKE_KEY` 경계를 명시해 해소했다.
+- 미검증 경로: 실제 브라우저의 최종 light/dark·폭별 시각 QA는 사용자 승인 확인 경로로 남는다. jsdom 상태·접근성 계약은 자동 검증했으며 알려진 기능 회귀는 없다.
+- 최종 판정: 필수 정상·실패·경계·회귀 검증이 모두 통과해 `PASS`, 사용자 후속 지시로 `ACCEPTED`. T12 변경만 최종 커밋·push하고 development 대상 PR에서 quality를 다시 확인한다.
+
+#### T12 게시·PR 결과
+
+- 최종 제품 commit은 `e58e0f7 feat: add KMA and USGS earthquake signals`이며 승인된 T12 목적의 34 files·3,456 insertions·4 deletions만 포함한다. feature worktree는 clean이고 local·remote `feature/t12-earthquake`가 전체 SHA `e58e0f7d417b339f9840ce20f10d30d36ecf1393`로 일치한다.
+- [PR #6](https://github.com/HappyMarmot123/balance-keeper/pull/6)은 `development@955f6e5 ← feature/t12-earthquake@e58e0f7`이며 OPEN·MERGEABLE이다. PR 본문에 Task ID, 정상·실패·경계·회귀 증거, 실제 브라우저 시각 QA와 지도 overlay 제외 범위를 기록했다.
+- [Frontend PR Review run 30335532243](https://github.com/HappyMarmot123/balance-keeper/actions/runs/30335532243)의 필수 `quality-gate`는 install·Biome·tests·typecheck·client/server build를 모두 PASS했다.
+- `codex-review`는 변경 분석 전에 OpenAI API `Quota exceeded`로 실패했고 `post-feedback`은 [안전한 BLOCKED 댓글](https://github.com/HappyMarmot123/balance-keeper/pull/6#issuecomment-5100831676)을 게시했다. 발견된 코드 finding은 없지만 자동 리뷰가 완료된 것으로 해석하지 않는다.
+- 제품 T12는 독립 read-only 리뷰에서 재현한 3개 경계를 수정하고 전체 검증을 통과해 이미 `ACCEPTED`다. Codex 리뷰는 advisory이므로 quota 실패가 필수 quality 결과를 무효화하지 않지만, PR merge는 사람의 별도 결정 전까지 수행하지 않는다.
+- 사용자의 “다음단계 진행” 지시에 따라 PR #6을 merge commit `3c636d1`로 `development`에 병합했고 T12 commit ancestry를 확인했다.
+
+### T13 — ECOS 거시
+
+- 상태: `BLOCKED · DEVELOPMENT MERGE AUTHORIZED` — 실제 제품 구현과 deterministic 전체 회귀는 PASS했지만 local/server process에 `ECOS_API_KEY`가 없어 credential-gated live smoke가 SKIP됐다. 사용자가 이 제한을 전달받은 뒤 “지금까지 피쳐 작업 development 브랜치로 다 머지”하라고 명시해 T13 commit·push·development PR 병합을 승인했다. 이는 live 검증 완료나 production release PASS를 뜻하지 않는다.
+- 승인·기준선: 사용자가 “다음단계 진행”으로 T13 착수를 승인했고, `origin/development@3c636d1`에서 `feature/t13-ecos-macro` worktree를 생성했다.
+- 포함:
+  - 고정 queryless `GET /api/macro`, server-only `ECOS_API_KEY`, ECOS `StatisticSearch` 3건
+  - 원/달러 `731Y001/0000001/D/원`, 기준금리 `722Y001/0101000/D/연%`, 외환보유액 `732Y001/99/M/천달러`
+  - strict Entity contract·Query, provider 정규화, partial/empty/error/stale gateway 경계, Dashboard Panel
+- 제외: 차트·지도 overlay·다른 시장 source·라우터·provider discovery의 runtime 반복 호출.
+- 공식 discovery:
+  - ECOS 공식 service catalog와 내부 item metadata에서 세 table·item·cycle을 확인했다. 외환보유액 합계의 원문 단위는 `untNm: 천달러`이며, `백만달러` 추정은 폐기했다.
+  - Open API는 응답 정렬을 보장하지 않으므로 최대 유효 `TIME`을 직접 선택한다. 동일 period 중복, 통계·항목·단위 불일치, invalid numeric/period, 100행 초과·부분 pagination은 실패시킨다.
+  - 최상위 `RESULT` 중 `INFO-200`만 정상 empty로 처리하고 인증·요청·timeout·quota를 포함한 나머지 코드는 provider failure로 분류한다. 오류에는 key·raw URL·provider message를 포함하지 않는다.
+- 구현:
+  - 일별은 KST 현재일 기준 45일, 월별은 18개월의 bounded window를 요청한다. 외환보유액 `천달러`는 UI의 `억 달러`로 `÷100,000` 정규화하고 source value·period를 함께 보존한다.
+  - 한두 series 실패는 `unavailable` partial snapshot, 세 series 정상 무자료만 negative cache, 전부 실패는 `UPSTREAM_UNAVAILABLE`로 last-good stale 경계를 사용한다.
+  - cache는 fresh 6시간, CDN 1시간, negative 1시간, last-good 7일, timeout 8초이며 Query는 stale 3시간·foreground refetch 6시간이다.
+  - Widget은 loading, missing credential, error/retry, empty, partial, success, gateway stale와 cached-data refetch failure를 처리하고 observation 기준시점과 gateway 수집시각을 구분한다.
+- 검증:
+  - RED에서 Entity/provider/route/runtime/Widget/Page slot 부재와 공식 trailing path 계약을 assertion failure로 확인한 뒤 GREEN 전환했다.
+  - 정상: 세 값·canonical order·최신 `TIME`·단위 변환·production MISS — PASS.
+  - 실패: `INFO-200`, `ERROR-602`, HTTP/network, partial·all-fail, missing credential, key redaction, retry/stale — PASS.
+  - 경계: 역순 행, duplicate period, code/item/unit mismatch, invalid value/calendar, pagination truncation, KST search window — PASS.
+  - 회귀: Full FSD, server/browser graph 분리, map/weather/air/earthquake Dashboard 조합, 공통 gateway/cache — PASS.
+  - `npm run validate`: 101 files, 1,138 passed·4 credential-gated skipped, Biome·strict TypeScript·client/server build PASS. client JS `172.70 kB / gzip 51.60 kB`, CSS `15.63 kB / gzip 4.17 kB`, server `442.79 kB / gzip 87.36 kB`.
+- release condition: `ECOS_API_KEY`를 server environment에 설정하고 production gateway가 정확히 3건을 요청해 세 series가 `available|empty`로 strict parse되는 live smoke를 PASS해야 한다. 그 전에는 Task를 `PASS` 또는 production-ready `ACCEPTED`로 기록하지 않는다. 사용자가 별도로 승인한 development 병합은 이 release blocker를 제거하지 않는다.
+
+### T09-R2 — Codex feedback multi-area finding contract
+
+- 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
+- 목적: 하나의 재현 가능한 finding이 여러 review area에 영향을 줄 때 valid `CHANGES_REQUESTED`를 fallback `BLOCKED`로 숨기지 않도록 schema·prompt·validator 불변식을 정렬한다.
+- 포함 후보: PR #3 actual output fixture RED, finding category와 primary ISSUE area 일치, 추가 영향 area 허용 또는 prompt의 primary-area 단일화, fallback 안전성 회귀.
+- 제외: T10 제품 bugfix와 동일 commit/PR, review write 권한·모델·secret 정책 변경.
 
 ---
 
@@ -2106,6 +2422,7 @@ flowchart LR
 | Codex review 실행 조건 | RESOLVED | D-012의 quality PASS 후 실행안을 사용자가 T09 진행 지시로 승인 |
 | T09 remote activation | PARTIAL | 사용자 등록 `OPENAI_API_KEY`와 `CODEX_REVIEW_ENABLED=true`로 실제 Codex review·feedback까지 PASS했다. required check/ruleset·merge·main push는 계속 EXTERNAL이다. |
 | Production Upstash·provider keys | EXTERNAL | 해당 live smoke Task에서 secret 존재 확인 |
+| T11 fixture browser QA | RESOLVED | 사용자 수동 반응형·light/dark theme와 기존 지도·서울 기상 실황 Panel 존재 PASS; D-044에 따라 keyboard 별도 수동 검증은 현재 gate에서 제외 |
 
 ---
 
@@ -2247,3 +2564,43 @@ flowchart LR
 | 2026-07-22 | T10 server/client public boundary와 세부 계약 RED를 확인한 뒤 KMA provider·weather route·Entity query·WeatherNowcast Panel과 production assembly를 GREEN; API 연결 전 STATE MATRIX를 실제 Panel로 교체하고 지도 full-width·높이 유지 | T10 |
 | 2026-07-22 | 독립 리뷰의 slot mismatch·production 통합·server Query bundle·empty refetch 은폐·region mismatch를 각각 RED→GREEN으로 해소; focused 134 tests, server graph와 strict type/Biome PASS | T10 |
 | 2026-07-22 | 전체 validate·client/server build, 값 미출력 production gateway live smoke와 fixture browser light/dark·390px overflow QA PASS; NAVER registered-host live는 기존 안전한 auth 오류로 별도 제한 기록, T10 PASS·사용자 승인 대기 | T10 |
+| 2026-07-22 | 사용자가 T10 커밋과 다음 단계 진행을 승인; `6329e02 feat: add kma weather nowcast`로 commit하고 사용자 소유 main 변경을 보존한 채 main에 fast-forward, 중복 T10 초안 stash와 clean worktree/병합 branch는 완성본·main 포함 여부 대조 후 정리 | T10→main |
+| 2026-07-22 | T11 AirKorea를 다음 dependency-ready slice로 선정하고 현재 T10 gateway/FSD 패턴, 레거시 air route/UI와 2026-06-30 공식 API·행정구역·좌표·등급 계약을 대조해 상세 범위를 PROPOSED | main→T11 |
+| 2026-07-27 | 사용자가 “진행하세요”로 D-043과 T11 상세 범위를 승인; dependency가 모두 ACCEPTED임을 확인하고 독립 worktree·값 미출력 서울 2-call contract gate부터 IN_PROGRESS 전환 | T11 |
+| 2026-07-27 | 승인된 서울 2-call gate에서 대기오염정보는 200·JSON·00·40 items로 PASS했지만 측정소정보가 HTTPS 403/non-JSON; secret·raw URL/body 미출력, 제품 변경 0건으로 T11 BLOCKED, 측정소정보 활용승인 뒤 station-only 재검증 필요 | T11 |
+| 2026-07-27 | 사용자가 local AirQuality base와 공식 측정소정보 endpoint 불일치를 지적; 값 미출력 판별로 measurement와 station-directory가 별도 service family임을 확인하고, 단일 env 계약을 두 provider에 재사용하지 않도록 material scope amendment 승인 대기 | T11 |
+| 2026-07-27 | 사용자가 “네”로 측정 `KOREA_AIR_QUALITY_*`와 측정소정보 `KOREA_AIR_STATION_*`의 base/key/만료일 분리를 승인; D-043과 contract gate를 superseding contract로 갱신하고 별도 station config 확인 단계로 전환 | T11 |
+| 2026-07-27 | 분리 계약 이름을 값 미출력 확인: measurement base만 공식 family로 valid, measurement key/expiry와 station base/key/expiry는 missing; 추가 호출 0건, 필요한 local 설정 뒤 service별 gate 재개 | T11 |
+| 2026-07-27 | 사용자의 설정 완료 알림 뒤 모든 local `.env*`와 process env를 값 미출력 재검사: measurement/station base는 valid, 두 service key와 measurement expiry는 빈 선언, station expiry는 미선언; provider 호출 없이 BLOCKED 유지 | T11 |
+| 2026-07-27 | `KOREA_AIR_STATION_KEY` 저장을 값 미출력 확인; measurement key/expiry는 빈 선언이고 station expiry는 미선언이므로 provider 호출 0건, contract gate BLOCKED 유지 | T11 |
+| 2026-07-27 | 사용자가 `EXPIRES_AT`을 일단 무시하도록 지시해 D-043과 T11 contract를 base/key-only로 갱신; 두 base와 station key는 valid, measurement key만 missing인 상태로 gate를 축소 | T11 |
+| 2026-07-27 | expiry gate 제거 후 station-only 서울 probe 1회 실행; secret·raw URL/body·식별정보 미출력 상태에서 8초 `TimeoutError`, 자동 재시도 없이 station contract 미검증과 measurement key missing으로 BLOCKED 유지 | T11 |
+| 2026-07-27 | 대기오염정보 키 설정 완료 알림 뒤 모든 `.env*`와 process env를 값 미출력 재검사했으나 root `.env` key는 빈 선언이고 다른 source에도 없음; provider 호출 0건으로 measurement key blocker 유지 | T11 |
+| 2026-07-27 | 네 base/key 저장 확인 후 승인된 서울 2-call gate PASS: 양 service 200/JSON/00·40건, 좌표 40/40, unique join 40·unmatched/ambiguous 0, PM 결측과 단일 관측 slot 확인; T11 IN_PROGRESS로 전환 | T11 |
+| 2026-07-27 | AirKorea Entity·두-fetch provider·`/api/air` route/cache·6상태 Panel·Dashboard slot을 RED→GREEN으로 구현; 전체 1,030 tests·두 build, 값 미출력 2-call production live smoke와 독립 contract/security/FSD 리뷰 PASS | T11 |
+| 2026-07-27 | browser runtime의 available browser가 0개여서 필수 fixture light/dark·keyboard·390px overflow·기존 map/weather 시각 회귀를 실행하지 못함; 자동 테스트로 대체 판정하지 않고 T11 BLOCKED, 제품 코드는 미커밋 유지 | T11 |
+| 2026-07-28 | 사용자가 지정한 `http://localhost:5173/`는 HTTP 200·HTML 응답을 확인했으나 browser 재연결 목록은 여전히 0개; 시각 QA blocker 유지 | T11 |
+| 2026-07-28 | 사용자가 로컬 화면의 반응형과 테마 기능을 수동 QA해 PASS를 보고; keyboard 조작과 기존 map/weather 화면 회귀만 명시 확인 대기 | T11 |
+| 2026-07-28 | 사용자가 keyboard 테마 전환은 현재 불필요하다고 D-044를 승인하고 지도·서울 기상 실황 Panel 존재를 확인; 남은 UI blocker 해제, T11 전체 PASS·최종 ACCEPTED 대기 | T11 |
+| 2026-07-28 | 사용자가 T11 최종 결과를 “네”로 ACCEPTED; 최종 `npm run validate` 1,030 tests·두 build PASS 뒤 feature commit `7e3bcb9` 생성, push·PR·merge는 미수행 | T11 |
+| 2026-07-28 | 사용자가 “다음 단계 진행”으로 T11 push·development PR 단계를 승인; 원격 development가 accepted T10보다 1 commit 뒤임을 확인해 one-purpose T11 PR 전 T10 `main → development` sync PR을 선행 | T11→T11-R1 |
+| 2026-07-28 | T10 commit만 포함한 PR #3 생성, quality/Codex/feedback jobs SUCCESS; 실제 Codex output의 KMA pagination MEDIUM finding과 feedback fallback 결함을 확인해 PR 미병합·T11-R1 BLOCKED, T10-R1과 T09-R2를 별도 PROPOSED | T11-R1 |
+| 2026-07-28 | 사용자가 T10-R1 pagination-consistency bugfix를 “네”로 승인; PR #3은 open·미병합으로 유지하고 origin/main T10 기준 독립 TDD worktree 착수 | T10-R1 |
+| 2026-07-28 | KMA fixed first-page request/response pagination을 fail-closed로 결합하고 모순 응답의 last-good STALE 보존을 RED→GREEN; mutation 격리·전체 904 tests·두 build·독립 리뷰 PASS, 최종 ACCEPTED 대기 | T10-R1 |
+| 2026-07-28 | 사용자가 PASS 보고 뒤 “진행”으로 T10-R1을 ACCEPTED하고 후속 게시를 승인; 제품 변경을 `667b05e`로 커밋하고 replacement T10 baseline PR 단계 착수 | T10-R1 |
+| 2026-07-28 | feature branch push·PR #4 생성 후 PR #3을 대체 사유와 함께 close; PR #4 세 jobs SUCCESS지만 실제 Codex output의 tracked `.env.example`/runtime credential mismatch MEDIUM finding을 재현해 미병합 BLOCKED, T10-R2 PROPOSED | T10-R1→T10-R2 |
+| 2026-07-28 | 사용자가 간단한 동일 목적 수정용 Fast Track을 승인; T10-R2 identifier contract를 RED→GREEN, commit `bcd4548` push, 전체 905 tests·필수 quality PASS. Codex advisory는 API quota 초과로 실행 실패해 제한을 명시하고 PR #4 사람 판단 대기 | D-045·T10-R2 |
+| 2026-07-28 | 사용자가 “다음단계 진행”으로 T10-R2를 ACCEPTED하고 PR #4 merge를 승인; merge commit `44dc5a7`로 development에 ancestry를 보존해 병합 | T10-R2 |
+| 2026-07-28 | T11 branch를 push해 최신 development 대상 PR #5 생성; AirKorea commit 1개·28 files만 포함하고 merge-result quality PASS. Codex advisory는 동일 API quota 초과로 실패해 PR은 사람 merge 판단 대기 | T11-R1 |
+| 2026-07-28 | 사용자가 계속 진행을 지시해 T11-R1을 ACCEPTED; PR #5를 merge commit `955f6e5`로 development에 병합하고 T11 ancestry를 확인한 뒤 최신 development에서 `feature/t12-earthquake` worktree 생성 | T11-R1→T12 |
+| 2026-07-28 | T12 공식·레거시·현재 아키텍처 조사와 값 미출력 source gate 수행; USGS는 200, KMA key는 승인된 weather service에서 00이지만 `getEqkMsg`가 반복 99/timeout으로 종료되어 활용승인·provider 상태 확인 전 T12 BLOCKED, 제품 변경 0건 | T12 |
+| 2026-07-28 | 사용자가 지진 key 설정 완료를 알렸으나 재검증에서도 `getEqkMsg` 200/resultCode 99; local `.env` 수정시각은 이전과 같고 별도 process/user/machine key가 없어 새 credential 로드 증거 없음, 제품 변경 없이 BLOCKED 유지 | T12 |
+| 2026-07-28 | 초기 대문자 `ServiceKey` 요청의 99 응답을 credential 유형 문제로 해석해 API Hub를 시도했으나, 사용자가 실제 data.go.kr 정상 요청의 소문자 `serviceKey` 계약을 제시해 기존 판단을 폐기 | T12 |
+| 2026-07-28 | data.go.kr HTTPS `getEqkMsg`를 소문자 `serviceKey`, JSON, 최근 날짜 범위로 값 미출력 재검증해 HTTP 200·resultCode 00·1 item과 실제 field/type 경계를 확인; KMA contract gate PASS, D-046 ACCEPTED, T12 RED 착수 | D-046·T12 |
+| 2026-07-28 | 공식 활용가이드에서 상세기능 4개와 소문자 `serviceKey`, 최근 3일 자료 범위를 재확인; T12는 `getEqkMsg`만 사용하고 snapshot을 KMA 3일·USGS 7일 source window로 정정 | D-046·T12 |
+| 2026-07-28 | T12 Entity·KMA/USGS provider·reconciliation·gateway·Query·Dashboard Panel을 RED→GREEN; 독립 리뷰의 월별 ID·500건 상한·USGS 상태 경계를 재현·수정하고 실키 1 test와 전체 1,106 tests·두 build PASS, commit 없이 ACCEPTED 대기 | T12 |
+| 2026-07-28 | 사용자가 T12 PASS 보고 뒤 “계속 진행”으로 결과를 ACCEPTED하고 최종 커밋·development 대상 PR 진행을 승인 | T12 |
+| 2026-07-28 | T12를 `e58e0f7`로 commit·push하고 development 대상 PR #6 생성; 34 files만 포함, OPEN·MERGEABLE, 필수 quality PASS. Codex advisory는 변경 분석 전 API quota 초과로 실패해 안전한 BLOCKED 댓글을 남겼으며 merge하지 않고 사람 판단 대기 | T12 |
+| 2026-07-28 | 사용자의 다음 단계 지시로 PR #6을 merge commit `3c636d1`로 development에 병합하고 최신 development에서 `feature/t13-ecos-macro` worktree 생성 | T12→T13 |
+| 2026-07-28 | ECOS 공식 code/item/unit을 확정하고 T13 Entity·provider·gateway·Query·Dashboard Panel을 RED→GREEN; 전체 1,138 tests·client/server build PASS. `ECOS_API_KEY` 부재로 live smoke 1건이 SKIP되어 commit 없이 BLOCKED | T13 |
+| 2026-07-28 | 사용자가 live gate 제한을 전달받은 뒤 지금까지의 피처 작업을 development에 모두 병합하라고 명시; 이미 반영된 T10~T12를 확인하고 남은 T13의 commit·push·PR·development merge를 승인하되 live release blocker는 유지 | T13 |
