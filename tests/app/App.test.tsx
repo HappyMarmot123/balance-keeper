@@ -64,6 +64,71 @@ const airQualityEnvelope = {
   },
 } as const;
 
+const earthquakeSnapshotTo = Date.parse('2026-07-28T03:00:00.000Z');
+const earthquakeOccurredAt = Date.parse('2026-07-27T03:30:05.120Z');
+const earthquakeEnvelope = {
+  data: {
+    coverage: {
+      maximumLatitude: 45,
+      maximumLongitude: 145,
+      minimumLatitude: 21,
+      minimumLongitude: 110,
+    },
+    events: [
+      {
+        depthKm: 11,
+        id: 'kma:108:42',
+        intensity: '최대진도 III',
+        latitude: 37.12,
+        location: '충북 가상군 남남서쪽 9km 지역',
+        longitude: 127.18,
+        magnitude: 3.1,
+        magnitudeType: null,
+        occurredAt: earthquakeOccurredAt,
+        sourceRefs: [
+          {
+            aliases: ['108:42:202607271245:2'],
+            depthKm: 11,
+            id: '108:42',
+            intensity: '최대진도 III',
+            latitude: 37.12,
+            location: '충북 가상군 남남서쪽 9km 지역',
+            longitude: 127.18,
+            magnitude: 3.1,
+            magnitudeType: null,
+            occurredAt: earthquakeOccurredAt,
+            provider: 'KMA',
+            updatedAt: Date.parse('2026-07-27T03:45:00.000Z'),
+          },
+        ],
+        updatedAt: Date.parse('2026-07-27T03:45:00.000Z'),
+      },
+    ],
+    sources: {
+      kma: {
+        from: earthquakeSnapshotTo - 3 * 24 * 60 * 60_000,
+        status: 'available',
+        to: earthquakeSnapshotTo,
+      },
+      usgs: {
+        from: earthquakeSnapshotTo - 7 * 24 * 60 * 60_000,
+        status: 'available',
+        to: earthquakeSnapshotTo,
+      },
+    },
+    window: {
+      from: earthquakeSnapshotTo - 7 * 24 * 60 * 60_000,
+      to: earthquakeSnapshotTo,
+    },
+  },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: earthquakeSnapshotTo,
+    requestId: 'app-earthquake-request',
+    source: 'KMA+USGS',
+  },
+} as const;
+
 beforeEach(() => {
   queryClient.clear();
   vi.stubEnv('VITE_NAVER_MAPS_KEY_ID', '');
@@ -72,7 +137,11 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      const envelope = requestUrl.startsWith('/api/air?') ? airQualityEnvelope : weatherEnvelope;
+      const envelope = requestUrl.startsWith('/api/air?')
+        ? airQualityEnvelope
+        : requestUrl === '/api/earthquake'
+          ? earthquakeEnvelope
+          : weatherEnvelope;
 
       return Promise.resolve(
         new Response(JSON.stringify(envelope), {
@@ -114,6 +183,7 @@ describe('application bootstrap', () => {
     expect(screen.getByRole('group', { name: '화면 테마' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '서울 기상 실황' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '서울 대기질' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: '동아시아 지진' })).toBeTruthy();
 
     expect(screen.queryByText('STATE MATRIX')).toBeNull();
     expect(screen.queryByRole('region', { name: '시맨틱 토큰' })).toBeNull();
@@ -139,6 +209,17 @@ describe('application bootstrap', () => {
     expect(screen.getByText('81 µg/m³')).toBeTruthy();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/air?region=seoul',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('renders recent earthquake signals through the application query provider', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('M 3.1')).toBeTruthy();
+    expect(screen.getByText('충북 가상군 남남서쪽 9km 지역')).toBeTruthy();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/earthquake',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });

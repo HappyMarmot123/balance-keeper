@@ -1,0 +1,53 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL_SERVICE"
+    },
+    "body": {
+      "dataType": "JSON",
+      "items": {
+        "item": [
+          {
+            "cnt": 1,
+            "cor": "초기 통보",
+            "dep": 12,
+            "fcTp": 3,
+            "img": "https://example.invalid/earthquake-initial.png",
+            "inT": "최대진도 III",
+            "lat": 37.1,
+            "loc": "충북 가상군 남쪽 10km 지역",
+            "lon": 127.2,
+            "mt": 3,
+            "rem": "합성 테스트 자료",
+            "stnId": 108,
+            "tmEqk": 20260727123000,
+            "tmFc": 202607271235,
+            "tmSeq": 42
+          },
+          {
+            "cnt": 2,
+            "cor": "규모 및 위치 수정",
+            "dep": "11",
+            "fcTp": 5,
+            "img": "https://example.invalid/earthquake-correction.png",
+            "inT": "최대진도 III",
+            "lat": "37.12",
+            "loc": "충북 가상군 남남서쪽 9km 지역",
+            "lon": "127.18",
+            "mt": "3.1",
+            "rem": "합성 테스트 자료",
+            "stnId": 108,
+            "tmEqk": 20260727123005,
+            "tmFc": 202607271245,
+            "tmMsc": 120,
+            "tmSeq": 42
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 2
+    }
+  }
+}

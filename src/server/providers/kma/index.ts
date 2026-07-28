@@ -1,3 +1,9 @@
+export type { EarthquakeWindow, FetchKmaEarthquakeRecordsOptions } from './earthquake';
+export {
+  fetchKmaEarthquakeRecords,
+  normalizeKmaEarthquakePages,
+  readKmaEarthquakeCredential,
+} from './earthquake';
 export {
   type FetchKmaUltraShortNowcastOptions,
   fetchKmaUltraShortNowcast,

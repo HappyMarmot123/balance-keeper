@@ -1,7 +1,8 @@
 import type { FleetStateStore } from '../cache';
 import { readAirKoreaConfig } from '../providers/airkorea';
-import { readKmaWeatherCredential } from '../providers/kma';
+import { readKmaEarthquakeCredential, readKmaWeatherCredential } from '../providers/kma';
 import { createAirRoute } from '../routes/air';
+import { createEarthquakeRoute } from '../routes/earthquake';
 import { createWeatherRoute } from '../routes/weather';
 import { createGatewayRuntime, type GatewayRuntime } from './createGatewayRuntime';
 import { createJsonGatewayLogger, type GatewayLogWriter } from './jsonGatewayLogger';
@@ -42,6 +43,12 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     fetcher: options.fetcher ?? globalThis.fetch,
     readAdmissionSubject: readTrustedAdmissionSubject,
   });
+  const earthquakeRoute = createEarthquakeRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: readKmaEarthquakeCredential(environment),
+  });
 
   return createGatewayRuntime({
     clock,
@@ -52,7 +59,7 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     environment,
     ...(options.fleetStateStore === undefined ? {} : { fleetStateStore: options.fleetStateStore }),
     logger: createJsonGatewayLogger(options.logWriter),
-    routes: [weatherRoute, airRoute],
+    routes: [weatherRoute, airRoute, earthquakeRoute],
   });
 }
 

@@ -99,10 +99,12 @@ describe('server build contract', () => {
     const graph = collectLocalModuleGraph(resolve(workspaceRoot, 'src/server/runtime/nodeMain.ts'));
     const contractEntries = [
       resolve(workspaceRoot, 'src/entities/air-quality/contract.ts'),
+      resolve(workspaceRoot, 'src/entities/earthquake/contract.ts'),
       resolve(workspaceRoot, 'src/entities/weather/contract.ts'),
     ];
     const browserBarrels = [
       resolve(workspaceRoot, 'src/entities/air-quality/index.ts'),
+      resolve(workspaceRoot, 'src/entities/earthquake/index.ts'),
       resolve(workspaceRoot, 'src/entities/weather/index.ts'),
     ];
     const browserQueryDependencies = [...graph.entries()]
