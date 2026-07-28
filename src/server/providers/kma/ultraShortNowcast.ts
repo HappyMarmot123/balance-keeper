@@ -5,6 +5,8 @@ import { WEATHER_REGIONS, weatherNowcastDataSchema } from '../../../entities/wea
 const KST_OFFSET_MS = 9 * 60 * 60_000;
 const PUBLICATION_SAFETY_LAG_MS = 20 * 60_000;
 const KMA_NOWCAST_ENDPOINT = 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';
+const KMA_NOWCAST_PAGE_NO = 1;
+const KMA_NOWCAST_NUM_OF_ROWS = 1000;
 
 const providerHeaderSchema = z
   .object({
@@ -226,7 +228,17 @@ export function normalizeKmaUltraShortNowcast(
   } catch (error) {
     throw new KmaProviderError('Requested KMA observation slot is invalid', error);
   }
+  const { numOfRows, pageNo, totalCount } = parsed.response.body;
   const items = parsed.response.body.items === '' ? [] : parsed.response.body.items.item;
+  const hasInvalidPagination =
+    pageNo !== KMA_NOWCAST_PAGE_NO ||
+    numOfRows !== KMA_NOWCAST_NUM_OF_ROWS ||
+    totalCount > KMA_NOWCAST_NUM_OF_ROWS ||
+    items.length !== totalCount;
+  if (hasInvalidPagination) {
+    throw new KmaProviderError('KMA pagination metadata does not match the returned items');
+  }
+
   if (items.length === 0) {
     return null;
   }
@@ -300,8 +312,8 @@ export async function fetchKmaUltraShortNowcast(options: FetchKmaUltraShortNowca
   const slot = slotSchema.parse(options.slot);
   const url = new URL(KMA_NOWCAST_ENDPOINT);
   url.searchParams.set('ServiceKey', serviceKey);
-  url.searchParams.set('pageNo', '1');
-  url.searchParams.set('numOfRows', '1000');
+  url.searchParams.set('pageNo', String(KMA_NOWCAST_PAGE_NO));
+  url.searchParams.set('numOfRows', String(KMA_NOWCAST_NUM_OF_ROWS));
   url.searchParams.set('dataType', 'JSON');
   url.searchParams.set('base_date', slot.baseDate);
   url.searchParams.set('base_time', slot.baseTime);

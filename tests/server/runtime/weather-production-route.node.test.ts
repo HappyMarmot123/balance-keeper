@@ -10,6 +10,14 @@ import {
 
 const fixturePath = resolve(import.meta.dirname, '../../fixtures/kma/ultra-short-nowcast-success.json');
 const readFixture = (): unknown => JSON.parse(readFileSync(fixturePath, 'utf8')) as unknown;
+type MutableWeatherProviderFixture = {
+  response: {
+    body: {
+      items: { item: unknown[] };
+      totalCount: number;
+    };
+  };
+};
 
 describe('weather production route registration', () => {
   it('registers /api/weather with its CDN profile in the production assembly', () => {
@@ -104,5 +112,51 @@ describe('weather production route registration', () => {
     expect(requestedUrl?.searchParams.get('base_time')).toBe('1400');
     expect(requestedUrl?.searchParams.get('ServiceKey')).toBe('canonical-fixture-key');
     expect(JSON.stringify(body)).not.toContain('canonical-fixture-key');
+  });
+
+  it('retains the last good observation when KMA pagination metadata contradicts its items', async () => {
+    let now = Date.parse('2026-07-22T14:25:00+09:00');
+    let returnInconsistentPagination = false;
+    let providerRequestCount = 0;
+    let requestSequence = 0;
+    const fetcher = async (): Promise<Response> => {
+      providerRequestCount += 1;
+      const fixture = readFixture() as MutableWeatherProviderFixture;
+      if (returnInconsistentPagination) {
+        fixture.response.body.items.item = [];
+        fixture.response.body.totalCount = 1;
+      }
+      return Response.json(fixture);
+    };
+    const runtime = createProductionGatewayRuntime({
+      clock: () => now,
+      createCoordinationToken: () => `coordination-weather-stale-${requestSequence}`,
+      createRequestId: () => `request-weather-stale-${++requestSequence}`,
+      environment: { DATA_GO_KR_SERVICE_KEY: 'canonical-fixture-key' },
+      fetcher,
+      fleetStateStore: new MemoryFleetStateStore(() => now),
+      logWriter: () => undefined,
+    });
+    const request = () =>
+      withTrustedAdmissionSubject(new Request('https://balance.test/api/weather?region=seoul'), '203.0.113.12');
+
+    const missResponse = await runtime.handle(request());
+    const missBody = await missResponse.json();
+    returnInconsistentPagination = true;
+    now += 10 * 60_000 + 1;
+    const staleResponse = await runtime.handle(request());
+    const staleBody = await staleResponse.json();
+
+    expect(missResponse.status).toBe(200);
+    expect(missBody.meta.cache).toBe('MISS');
+    expect(staleResponse.status).toBe(200);
+    expect(staleBody.data).toEqual(missBody.data);
+    expect(staleBody.meta).toMatchObject({
+      cache: 'STALE',
+      fetchedAt: missBody.meta.fetchedAt,
+      requestId: 'request-weather-stale-2',
+      source: 'KMA',
+    });
+    expect(providerRequestCount).toBe(2);
   });
 });

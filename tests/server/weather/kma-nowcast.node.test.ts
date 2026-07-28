@@ -118,6 +118,49 @@ describe('KMA ultra-short nowcast normalization', () => {
     expect(normalizeFixture(withItems([]))).toBeNull();
   });
 
+  it('rejects a positive totalCount paired with an empty item collection', () => {
+    const fixture = withItems([]);
+    fixture.response.body.totalCount = 1;
+
+    expect(() => normalizeFixture(fixture)).toThrow(/pagination/i);
+  });
+
+  it('rejects a partial first page whose item count contradicts totalCount', () => {
+    const fixture = readSuccessFixture();
+    fixture.response.body.totalCount += 1;
+
+    expect(() => normalizeFixture(fixture)).toThrow(/pagination/i);
+  });
+
+  it('rejects a response page size that differs from the requested page size', () => {
+    const fixture = readSuccessFixture();
+    fixture.response.body.numOfRows = fixture.response.body.items.item.length;
+
+    expect(() => normalizeFixture(fixture)).toThrow(/pagination/i);
+  });
+
+  it('rejects a response page number that differs from the requested first page', () => {
+    const fixture = readSuccessFixture();
+    fixture.response.body.pageNo = 2;
+
+    expect(() => normalizeFixture(fixture)).toThrow(/pagination/i);
+  });
+
+  it('rejects a result set larger than the requested single-page capacity', () => {
+    const fixture = readSuccessFixture();
+    const template = fixture.response.body.items.item[0];
+    if (template === undefined) {
+      throw new Error('KMA success fixture must contain an item');
+    }
+    fixture.response.body.items.item = Array.from({ length: 1001 }, (_, index) => ({
+      ...template,
+      category: `EXTRA_${index}`,
+    }));
+    fixture.response.body.totalCount = fixture.response.body.items.item.length;
+
+    expect(() => normalizeFixture(fixture)).toThrow(/pagination/i);
+  });
+
   it('rejects malformed numeric observation values instead of converting them to NaN or null', () => {
     const items = readSuccessFixture().response.body.items.item.map((item) =>
       item.category === 'T1H' ? { ...item, obsrValue: 'not-a-number' } : item,
