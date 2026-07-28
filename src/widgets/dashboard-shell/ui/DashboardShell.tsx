@@ -4,11 +4,12 @@ import { ThemeSwitch } from '../../../features/theme-switch';
 
 type DashboardShellProps = {
   airQualitySlot: ComponentChildren;
+  earthquakeSlot: ComponentChildren;
   mapSlot: ComponentChildren;
   weatherSlot: ComponentChildren;
 };
 
-export function DashboardShell({ airQualitySlot, mapSlot, weatherSlot }: DashboardShellProps) {
+export function DashboardShell({ airQualitySlot, earthquakeSlot, mapSlot, weatherSlot }: DashboardShellProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-foreground">
       <header className="border-b border-boundary bg-surface">
@@ -39,6 +40,7 @@ export function DashboardShell({ airQualitySlot, mapSlot, weatherSlot }: Dashboa
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {weatherSlot}
             {airQualitySlot}
+            {earthquakeSlot}
           </div>
         </div>
       </main>

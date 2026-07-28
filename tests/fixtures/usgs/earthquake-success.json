@@ -1,0 +1,65 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "generated": 1785193200000,
+    "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson",
+    "title": "USGS Magnitude 2.5+ Earthquakes, Past Week",
+    "status": 200,
+    "api": "1.14.1",
+    "count": 3
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "mag": 3,
+        "place": "Synthetic Korea region",
+        "time": 1785123000000,
+        "updated": 1785123060000,
+        "ids": ",us-test-1,alias-test-1,",
+        "magType": "mb",
+        "type": "earthquake"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [127.19, 37.11, 10]
+      },
+      "id": "us-test-1"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "mag": null,
+        "place": null,
+        "time": 1785119400000,
+        "updated": 1785119460000,
+        "ids": ",us-test-2,",
+        "magType": null,
+        "type": "earthquake"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [129.2, 35.8, -1.2]
+      },
+      "id": "us-test-2"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "mag": 4.1,
+        "place": "Outside approved longitude",
+        "time": 1785115800000,
+        "updated": 1785115860000,
+        "ids": ",us-outside,",
+        "magType": "mb",
+        "type": "earthquake"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [146, 37, 20]
+      },
+      "id": "us-outside"
+    }
+  ],
+  "bbox": [127.19, 35.8, -1.2, 146, 37.11, 20]
+}
