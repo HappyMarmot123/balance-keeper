@@ -33,6 +33,7 @@ type NowcastFixture = {
 };
 
 const fixturePath = resolve(import.meta.dirname, '../../fixtures/kma/ultra-short-nowcast-success.json');
+const environmentExamplePath = resolve(import.meta.dirname, '../../../.env.example');
 const EXPECTED_SLOT = { baseDate: '20260722', baseTime: '1400' } as const;
 const readSuccessFixture = (): NowcastFixture => JSON.parse(readFileSync(fixturePath, 'utf8')) as NowcastFixture;
 const normalizeFixture = (input: unknown) => normalizeKmaUltraShortNowcast(input, 'seoul', EXPECTED_SLOT);
@@ -383,6 +384,17 @@ describe('KMA HTTPS fetch boundary', () => {
 });
 
 describe('KMA canonical credential', () => {
+  it('documents only the canonical KMA credential identifier', () => {
+    const identifiers = readFileSync(environmentExamplePath, 'utf8')
+      .split(/\r?\n/u)
+      .flatMap((line) => {
+        const [identifier] = line.split('=', 1);
+        return identifier !== undefined && /^[A-Z][A-Z0-9_]*$/u.test(identifier) ? [identifier] : [];
+      });
+
+    expect(identifiers.filter((identifier) => identifier.startsWith('DATA_GO_KR'))).toEqual(['DATA_GO_KR_SERVICE_KEY']);
+  });
+
   it('reads only DATA_GO_KR_SERVICE_KEY and trims its boundary whitespace', () => {
     expect(
       readKmaWeatherCredential({
