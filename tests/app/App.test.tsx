@@ -23,20 +23,64 @@ const weatherEnvelope = {
   },
 } as const;
 
+const airQualityEnvelope = {
+  data: {
+    observedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+    observedStationCount: 2,
+    region: 'seoul',
+    stations: [
+      {
+        address: '서울 가상구 관측로 1',
+        latitude: 37.57,
+        longitude: 126.98,
+        networkName: '도시대기',
+        observedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+        pm10: { concentration: 31, grade: 'moderate' },
+        pm25: { concentration: 15, grade: 'good' },
+        providerRegionName: '서울',
+        regionId: 'seoul',
+        stationName: '북악가상',
+      },
+      {
+        address: '서울 가상구 관측로 2',
+        latitude: 37.51,
+        longitude: 127.02,
+        networkName: '도시대기',
+        observedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+        pm10: { concentration: 81, grade: 'bad' },
+        pm25: { concentration: null, grade: null },
+        providerRegionName: '서울',
+        regionId: 'seoul',
+        stationName: '한강가상',
+      },
+    ],
+    totalStationCount: 2,
+  },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: Date.parse('2026-07-22T14:09:00+09:00'),
+    requestId: 'app-air-quality-request',
+    source: 'AirKorea',
+  },
+} as const;
+
 beforeEach(() => {
   queryClient.clear();
   vi.stubEnv('VITE_NAVER_MAPS_KEY_ID', '');
   vi.stubEnv('VITE_NAVER_MAP_STYLE_ID', '');
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () =>
-      Promise.resolve(
-        new Response(JSON.stringify(weatherEnvelope), {
+    vi.fn(async (input: RequestInfo | URL) => {
+      const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const envelope = requestUrl.startsWith('/api/air?') ? airQualityEnvelope : weatherEnvelope;
+
+      return Promise.resolve(
+        new Response(JSON.stringify(envelope), {
           headers: { 'content-type': 'application/json' },
           status: 200,
         }),
-      ),
-    ),
+      );
+    }),
   );
 });
 
@@ -69,6 +113,7 @@ describe('application bootstrap', () => {
 
     expect(screen.getByRole('group', { name: '화면 테마' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '서울 기상 실황' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: '서울 대기질' })).toBeTruthy();
 
     expect(screen.queryByText('STATE MATRIX')).toBeNull();
     expect(screen.queryByRole('region', { name: '시맨틱 토큰' })).toBeNull();
@@ -83,6 +128,17 @@ describe('application bootstrap', () => {
     expect(screen.getByText('14:00 기준')).toBeTruthy();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/weather?region=seoul',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('renders the highest Seoul PM observations through the application query provider', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('한강가상')).toBeTruthy();
+    expect(screen.getByText('81 µg/m³')).toBeTruthy();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/air?region=seoul',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });

@@ -1,0 +1,60 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "SYNTHETIC_OK"
+    },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 5,
+      "items": [
+        {
+          "stationName": "합성측정소-A",
+          "addr": "서울특별시 합성구 테스트로 1",
+          "year": "2020",
+          "mangName": "도시대기",
+          "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+          "dmX": "37.55",
+          "dmY": "126.98"
+        },
+        {
+          "stationName": "합성측정소-B",
+          "addr": "서울특별시 합성구 테스트로 2",
+          "year": "2021",
+          "mangName": "도로변대기",
+          "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+          "dmX": "37.56",
+          "dmY": "126.99"
+        },
+        {
+          "stationName": "합성측정소-C",
+          "addr": "서울특별시 합성구 테스트로 3",
+          "year": "2022",
+          "mangName": "도시대기",
+          "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+          "dmX": "37.57",
+          "dmY": "127.01"
+        },
+        {
+          "stationName": "합성측정소-D",
+          "addr": "서울특별시 합성구 테스트로 4",
+          "year": "2023",
+          "mangName": "도시대기",
+          "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+          "dmX": "37.58",
+          "dmY": "127.02"
+        },
+        {
+          "stationName": "합성측정소-E",
+          "addr": "서울특별시 합성구 테스트로 5",
+          "year": "2024",
+          "mangName": "도시대기",
+          "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+          "dmX": "37.59",
+          "dmY": "127.03"
+        }
+      ]
+    }
+  }
+}

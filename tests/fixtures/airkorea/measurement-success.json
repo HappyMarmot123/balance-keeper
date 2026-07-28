@@ -1,0 +1,85 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "SYNTHETIC_OK"
+    },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 5,
+      "items": [
+        {
+          "stationName": "합성측정소-A",
+          "mangName": "도시대기",
+          "sidoName": "서울",
+          "dataTime": "2026-06-15 09:00",
+          "pm10Value": "0",
+          "pm25Value": "15",
+          "khaiGrade": "4",
+          "khaiValue": "250",
+          "so2Value": "0.003",
+          "coValue": "0.4",
+          "o3Value": "0.021",
+          "no2Value": "0.018"
+        },
+        {
+          "stationName": "합성측정소-B",
+          "mangName": "도로변대기",
+          "sidoName": "서울",
+          "dataTime": "2026-06-15 09:00",
+          "pm10Value": "31",
+          "pm25Value": "16",
+          "khaiGrade": "1",
+          "khaiValue": "45",
+          "so2Value": "0.004",
+          "coValue": "0.5",
+          "o3Value": "0.024",
+          "no2Value": "0.021"
+        },
+        {
+          "stationName": "합성측정소-C",
+          "mangName": "도시대기",
+          "sidoName": "서울",
+          "dataTime": "2026-06-15 08:00",
+          "pm10Value": "81",
+          "pm25Value": "36",
+          "khaiGrade": "2",
+          "khaiValue": "80",
+          "so2Value": "0.005",
+          "coValue": "0.6",
+          "o3Value": "0.027",
+          "no2Value": "0.024"
+        },
+        {
+          "stationName": "합성측정소-D",
+          "mangName": "도시대기",
+          "sidoName": "서울",
+          "dataTime": "2026-06-15 08:00",
+          "pm10Value": "151",
+          "pm25Value": "76",
+          "khaiGrade": "1",
+          "khaiValue": "40",
+          "so2Value": "0.006",
+          "coValue": "0.7",
+          "o3Value": "0.03",
+          "no2Value": "0.027"
+        },
+        {
+          "stationName": "합성측정소-E",
+          "mangName": "도시대기",
+          "sidoName": "서울",
+          "dataTime": "2026-06-15 09:00",
+          "pm10Value": null,
+          "pm25Value": "-",
+          "khaiGrade": null,
+          "khaiValue": null,
+          "so2Value": null,
+          "coValue": null,
+          "o3Value": null,
+          "no2Value": null
+        }
+      ]
+    }
+  }
+}

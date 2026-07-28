@@ -97,14 +97,20 @@ describe('server build contract', () => {
 
   it('keeps the browser query runtime outside the bundled server dependency graph', () => {
     const graph = collectLocalModuleGraph(resolve(workspaceRoot, 'src/server/runtime/nodeMain.ts'));
-    const contractEntry = resolve(workspaceRoot, 'src/entities/weather/contract.ts');
-    const browserBarrel = resolve(workspaceRoot, 'src/entities/weather/index.ts');
+    const contractEntries = [
+      resolve(workspaceRoot, 'src/entities/air-quality/contract.ts'),
+      resolve(workspaceRoot, 'src/entities/weather/contract.ts'),
+    ];
+    const browserBarrels = [
+      resolve(workspaceRoot, 'src/entities/air-quality/index.ts'),
+      resolve(workspaceRoot, 'src/entities/weather/index.ts'),
+    ];
     const browserQueryDependencies = [...graph.entries()]
       .filter(([, source]) => source.includes('@tanstack') || source.includes('QueryClient'))
       .map(([file]) => file.replaceAll('\\', '/').replace(`${workspaceRoot.replaceAll('\\', '/')}/`, ''));
 
-    expect(graph.has(contractEntry)).toBe(true);
-    expect(graph.has(browserBarrel)).toBe(false);
+    expect(contractEntries.every((entry) => graph.has(entry))).toBe(true);
+    expect(browserBarrels.every((barrel) => !graph.has(barrel))).toBe(true);
     expect(browserQueryDependencies).toEqual([]);
   });
 });
