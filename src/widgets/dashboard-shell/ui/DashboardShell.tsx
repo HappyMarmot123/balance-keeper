@@ -4,6 +4,7 @@ import { ThemeSwitch } from '../../../features/theme-switch';
 
 type DashboardShellProps = {
   airQualitySlot: ComponentChildren;
+  disasterSlot: ComponentChildren;
   earthquakeSlot: ComponentChildren;
   mapSlot: ComponentChildren;
   macroSlot: ComponentChildren;
@@ -14,6 +15,7 @@ type DashboardShellProps = {
 
 export function DashboardShell({
   airQualitySlot,
+  disasterSlot,
   earthquakeSlot,
   mapSlot,
   macroSlot,
@@ -52,6 +54,7 @@ export function DashboardShell({
             {weatherSlot}
             {airQualitySlot}
             {earthquakeSlot}
+            {disasterSlot}
             {macroSlot}
             {marketsSlot}
             {newsSlot}
