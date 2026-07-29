@@ -13,9 +13,9 @@ const readStationFixture = (): unknown => JSON.parse(readFileSync(stationFixture
 const airKorea = airKoreaModule as Record<string, unknown>;
 const syntheticConfig = {
   measurementBaseUrl: 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc',
-  measurementKey: 'synthetic-quality-key',
+  measurementKey: 'synthetic-data-go-key',
   stationBaseUrl: 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc',
-  stationKey: 'synthetic-station-key',
+  stationKey: 'synthetic-data-go-key',
 } as const;
 
 describe('AirKorea regional normalization', () => {
@@ -458,13 +458,12 @@ describe('AirKorea regional normalization', () => {
 
 describe('AirKorea server configuration', () => {
   const validEnvironment = {
+    DATA_GO_KR_SERVICE_KEY: 'synthetic-data-go-key',
     KOREA_AIR_QUALITY_BASE_URL: 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc',
-    KOREA_AIR_QUALITY_KEY: 'synthetic-quality-key',
     KOREA_AIR_STATION_BASE_URL: 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc',
-    KOREA_AIR_STATION_KEY: 'synthetic-station-key',
   } as const;
 
-  it('reads only the two approved service-family base and key pairs', () => {
+  it('uses one canonical data.go.kr key with the two approved service-family bases', () => {
     const readAirKoreaConfig = airKorea.readAirKoreaConfig;
 
     expect(readAirKoreaConfig).toBeTypeOf('function');
@@ -474,27 +473,29 @@ describe('AirKorea server configuration', () => {
 
     expect(
       readAirKoreaConfig({
+        DATA_GO_KR_SERVICE_KEY: '  synthetic-data-go-key  ',
         KOREA_AIR_QUALITY_BASE_URL: '  https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/  ',
         KOREA_AIR_QUALITY_EXPIRES_AT: 'ignored-by-t11',
-        KOREA_AIR_QUALITY_KEY: '  synthetic-quality-key  ',
         KOREA_AIR_STATION_BASE_URL: ' https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc ',
         KOREA_AIR_STATION_EXPIRES_AT: 'ignored-by-t11',
-        KOREA_AIR_STATION_KEY: ' synthetic-station-key ',
       }),
     ).toEqual({
       measurementBaseUrl: 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc',
-      measurementKey: 'synthetic-quality-key',
+      measurementKey: 'synthetic-data-go-key',
       stationBaseUrl: 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc',
-      stationKey: 'synthetic-station-key',
+      stationKey: 'synthetic-data-go-key',
     });
   });
 
   it.each([
-    ['missing measurement key', { ...validEnvironment, KOREA_AIR_QUALITY_KEY: '' }],
+    ['missing canonical key', { ...validEnvironment, DATA_GO_KR_SERVICE_KEY: '' }],
     [
-      'legacy generic key aliases',
+      'legacy provider-specific key aliases',
       {
-        DATA_GO_KR_SERVICE_KEY: 'legacy-key',
+        KOREA_AIR_QUALITY_BASE_URL: validEnvironment.KOREA_AIR_QUALITY_BASE_URL,
+        KOREA_AIR_QUALITY_KEY: 'legacy-key',
+        KOREA_AIR_STATION_BASE_URL: validEnvironment.KOREA_AIR_STATION_BASE_URL,
+        KOREA_AIR_STATION_KEY: 'legacy-key',
         KOREA_EARTHQUAKE_KEY: 'legacy-key',
       },
     ],
@@ -553,7 +554,7 @@ describe('AirKorea server configuration', () => {
 });
 
 describe('AirKorea HTTPS transport', () => {
-  it('fetches both service operations with distinct keys and one shared signal', async () => {
+  it('fetches both service operations with one canonical key and one shared signal', async () => {
     const fetchAirKoreaInputs = airKorea.fetchAirKoreaInputs;
     const signal = new AbortController().signal;
     const requests: Array<{ init?: RequestInit; url: URL }> = [];
@@ -578,9 +579,9 @@ describe('AirKorea HTTPS transport', () => {
       fetchAirKoreaInputs({
         config: {
           measurementBaseUrl: 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc',
-          measurementKey: 'synthetic%2Bquality%2Fkey%3D',
+          measurementKey: 'synthetic%2Bdata%2Fgo%3D',
           stationBaseUrl: 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc',
-          stationKey: 'synthetic-station-key',
+          stationKey: 'synthetic%2Bdata%2Fgo%3D',
         },
         fetcher,
         providerRegionName: '서울',
@@ -600,7 +601,7 @@ describe('AirKorea HTTPS transport', () => {
       numOfRows: '100',
       pageNo: '1',
       returnType: 'json',
-      serviceKey: 'synthetic+quality/key=',
+      serviceKey: 'synthetic+data/go=',
       sidoName: '서울',
       ver: '1.5',
     });
@@ -609,7 +610,7 @@ describe('AirKorea HTTPS transport', () => {
       numOfRows: '100',
       pageNo: '1',
       returnType: 'json',
-      serviceKey: 'synthetic-station-key',
+      serviceKey: 'synthetic+data/go=',
     });
     for (const request of requests) {
       expect(request.init).toMatchObject({

@@ -17,9 +17,9 @@ const stationFixture = JSON.parse(
 const NOW = Date.parse('2026-06-15T09:09:00+09:00');
 const syntheticConfig = {
   measurementBaseUrl: 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc',
-  measurementKey: 'synthetic-quality-key',
+  measurementKey: 'synthetic-data-go-key',
   stationBaseUrl: 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc',
-  stationKey: 'synthetic-station-key',
+  stationKey: 'synthetic-data-go-key',
 } as const;
 
 describe('/api/air request contract', () => {
@@ -128,9 +128,9 @@ describe('air-quality route loader', () => {
       clock: () => NOW,
       config: {
         measurementBaseUrl: 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc',
-        measurementKey: 'synthetic-quality-key',
+        measurementKey: 'synthetic-data-go-key',
         stationBaseUrl: 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc',
-        stationKey: 'synthetic-station-key',
+        stationKey: 'synthetic-data-go-key',
       },
       fetcher,
       readAdmissionSubject: () => createAdmissionSubject('opaque-air-quality-fixture'),

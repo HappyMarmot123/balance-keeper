@@ -171,7 +171,7 @@ describe('AirQualityView', () => {
   });
 
   it('uses the terminal setup state for missing credentials without exposing configuration details', () => {
-    const unsafeCause = new Error('KOREA_AIR_QUALITY_KEY=fixture-secret provider detail');
+    const unsafeCause = new Error('DATA_GO_KR_SERVICE_KEY=fixture-secret provider detail');
 
     render(
       <AirQualityView
@@ -185,7 +185,7 @@ describe('AirQualityView', () => {
 
     expect(screen.getByRole('status').textContent).toContain('연결 설정이 필요합니다. 관리자에게 문의하세요.');
     expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull();
-    expect(document.body.textContent).not.toContain('KOREA_AIR_QUALITY_KEY');
+    expect(document.body.textContent).not.toContain('DATA_GO_KR_SERVICE_KEY');
     expect(document.body.textContent).not.toContain('fixture-secret');
     expect(document.body.textContent).not.toContain('provider detail');
   });

@@ -48,7 +48,7 @@ describe('markets production route registration', () => {
       clock: () => now,
       createCoordinationToken: () => 'coordination-markets',
       createRequestId: () => `markets-runtime-${++requestSequence}`,
-      environment: { KOREA_MARKET_INDEX_KEY: 'synthetic-market-key' },
+      environment: { DATA_GO_KR_SERVICE_KEY: 'synthetic-data-go-key' },
       fetcher: async (input) => createResponse(input),
       fleetStateStore: new MemoryFleetStateStore(() => now),
       logWriter: () => undefined,
@@ -67,6 +67,6 @@ describe('markets production route registration', () => {
       requestId: 'markets-runtime-1',
       source: '금융위원회 · 한국거래소 통계정보',
     });
-    expect(JSON.stringify(envelope)).not.toContain('synthetic-market-key');
+    expect(JSON.stringify(envelope)).not.toContain('synthetic-data-go-key');
   });
 });

@@ -16,6 +16,6 @@ describe('Financial Services Commission market provider boundary', () => {
       return;
     }
     expect(readFileSync(provider, 'utf8')).not.toMatch(/VITE_/);
-    expect(readFileSync(entityContract, 'utf8')).not.toMatch(/KOREA_MARKET_INDEX_KEY|server\/providers/);
+    expect(readFileSync(entityContract, 'utf8')).not.toMatch(/DATA_GO_KR_SERVICE_KEY|server\/providers/);
   });
 });

@@ -38,7 +38,7 @@ describe('earthquake production route registration', () => {
       clock: () => now,
       createCoordinationToken: () => 'coordination-earthquake-runtime',
       createRequestId: () => `request-earthquake-${++requestSequence}`,
-      environment: { KOREA_EARTHQUAKE_KEY: 'synthetic-earthquake-key' },
+      environment: { DATA_GO_KR_SERVICE_KEY: 'synthetic-data-go-key' },
       fetcher: async (input) => {
         providerRequestCount += 1;
         return createProviderResponse(input);
@@ -66,7 +66,7 @@ describe('earthquake production route registration', () => {
     });
     expect(hitEnvelope.meta).toMatchObject({ cache: 'HIT', requestId: 'request-earthquake-2' });
     expect(providerRequestCount).toBe(2);
-    expect(JSON.stringify([missEnvelope, hitEnvelope])).not.toContain('synthetic-earthquake-key');
+    expect(JSON.stringify([missEnvelope, hitEnvelope])).not.toContain('synthetic-data-go-key');
   });
 
   it('serves aggregate STALE only after both providers fail beyond freshness', async () => {
@@ -77,7 +77,7 @@ describe('earthquake production route registration', () => {
       clock: () => now,
       createCoordinationToken: () => `coordination-earthquake-${requestSequence}`,
       createRequestId: () => `request-earthquake-stale-${++requestSequence}`,
-      environment: { KOREA_EARTHQUAKE_KEY: 'synthetic-earthquake-key' },
+      environment: { DATA_GO_KR_SERVICE_KEY: 'synthetic-data-go-key' },
       fetcher: async (input) => (failProviders ? new Response(null, { status: 503 }) : createProviderResponse(input)),
       fleetStateStore: new MemoryFleetStateStore(() => now),
       logWriter: () => undefined,

@@ -248,7 +248,7 @@ describe('KMA earthquake provider', () => {
     await expect(pending).rejects.toBe(reason);
   });
 
-  it('owns a dedicated server-only environment identifier', () => {
+  it('uses the canonical data.go.kr server-only environment identifier', () => {
     const readCredential = kma.readKmaEarthquakeCredential;
 
     expect(readCredential).toBeTypeOf('function');
@@ -256,12 +256,12 @@ describe('KMA earthquake provider', () => {
       return;
     }
 
-    expect(readCredential({ KOREA_EARTHQUAKE_KEY: '  dedicated-key  ' })).toBe('dedicated-key');
-    expect(readCredential({ DATA_GO_KR_SERVICE_KEY: 'weather-key' })).toBeUndefined();
-    expect(readCredential({ KOREA_EARTHQUAKE_KEY: '   ' })).toBeUndefined();
+    expect(readCredential({ DATA_GO_KR_SERVICE_KEY: '  canonical-key  ' })).toBe('canonical-key');
+    expect(readCredential({ KOREA_EARTHQUAKE_KEY: 'legacy-key' })).toBeUndefined();
+    expect(readCredential({ DATA_GO_KR_SERVICE_KEY: '   ' })).toBeUndefined();
 
     const envExample = readFileSync(environmentExamplePath, 'utf8');
-    expect(envExample.split(/\r?\n/)).toContain('KOREA_EARTHQUAKE_KEY=');
-    expect(envExample).not.toContain('VITE_KOREA_EARTHQUAKE_KEY');
+    expect(envExample.split(/\r?\n/)).toContain('DATA_GO_KR_SERVICE_KEY=');
+    expect(envExample).not.toContain('KOREA_EARTHQUAKE_KEY=');
   });
 });

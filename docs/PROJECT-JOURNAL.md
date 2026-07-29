@@ -9,7 +9,7 @@
 | 기준일 | 2026-07-29 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T14 지연 시장 지수 + T08-R1 로컬 런타임 — ACCEPTED |
+| 현재 단계 | T05-R1 data.go.kr 단일 credential 계약 — PASS · ACCEPTED 대기 |
 | 다음 단계 | T15 직접 publisher 뉴스 RSS 상세 기획 |
 
 ---
@@ -265,6 +265,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-045 | 승인모드에 Fast Track을 추가한다. 동일 목적·최대 3개 product/test/config 파일이며 dependency·public API/schema·architecture·migration·secret 값·제품 정책을 바꾸지 않는 수정은 시작 승인 한 번으로 RED→GREEN, focused test, 최종 validate, commit과 기존 승인 PR branch push까지 연속 수행한다. merge·deploy는 별도 승인한다. | ACCEPTED | 사용자가 간단한 작업에 대형 workflow가 반복되는 문제를 지적했고, 제안한 Fast Track 규칙에 “진행”으로 승인했다. 범위 확대·검증 실패·secret 또는 사용자 변경 충돌이 생기면 즉시 full workflow로 복귀한다. |
 | D-046 | T12의 공개 범위는 KMA가 공식 제공하는 최근 3일 통보와 USGS `2.5_week.geojson` 최근 7일 자료를 KMA 공식 동아시아 범위 `21~45°N, 110~145°E`에서 결합하는 고정 `/api/earthquake`로 둔다. snapshot은 source별 조회 시작시각을 노출해 3일 KMA 자료를 7일 자료로 오인하지 않게 한다. provider-native ID·revision·magnitude와 양쪽 출처를 보존하고, KMA 수정 통보를 먼저 정리한 뒤 발생시각 90초 이내·거리 50km 이내·규모 차이 0.7 이하를 모두 만족하는 사건만 보수적으로 dedup한다. 한 source만 실패하면 유효 source를 명시적 partial 상태로 제공하고 둘 다 실패할 때만 last-good/error 경계로 전환한다. 지도 overlay는 T30까지 제외한다. KMA provider는 data.go.kr HTTPS `getEqkMsg`와 실제 정상 동작이 확인된 소문자 `serviceKey`를 사용한다. 지진 전용 server credential identifier는 사용자가 설정한 `KOREA_EARTHQUAKE_KEY`이며 기존 기상 adapter의 `DATA_GO_KR_SERVICE_KEY` 계약은 바꾸지 않는다. | ACCEPTED | 사용자가 T12 진행과 keyed contract 확인을 승인했고, 2026-07-28 값 미출력 gate에서 `serviceKey` 요청이 HTTP 200·`resultCode=00`·1 item을 반환했다. 공식 활용가이드는 서비스 갱신을 수시, 자료 범위를 현재일 기준 최근 3일로 명시한다. 2.5 feed는 레거시의 M2.5 동아시아 신호 밀도와 60초 polling payload 예산을 보존하고, KMA 국내 M2.0 이상 통보가 더 낮은 국내 신호를 보완한다. 경계값은 RED 테스트로 고정한다. |
 | D-047 | T14는 KRX 직접 API나 FRED copyrighted index 대신 금융위원회 `GetMarketIndexInfoService/getStockMarketIndex`의 KOSPI·KOSDAQ 하루 지연 지수를 사용한다. queryless route가 exact index별 bounded window를 조회하며 provider 기준일과 지연 상태를 노출한다. | ACCEPTED | 사용자가 T14 착수를 지시했다. 금융위원회 공식 metadata는 이용허락 제한 없음, 일 1회·다음 영업일 13시 이후 갱신과 개발 10,000회를 명시하고, KRX 직접·FRED 제3자 series 약관은 public 재배포 근거가 되지 않는다. |
+| D-048 | `apis.data.go.kr` 기반 provider는 활용신청별 endpoint·base allowlist는 분리하되 인증 값은 canonical server-only `DATA_GO_KR_SERVICE_KEY` 하나만 읽는다. D-043의 AirKorea 분리 key와 D-046의 지진 전용 key identifier는 이 결정으로 대체한다. ECOS·NAVER·Upstash 등 비-data.go provider credential은 통합하지 않는다. | ACCEPTED | 사용자가 AirKorea·KMA 지진 등 승인 서비스가 동일 공공데이터포털 인증키를 사용한다고 확인하고 단일 변수만 유지하겠다고 결정한 뒤 “진행하세요”로 구현을 승인했다. |
 
 ---
 
@@ -582,8 +583,7 @@ Vercel Node runtime은 Node API와 표준 Web `Request`/`Response`를 지원하�
 | --- | --- | --- |
 | `VITE_NAVER_MAPS_KEY_ID` | browser-visible ID | 등록 host 제한, Dynamic Map 선택, quota monitoring 필수 |
 | `VITE_NAVER_MAP_STYLE_ID` | browser-visible metadata ID | 발행된 GL style만 사용, 누락 시 명시적 fallback |
-| `DATA_GO_KR_SERVICE_KEY` | server-only secret | KMA 기상·AirKorea route adapter에서만 읽고 query log에서 redact |
-| `KOREA_EARTHQUAKE_KEY` | server-only secret | T12 `EqkInfoService/getEqkMsg` adapter에서만 읽고 query log에서 redact |
+| `DATA_GO_KR_SERVICE_KEY` | server-only secret | KMA 기상·지진, AirKorea·금융위원회와 승인된 data.go.kr adapter에서만 읽고 query log에서 redact |
 | `SAFETY_DATA_SERVICE_KEY` | server-only secret | 이용신청·license 확인 후 disaster adapter에서만 사용 |
 | `ECOS_API_KEY` | server-only secret | T13 통계코드 gated probe 이후 사용 |
 | `KRX_API_KEY`, `FRED_API_KEY` | server-only secret | 승인된 지연 시장 source에만 사용; Yahoo 대체키가 아님 |
@@ -2461,6 +2461,25 @@ flowchart LR
   - 실제 zero-row 응답 모양과 quota exhaustion은 이번 정상 2-call smoke에서 만들지 않아 미검증이다. empty negative cache, pagination·provider error 경계는 deterministic offline fixture로 검증했으며 live PASS 범위에 포함한다고 주장하지 않는다.
   - browser backend가 제공되지 않아 1280px 실제 screenshot 검증은 수행하지 못했다. Tailwind breakpoint contract, 산출 CSS·폭 계산과 독립 UI 재리뷰로 회귀를 검증했으며 이 제한을 수동 QA 항목으로 남긴다.
 - release condition: 충족. 승인된 T14 변경을 final commit으로 보존한다.
+
+### T05-R1 — data.go.kr 단일 credential 계약
+
+- 상태: `PASS` — 구현·전체 회귀와 독립 리뷰를 완료했으며 사용자 `ACCEPTED`를 기다린다.
+- 목적: 같은 공공데이터포털 인증 값을 provider별 환경변수로 중복 관리해 발생하는 설정 누락을 제거한다.
+- 포함: AirKorea 측정·측정소, KMA 기상·지진과 금융위원회 시장지수의 credential 판독, production runtime·live smoke·tracked `.env.example` 계약, 관련 deterministic 테스트.
+- 제외: credential 값 읽기·이동·출력, provider 활용신청, base URL 통합, ECOS·NAVER·Upstash 설정.
+- 완료 조건:
+  - `DATA_GO_KR_SERVICE_KEY` 하나로 기상·대기질·KMA 지진·금융위원회 시장지수 provider가 구성되고 기존 provider별 key 이름은 runtime과 tracked 예시에서 제거된다.
+  - 빈 canonical key는 기존 missing-credential/USGS partial 경계를 유지하며, base allowlist와 secret 비노출 계약은 변하지 않는다.
+  - focused 정상·실패·경계·회귀 테스트와 `npm run validate`가 통과한다. PR quality-gate는 병합 전 필수 gate로 별도 확인한다.
+- 구현·검증:
+  - 구현 전 감사에서 금융위원회 시장지수도 `apis.data.go.kr` provider임을 확인해 사용자의 “모든 DATA_GO 기반 API” 범위에 포함했다. 비-data.go provider 제외는 유지한다.
+  - RED: AirKorea·KMA 지진·금융위원회 provider contract 5건이 canonical key 미지원과 tracked legacy identifier 때문에 실패했고, production runtime 4건도 기존 전용 key fixture 때문에 missing/partial로 실패했다.
+  - GREEN: 세 provider가 canonical key만 읽고 AirKorea의 두 allowlisted base 요청에는 동일 값을 주입한다. provider·runtime·Widget secret-redaction focused 9 files, 92 tests가 PASS했다.
+  - 독립 리뷰의 기상 URL-encoded key 이중 인코딩 finding을 RED로 재현해 네 data.go provider 모두 decoded/encoded key를 단일 decode한다. 지진 runtime의 오래된 secret 비노출 assertion도 canonical fixture로 정정했다.
+  - 정상: canonical key 하나로 KMA 기상·지진, AirKorea 두 요청과 금융위원회 두 지수를 구성 — PASS.
+  - 실패·경계: 빈 key와 legacy alias 거부, USGS-only partial, AirKorea base allowlist, decoded/URL-encoded key, secret 비노출 — PASS.
+  - 회귀: `npm run validate`에서 Biome 264 files, 1,189 passed·5 credential-gated skipped, strict TypeScript와 client/server build PASS. live provider 호출과 local secret 값 열람은 수행하지 않았다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 

@@ -303,8 +303,20 @@ const throwAbortReason = (signal: AbortSignal): never => {
   throw signal.reason ?? new DOMException('The operation was aborted', 'AbortError');
 };
 
+const normalizeServiceKey = (input: string): string => {
+  if (!/%[0-9a-f]{2}/i.test(input)) {
+    return input;
+  }
+
+  try {
+    return decodeURIComponent(input);
+  } catch {
+    throw new KmaProviderError('KMA service key encoding is invalid');
+  }
+};
+
 export async function fetchKmaUltraShortNowcast(options: FetchKmaUltraShortNowcastOptions): Promise<unknown> {
-  const serviceKey = options.serviceKey.trim();
+  const serviceKey = normalizeServiceKey(options.serviceKey.trim());
   if (serviceKey.length === 0) {
     throw new TypeError('KMA service key must not be empty');
   }

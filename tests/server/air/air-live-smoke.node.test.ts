@@ -8,10 +8,9 @@ import { createProductionGatewayRuntime, withTrustedAdmissionSubject } from '../
 import { successEnvelopeSchema } from '../../../src/shared/contracts';
 
 const environment = {
+  DATA_GO_KR_SERVICE_KEY: process.env.DATA_GO_KR_SERVICE_KEY?.trim(),
   KOREA_AIR_QUALITY_BASE_URL: process.env.KOREA_AIR_QUALITY_BASE_URL?.trim(),
-  KOREA_AIR_QUALITY_KEY: process.env.KOREA_AIR_QUALITY_KEY?.trim(),
   KOREA_AIR_STATION_BASE_URL: process.env.KOREA_AIR_STATION_BASE_URL?.trim(),
-  KOREA_AIR_STATION_KEY: process.env.KOREA_AIR_STATION_KEY?.trim(),
 };
 const hasLiveConfig = Object.values(environment).every((value) => value !== undefined && value.length > 0);
 const liveIt = hasLiveConfig ? it : it.skip;

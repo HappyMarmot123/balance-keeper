@@ -471,6 +471,6 @@ export async function fetchKmaEarthquakeRecords(
 export function readKmaEarthquakeCredential(
   environment: Readonly<Record<string, string | undefined>>,
 ): string | undefined {
-  const credential = environment.KOREA_EARTHQUAKE_KEY?.trim() ?? '';
+  const credential = environment.DATA_GO_KR_SERVICE_KEY?.trim() ?? '';
   return credential.length === 0 ? undefined : credential;
 }
