@@ -134,7 +134,7 @@ jobs:
           permission-profile: ":read-only"
           safety-strategy: drop-sudo
           codex-version: "0.145.0"
-          model: gpt-5.6-sol
+          model: gpt-5.3-codex-spark
           effort: high
 
   post-feedback:
