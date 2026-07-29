@@ -4,6 +4,7 @@ node_modules/
 # Build and test output
 dist/
 dist-server/
+dist-server-dev/
 coverage/
 
 # Local runtime state

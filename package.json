@@ -8,10 +8,12 @@
   },
   "packageManager": "npm@11.17.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite --strictPort",
     "build": "npm run typecheck && npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "vite build --config vite.server.config.ts",
+    "build:server:dev": "vite build --config vite.local-server.config.ts",
     "preview": "vite preview",
     "start:api": "node dist-server/server.mjs",
     "typecheck": "tsc --noEmit",
