@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { EventEmitter } from 'node:events';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import * as runnerModule from '../../scripts/dev.mjs';
@@ -43,7 +43,7 @@ describe('local development process supervisor', () => {
       return;
     }
 
-    const workspaceRoot = join('C:', 'workspace', 'balance-keeper');
+    const workspaceRoot = resolve('workspace', 'balance-keeper');
     const specs = createDevelopmentProcessSpecs(workspaceRoot);
 
     expect(specs.map((spec) => spec.name)).toEqual(['api-build-once', 'api-build-watch', 'api', 'web']);
