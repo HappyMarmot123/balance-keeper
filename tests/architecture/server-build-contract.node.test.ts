@@ -58,8 +58,45 @@ describe('server build contract', () => {
       build: 'npm run typecheck && npm run build:client && npm run build:server',
       'build:client': 'vite build',
       'build:server': 'vite build --config vite.server.config.ts',
+      'build:server:dev': 'vite build --config vite.local-server.config.ts',
+      dev: 'node scripts/dev.mjs',
+      'dev:web': 'vite --strictPort',
       'start:api': 'node dist-server/server.mjs',
     });
+  });
+
+  it('keeps the local memory runtime in a separate development server bundle', async () => {
+    const localEntry = resolve(workspaceRoot, 'src/server/runtime/nodeDevMain.ts');
+    const localConfigPath = resolve(workspaceRoot, 'vite.local-server.config.ts');
+    const localRunner = resolve(workspaceRoot, 'scripts/dev.mjs');
+
+    expect(existsSync(localEntry)).toBe(true);
+    expect(existsSync(localConfigPath)).toBe(true);
+    expect(existsSync(localRunner)).toBe(true);
+    if (!existsSync(localEntry) || !existsSync(localConfigPath)) {
+      return;
+    }
+
+    const localConfig = (await import('../../vite.local-server.config')).default as {
+      build?: { outDir?: string; ssr?: string };
+    };
+    expect(localConfig.build).toMatchObject({
+      outDir: 'dist-server-dev',
+      ssr: 'src/server/runtime/nodeDevMain.ts',
+    });
+
+    const productionGraph = collectLocalModuleGraph(resolve(workspaceRoot, 'src/server/runtime/nodeMain.ts'));
+    const vercelGraph = collectLocalModuleGraph(resolve(workspaceRoot, 'api/gateway.ts'));
+    const localGraph = collectLocalModuleGraph(localEntry);
+    const memoryStorePath = resolve(workspaceRoot, 'src/server/cache/fleetStateStore.ts');
+    const localRuntimePath = resolve(workspaceRoot, 'src/server/runtime/localDevelopmentRuntime.ts');
+
+    expect(productionGraph.has(localRuntimePath)).toBe(false);
+    expect(vercelGraph.has(localRuntimePath)).toBe(false);
+    expect([...vercelGraph.values()].some((source) => source.includes('new MemoryFleetStateStore'))).toBe(false);
+    expect(localGraph.has(memoryStorePath)).toBe(true);
+    expect(localGraph.has(localRuntimePath)).toBe(true);
+    expect([...localGraph.values()].some((source) => source.includes('new MemoryFleetStateStore'))).toBe(true);
   });
 
   it('typechecks the server config and excludes generated server output', () => {
@@ -69,7 +106,9 @@ describe('server build contract', () => {
     const gitignore = readFileSync(resolve(workspaceRoot, '.gitignore'), 'utf8');
 
     expect(tsconfig.include).toContain('vite.server.config.ts');
+    expect(tsconfig.include).toContain('vite.local-server.config.ts');
     expect(gitignore.split(/\r?\n/)).toContain('dist-server/');
+    expect(gitignore.split(/\r?\n/)).toContain('dist-server-dev/');
   });
 
   it('keeps local dev and preview API requests on the same browser origin', async () => {

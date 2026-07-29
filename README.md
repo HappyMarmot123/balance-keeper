@@ -32,6 +32,12 @@
     npm run dev
     npm run validate
 
+`npm run dev`는 local API bundle과 Vite를 함께 감시합니다. API가 `127.0.0.1:8787`에서 준비된 뒤
+Vite가 `http://localhost:5173`에서 시작됩니다. Server provider 값은 API child가 로컬 `.env`에서
+명시적으로 로드하고, Vite의 browser 환경 노출은 기존처럼 `VITE_*`로 제한합니다. 로컬 API는
+process-local 상태 저장소를 명시적으로 사용하지만 production `start:api`의 Upstash fail-closed
+정책은 변경하지 않습니다.
+
 전체 로컬 스택은 Docker Compose 한 명령으로 실행합니다.
 
     docker compose up --build --wait
@@ -40,12 +46,15 @@
 
     docker compose down
 
-Docker 없이 API와 Vite를 나눠 실행하려면 API 터미널에서 서버 번들을 먼저 만들고 실행합니다.
+production과 같은 Upstash 경계를 확인하려고 Docker 없이 API와 Vite를 나눠 실행하려면 API
+터미널에서 production 서버 번들을 먼저 만들고 실행합니다.
 
     npm run build:server
     npm run start:api
 
-다른 터미널에서 `npm run dev`를 실행하면 `/api/*`와 `/healthz`가 `127.0.0.1:8787`로 same-origin proxy됩니다.
+다른 터미널에서 `npm run dev:web`을 실행하면 `/api/*`와 `/healthz`가 `127.0.0.1:8787`로
+same-origin proxy됩니다. `npm run dev:web`은 production API를 별도로 실행할 때 사용하는
+Vite-only 명령입니다.
 
 환경변수는 .env.example을 기준으로 로컬 .env에 설정합니다. Docker build에는 브라우저에 공개되는
 `VITE_NAVER_MAPS_KEY_ID`와 `VITE_NAVER_MAP_STYLE_ID`만 전달하며, 서버 비밀값에는 VITE_ 접두어를
