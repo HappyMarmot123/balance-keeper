@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>문화체육관광부 보도자료</title>
+    <link>https://www.mcst.go.kr/</link>
+    <description>합성 테스트 피드</description>
+    <item>
+      <title>먼저 등록된 오래된 소식</title>
+      <link>http://www.mcst.go.kr/web/s_notice/press/pressView.jsp?pMenuCD=0302000000&amp;pSeq=13001</link>
+      <description>DESCRIPTION_MUST_NEVER_ESCAPE</description>
+      <pubDate>Mon, 27 Jul 2026 09:10:00 KST</pubDate>
+      <author>synthetic</author>
+    </item>
+    <item>
+      <title>문화 &amp; 관광 최신 소식</title>
+      <link>http://www.mcst.go.kr/web/s_notice/press/pressView.jsp?pMenuCD=0302000000&amp;pSeq=13002</link>
+      <description><![CDATA[BODY_MUST_NEVER_ESCAPE]]></description>
+      <pubDate>Tue, 28 Jul 2026 11:41:50 KST</pubDate>
+      <category>synthetic</category>
+    </item>
+  </channel>
+</rss>

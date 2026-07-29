@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-29 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T09-R3 Codex 리뷰 비활성화 계약 정렬 — ACCEPTED |
-| 다음 단계 | T09-R3 final commit·development PR |
+| 현재 단계 | T15 공공 정책 보도자료 RSS — ACCEPTED |
+| 다음 단계 | T15 final commit·development PR |
 
 ---
 
@@ -181,7 +181,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | A03 | KMA `WthrWrnInfoService` | `CONDITIONAL` | event성 1~2분 확인, active/cancel은 목록이 아닌 현황 계약으로 판정 |
 | A04 | AirKorea 시도별 실시간 측정+측정소 | `CONDITIONAL` | 측정시각 기준 30분 확인, 결측은 last-good와 별도 표시; `dmX=위도`, `dmY=경도` keyed fixture 고정 |
 | A05 | KMA 지진 + USGS GeoJSON | USGS `GO`, 전체 `CONDITIONAL` | USGS 원본 최소 60초, KMA keyed smoke 후 source ID·시공간 dedup |
-| A06 | ECOS table/item/search discovery | `CONDITIONAL` | 발표일 기준 6~24시간; table→item→search로 후보 통계코드·단위·정렬 실키 검증 |
+| A06 | ECOS table/item/search discovery | `GO` | 공식 코드·항목·단위 discovery와 production gateway 3-call 실키 검증 PASS |
 | A07 | 금융위원회 KRX-derived 일별 주가지수 | `CONDITIONAL` | KOSPI·KOSDAQ EOD/하루 지연만. 전용 승인 key live gate 전 fixture 구현; Yahoo·KRX 직접·미국 지수는 `NO_GO` |
 | A08 | 직접 publisher RSS | `CONDITIONAL` | 5~10분, feed별 독립 실패. Google News RSS와 우회 feed는 `NO_GO` |
 | A09 | Safetydata `DSSP-IF-00247` | `CONDITIONAL` | 30~60초, 원문 보존·출처·license 확인과 keyed XML error·pagination·정렬/dedup probe |
@@ -687,7 +687,7 @@ primitive OKLCH
 | A03 | 기상특보 | MISSING | NOT_STARTED | `WthrWrnInfoService` 확인; 목록+현황으로 발효·해제·지역 계약 검증 | T23 |
 | A04 | `/api/air` PM10/PM2.5 | PARTIAL | NOT_STARTED | 개발 500/일·심사 후 운영 10,000/일 안내, 2026 행정구역·결측·측정시각과 측정소 `dmX=위도/dmY=경도` 보강 | T11 |
 | A05 | `/api/earthquake` KMA+USGS | PARTIAL | ACCEPTED | KMA 3일+USGS 7일, 수정 통보·보수적 dedup·partial/stale·500건 상한과 keyed live smoke PASS | T12 |
-| A06 | `/api/macro` | PARTIAL | IN_PROGRESS | 공식 코드·항목은 `731Y001/0000001/D/원`, `722Y001/0101000/D/연%`, `732Y001/99/M/천달러`로 확정; offline 구현·전체 회귀 PASS, 발급키 live smoke 대기 | T13 |
+| A06 | `/api/macro` | PARTIAL | ACCEPTED | 공식 코드·항목 확정, offline 전체 회귀와 production gateway 3-call live smoke PASS | T13 |
 | A07 | `/api/markets` | MVP | PASS | 금융위원회 KOSPI·KOSDAQ 하루 지연 구현, strict 실응답·2-call gateway live smoke와 전체 회귀 PASS | T14 |
 | A08 | `/api/news` | PARTIAL | NOT_STARTED | 직접 publisher RSS만 conditional, Google/우회 feed 제거, 부분 실패·권리 확인 | T15 |
 | A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
@@ -2401,7 +2401,7 @@ flowchart LR
 
 ### T13 — ECOS 거시
 
-- 상태: `BLOCKED · DEVELOPMENT MERGE AUTHORIZED` — 실제 제품 구현과 deterministic 전체 회귀는 PASS했지만 local/server process에 `ECOS_API_KEY`가 없어 credential-gated live smoke가 SKIP됐다. 사용자가 이 제한을 전달받은 뒤 “지금까지 피쳐 작업 development 브랜치로 다 머지”하라고 명시해 T13 commit·push·development PR 병합을 승인했다. 이는 live 검증 완료나 production release PASS를 뜻하지 않는다.
+- 상태: `ACCEPTED` — 제품 구현·deterministic 전체 회귀와 credential-gated production gateway live smoke가 모두 PASS했다. PR #7 merge commit `36e8a8b`는 현재 `development`의 ancestor다.
 - 승인·기준선: 사용자가 “다음단계 진행”으로 T13 착수를 승인했고, `origin/development@3c636d1`에서 `feature/t13-ecos-macro` worktree를 생성했다.
 - 포함:
   - 고정 queryless `GET /api/macro`, server-only `ECOS_API_KEY`, ECOS `StatisticSearch` 3건
@@ -2424,11 +2424,12 @@ flowchart LR
   - 경계: 역순 행, duplicate period, code/item/unit mismatch, invalid value/calendar, pagination truncation, KST search window — PASS.
   - 회귀: Full FSD, server/browser graph 분리, map/weather/air/earthquake Dashboard 조합, 공통 gateway/cache — PASS.
   - `npm run validate`: 101 files, 1,138 passed·4 credential-gated skipped, Biome·strict TypeScript·client/server build PASS. client JS `172.70 kB / gzip 51.60 kB`, CSS `15.63 kB / gzip 4.17 kB`, server `442.79 kB / gzip 87.36 kB`.
-- release condition: `ECOS_API_KEY`를 server environment에 설정하고 production gateway가 정확히 3건을 요청해 세 series가 `available|empty`로 strict parse되는 live smoke를 PASS해야 한다. 그 전에는 Task를 `PASS` 또는 production-ready `ACCEPTED`로 기록하지 않는다. 사용자가 별도로 승인한 development 병합은 이 release blocker를 제거하지 않는다.
+- 2026-07-29 live release gate: 사용자가 server environment에 `ECOS_API_KEY`를 설정한 뒤 `npm test -- tests/server/macro/macro-live-smoke.node.test.ts`를 실행했다. production gateway `200`, provider 요청 정확히 3건, `usd-krw/base-rate/fx-reserves` canonical order와 세 series의 `available|empty` strict parse를 확인해 1/1 PASS했다. key 값·raw provider URL·응답 본문은 출력하지 않았다.
+- release condition: 충족.
 
 ### T14 — 금융위원회 지연 시장 지수
 
-- 상태: `ACCEPTED` — offline 구현·전체 회귀, 강화된 2-call production gateway live smoke와 독립 재리뷰가 통과했고 사용자가 “진행”으로 결과와 final commit을 승인했다. T13의 `ECOS_API_KEY` live release gate는 별도 blocker로 유지한다.
+- 상태: `ACCEPTED` — offline 구현·전체 회귀, 강화된 2-call production gateway live smoke와 독립 재리뷰가 통과했고 사용자가 “진행”으로 결과와 final commit을 승인했다.
 - 기준선: `origin/development@36e8a8b`, `feature/t14-delayed-markets` 독립 worktree.
 - 포함:
   - queryless `GET /api/markets`, server-only `KOREA_MARKET_INDEX_KEY`
@@ -2464,7 +2465,7 @@ flowchart LR
 
 ### T05-R1 — data.go.kr 단일 credential 계약
 
-- 상태: `PASS` — 구현·전체 회귀와 독립 리뷰를 완료했으며 사용자 `ACCEPTED`를 기다린다.
+- 상태: `ACCEPTED` — 구현·전체 회귀와 독립 리뷰를 완료했고 사용자가 “진행하세요”로 결과와 다음 Task 진행을 승인했다. 필수 quality-gate가 통과한 PR #10은 merge commit `e449023`으로 `development`에 반영됐다.
 - 목적: 같은 공공데이터포털 인증 값을 provider별 환경변수로 중복 관리해 발생하는 설정 누락을 제거한다.
 - 포함: AirKorea 측정·측정소, KMA 기상·지진과 금융위원회 시장지수의 credential 판독, production runtime·live smoke·tracked `.env.example` 계약, 관련 deterministic 테스트.
 - 제외: credential 값 읽기·이동·출력, provider 활용신청, base URL 통합, ECOS·NAVER·Upstash 설정.
@@ -2481,6 +2482,38 @@ flowchart LR
   - 실패·경계: 빈 key와 legacy alias 거부, USGS-only partial, AirKorea base allowlist, decoded/URL-encoded key, secret 비노출 — PASS.
   - 회귀: `npm run validate`에서 Biome 264 files, 1,189 passed·5 credential-gated skipped, strict TypeScript와 client/server build PASS. live provider 호출과 local secret 값 열람은 수행하지 않았다.
 
+### T15 — 공공 정책 보도자료 RSS
+
+- 상태: `ACCEPTED` — 승인된 구현, T15 범위 검증, 실피드 smoke와 독립 리뷰를 완료했다. PR #11 merge commit `09c70c7` 기준 전체 회귀도 통과했고 사용자가 “승인”으로 final commit·development PR을 승인했다.
+- 변경된 승인 범위:
+  - 문화체육관광부·행정안전부의 공식 보도자료 RSS에서 제목·기관·발행시각·원문 HTTPS 링크·공공누리 제1유형 출처만 queryless `GET /api/news`로 제공
+  - feed별 독립 실패, malformed XML, MIME 불일치, timeout, redirect/SSRF allowlist, dedup·정렬·partial/stale와 Dashboard Panel 검증
+  - 민간 언론·Google News RSS·비공식 우회 feed, 본문·요약·이미지 저장 또는 재배포는 제외
+- 2026-07-29 source gate:
+  - 레거시의 연합뉴스 영문·KBS World·한겨레·조선일보 직접 feed는 모두 `HTTP 200`과 RSS root를 반환했다. KBS는 XML을 `text/html`로 보내므로 MIME만으로 실패시키면 안 된다. raw 기사 내용은 저장하거나 기록하지 않았다.
+  - 한국온라인신문협회 공식 디지털뉴스 이용규칙은 아웃링크 방식의 기사제목·직접링크 노출과 공중송신 및 RSS 이용을 권리자 계약 대상이라고 명시한다. 조선일보와 한겨레는 현재 협회 회원사다.
+  - 한겨레 현행 이용약관은 비영리 목적의 자동 수집·활용도 사전 동의를 요구한다. KBS World는 공식 RSS reader 안내와 동시에 사이트 콘텐츠의 복사·배포·사용을 금지해 공개 재제공 허용 범위가 명확하지 않다. 연합뉴스 feed도 공개 도달만 확인됐고 제3자 대시보드 재제공 허락은 확인되지 않았다.
+- 대체 source 결정:
+  - 정책브리핑 RSS는 2026-07-01 제공 종료 공지가 있어 제외한다.
+  - 문화체육관광부 보도자료 RSS와 행정안전부 보도자료 RSS는 공식 안내와 현재 `HTTP 200`, UTF-8 RSS root를 확인했다. 각 보도자료는 출처 표시를 조건으로 온·오프라인 공유와 영리 이용이 가능한 공공누리 제1유형임을 기관이 명시한다.
+  - 두 URL은 코드의 exact HTTPS allowlist로 고정하고 redirect를 거부한다. RSS description/content/첨부파일은 parse 결과와 transport에 포함하지 않으며 원문 링크는 승인된 기관 host의 HTTPS로만 정규화한다.
+- 완료 조건:
+  - 두 source 중 하나라도 성공하면 `success|partial`, 둘 다 정상 무자료면 empty, 둘 다 실패하면 `UPSTREAM_UNAVAILABLE`과 last-good stale 경계로 응답한다.
+  - 잘못된 XML·날짜·링크·MIME·redirect·과대 응답·timeout을 source별 실패로 격리하고 최신 유효 항목을 deterministic하게 정렬·dedup·상한 처리한다.
+  - Panel은 loading/error/empty/stale/partial/success, 기관·발행시각·원문 링크와 공공누리 출처를 접근 가능하게 표시하며 본문·이미지를 렌더링하지 않는다.
+  - focused 정상·실패·경계·FSD/보안/UI 회귀와 `npm run validate`가 PASS한다.
+- 구현·검증:
+  - RED에서 Entity, provider, route/runtime, query/Widget/FSD 공개 경계 부재를 재현했다. 상한 12개가 한 기관 항목으로 채워지는 상태 경계, feed 중복 항목, description CDATA의 `DOCTYPE` 문구 오탐도 각각 실패로 고정했다.
+  - GREEN에서 MCST·MOIS exact feed와 기사 링크 allowlist, RSS 2.0·UTF-8·MIME·2 MiB 상한, feed별 timeout/abort, KST 날짜, deterministic dedup·정렬, strict 12개 snapshot, cache/stale route와 Dashboard Panel을 구현했다. 본문·요약·이미지·raw upstream 오류는 경계를 넘지 않는다.
+  - focused 9 files 35 tests, Biome 284 files, strict TypeScript, client/server build, `git diff --check`, production dependency audit 0 vulnerabilities가 PASS했다. 독립 리뷰의 중복·XXE 오탐 finding 2건은 RED→GREEN 후 재검토 PASS했다.
+  - 최신 local bundle의 공식 실피드 smoke에서 `200`, 12 items, `mcst/available`, `mois/available`, 후속 `HIT`, ETag `304`를 확인했다. 연결 가능한 브라우저가 없어 실제 화면 자동 QA는 수행하지 못했다.
+  - 전체 `npm run validate`는 T15와 무관하고 `development`에도 동일한 `tests/architecture/github-pr-review-contract.node.test.ts` 3건만 실패했다. 나머지는 1,219 passed·5 credential-gated skipped이고 build는 별도 PASS했다.
+- 최종 회귀:
+  - T09-R3 PR #11 병합 후 `npm run validate`에서 Biome 284 files, 1,224 passed·5 credential-gated skipped, strict TypeScript와 client/server build가 모두 PASS했다.
+  - 독립 재리뷰는 RSS 중복·DOCTYPE 오탐 수정, SSRF allowlist, timeout/cancellation, schema·FSD·접근성을 확인하고 새 finding 없이 PASS했다.
+- 해제 조건:
+  - 충족. 사용자 ACCEPTED 전에는 T15 final commit·push·PR을 진행하지 않는다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -2491,6 +2524,7 @@ flowchart LR
 ### T09-R3 — Codex 리뷰 비활성화 계약 정렬
 
 - 상태: `ACCEPTED` — 사용자가 T15 전체 검증을 막는 기존 CI 계약 불일치의 최소 수정을 승인했고, focused·전체 회귀와 독립 리뷰가 통과한 결과에 “진행”으로 최종 commit·development PR을 승인했다.
+- 반영: commit `7039f34`, PR #11 quality-gate SUCCESS와 두 Codex job SKIPPED 확인 후 사용자 병합 승인에 따라 merge commit `09c70c7`로 `development`에 반영했다.
 - 목적: 임시 비활성화된 `codex-review`·`post-feedback` job과 아키텍처 테스트의 기대값을 일치시켜 quality-gate만 실행되는 현재 정책을 검증한다.
 - 포함: `tests/architecture/github-pr-review-contract.node.test.ts`의 `if: false` 계약, 이미 적용된 `gpt-5.3-codex-spark` 기대값, 관련 타입과 검증 증거.
 - 제외: workflow·권한·Secret·Variable·프롬프트·schema 변경, Codex 리뷰 재활성화, T09-R2 finding 계약, T15 제품 코드.
