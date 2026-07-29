@@ -152,17 +152,11 @@ const normalizeProviderBase = (input: string, expectedPath: string): string | un
 export function readAirKoreaConfig(
   environment: Readonly<Record<string, string | undefined>>,
 ): AirKoreaConfig | undefined {
+  const serviceKey = readTrimmed(environment, 'DATA_GO_KR_SERVICE_KEY');
   const measurementBase = readTrimmed(environment, 'KOREA_AIR_QUALITY_BASE_URL');
-  const measurementKey = readTrimmed(environment, 'KOREA_AIR_QUALITY_KEY');
   const stationBase = readTrimmed(environment, 'KOREA_AIR_STATION_BASE_URL');
-  const stationKey = readTrimmed(environment, 'KOREA_AIR_STATION_KEY');
 
-  if (
-    measurementBase.length === 0 ||
-    measurementKey.length === 0 ||
-    stationBase.length === 0 ||
-    stationKey.length === 0
-  ) {
+  if (serviceKey.length === 0 || measurementBase.length === 0 || stationBase.length === 0) {
     return undefined;
   }
 
@@ -174,9 +168,9 @@ export function readAirKoreaConfig(
 
   return {
     measurementBaseUrl,
-    measurementKey,
+    measurementKey: serviceKey,
     stationBaseUrl,
-    stationKey,
+    stationKey: serviceKey,
   };
 }
 

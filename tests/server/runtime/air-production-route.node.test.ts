@@ -17,10 +17,9 @@ const measurementFixturePath = resolve(import.meta.dirname, '../../fixtures/airk
 const stationFixturePath = resolve(import.meta.dirname, '../../fixtures/airkorea/station-directory-success.json');
 const readFixture = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8')) as unknown;
 const syntheticEnvironment = {
+  DATA_GO_KR_SERVICE_KEY: 'synthetic-data-go-key',
   KOREA_AIR_QUALITY_BASE_URL: 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc',
-  KOREA_AIR_QUALITY_KEY: 'synthetic-measurement-key',
   KOREA_AIR_STATION_BASE_URL: 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc',
-  KOREA_AIR_STATION_KEY: 'synthetic-station-key',
 } as const;
 
 describe('air-quality production route registration', () => {
@@ -99,8 +98,7 @@ describe('air-quality production route registration', () => {
     expect(requestedUrls.find((url) => url.pathname.endsWith('/getMsrstnList'))?.searchParams.get('addr')).toBe('서울');
 
     const serializedEnvelope = JSON.stringify([missEnvelope, hitEnvelope]);
-    expect(serializedEnvelope).not.toContain('synthetic-measurement-key');
-    expect(serializedEnvelope).not.toContain('synthetic-station-key');
+    expect(serializedEnvelope).not.toContain('synthetic-data-go-key');
     expect(serializedEnvelope).not.toContain('SYNTHETIC_OK');
   });
 

@@ -256,9 +256,9 @@ describe('Financial Services Commission market index transport', () => {
     }
     expect(caught).toBeInstanceOf(Error);
     expect((caught as Error).message).not.toContain(serviceKey);
-    expect(readCredential({ KOREA_MARKET_INDEX_KEY: '  official-key  ' })).toBe('official-key');
-    expect(readCredential({ KOREA_MARKET_INDEX_KEY: ' ' })).toBeUndefined();
-    expect(readCredential({ VITE_KOREA_MARKET_INDEX_KEY: 'browser-key' })).toBeUndefined();
+    expect(readCredential({ DATA_GO_KR_SERVICE_KEY: '  official-key  ' })).toBe('official-key');
+    expect(readCredential({ KOREA_MARKET_INDEX_KEY: 'legacy-key' })).toBeUndefined();
+    expect(readCredential({ DATA_GO_KR_SERVICE_KEY: ' ' })).toBeUndefined();
   });
 
   it('accepts either decoded or data.go.kr URL-encoded service keys without double encoding', async () => {
@@ -303,10 +303,10 @@ describe('Financial Services Commission market index transport', () => {
     expect(requestedKeys).toEqual(['synthetic+market/key=', 'synthetic+market/key=']);
   });
 
-  it('documents only the server-side market credential identifier', () => {
+  it('documents only the canonical data.go.kr server credential identifier', () => {
     const environmentExample = readFileSync(resolve(process.cwd(), '.env.example'), 'utf8');
 
-    expect(environmentExample.split(/\r?\n/)).toContain('KOREA_MARKET_INDEX_KEY=');
-    expect(environmentExample).not.toContain('VITE_KOREA_MARKET_INDEX_KEY');
+    expect(environmentExample.split(/\r?\n/)).toContain('DATA_GO_KR_SERVICE_KEY=');
+    expect(environmentExample).not.toContain('KOREA_MARKET_INDEX_KEY=');
   });
 });

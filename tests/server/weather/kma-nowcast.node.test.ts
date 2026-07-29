@@ -327,6 +327,30 @@ describe('KMA HTTPS fetch boundary', () => {
     expect(capturedRedirect).toBe('error');
   });
 
+  it('accepts decoded or data.go.kr URL-encoded canonical keys without double encoding', async () => {
+    const fixture = readSuccessFixture();
+    const requestedKeys: string[] = [];
+    const fetcher = async (input: RequestInfo | URL): Promise<Response> => {
+      requestedKeys.push(
+        new URL(input instanceof URL ? input.href : String(input)).searchParams.get('ServiceKey') ?? '',
+      );
+      return Response.json(fixture);
+    };
+    const fetchWithKey = (serviceKey: string) =>
+      fetchKmaUltraShortNowcast({
+        fetcher,
+        region: KMA_WEATHER_REGIONS.seoul,
+        serviceKey,
+        signal: new AbortController().signal,
+        slot: { baseDate: '20260722', baseTime: '1400' },
+      });
+
+    await fetchWithKey('fixture+shared/key=');
+    await fetchWithKey('fixture%2Bshared%2Fkey%3D');
+
+    expect(requestedKeys).toEqual(['fixture+shared/key=', 'fixture+shared/key=']);
+  });
+
   it('preserves an injected abort reason', async () => {
     const controller = new AbortController();
     const reason = new Error('fixture deadline');

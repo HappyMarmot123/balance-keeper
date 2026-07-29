@@ -7,7 +7,7 @@ import { MemoryFleetStateStore } from '../../../src/server/cache';
 import { createProductionGatewayRuntime, withTrustedAdmissionSubject } from '../../../src/server/runtime';
 import { successEnvelopeSchema } from '../../../src/shared/contracts';
 
-const serviceKey = process.env.KOREA_MARKET_INDEX_KEY?.trim();
+const serviceKey = process.env.DATA_GO_KR_SERVICE_KEY?.trim();
 const liveIt = serviceKey === undefined || serviceKey.length === 0 ? it.skip : it;
 
 describe('Financial Services Commission market credential-gated live smoke', () => {
@@ -15,7 +15,7 @@ describe('Financial Services Commission market credential-gated live smoke', () 
     'serves two strict delayed domestic indices through the production gateway',
     async () => {
       if (serviceKey === undefined || serviceKey.length === 0) {
-        throw new TypeError('KOREA_MARKET_INDEX_KEY is required for the live smoke');
+        throw new TypeError('DATA_GO_KR_SERVICE_KEY is required for the live smoke');
       }
 
       let providerRequestCount = 0;
@@ -24,7 +24,7 @@ describe('Financial Services Commission market credential-gated live smoke', () 
         clock,
         createCoordinationToken: () => 'coordination-markets-live-smoke',
         createRequestId: () => 'request-markets-live-smoke',
-        environment: { KOREA_MARKET_INDEX_KEY: serviceKey },
+        environment: { DATA_GO_KR_SERVICE_KEY: serviceKey },
         fetcher: async (input, init) => {
           providerRequestCount += 1;
           return globalThis.fetch(input, init);
