@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-28 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T13 ECOS 거시 — development 병합 승인, live release gate BLOCKED |
-| 다음 단계 | T13 commit·PR quality gate·development 병합 후 `ECOS_API_KEY` live smoke |
+| 현재 단계 | T08-R1 로컬 API 개발 런타임 — ACCEPTED |
+| 다음 단계 | 별도 승인 전 후속 Task 대기 |
 
 ---
 
@@ -264,6 +264,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-044 | T11 수동 화면 완료 조건은 반응형·테마 기능과 기존 지도·서울 기상 실황 Panel 존재 확인으로 고정한다. theme keyboard 전환의 별도 수동 검증은 현재 필요하지 않으며 T11 release gate에서 제외한다. 기존 native control과 자동 접근성 테스트는 제거하지 않는다. | ACCEPTED | 사용자가 반응형·테마 기능을 직접 PASS로 보고한 뒤 keyboard 전환은 지금 필요하지 않고 지도·서울 기상 실황 Panel이 존재한다고 명시했다. |
 | D-045 | 승인모드에 Fast Track을 추가한다. 동일 목적·최대 3개 product/test/config 파일이며 dependency·public API/schema·architecture·migration·secret 값·제품 정책을 바꾸지 않는 수정은 시작 승인 한 번으로 RED→GREEN, focused test, 최종 validate, commit과 기존 승인 PR branch push까지 연속 수행한다. merge·deploy는 별도 승인한다. | ACCEPTED | 사용자가 간단한 작업에 대형 workflow가 반복되는 문제를 지적했고, 제안한 Fast Track 규칙에 “진행”으로 승인했다. 범위 확대·검증 실패·secret 또는 사용자 변경 충돌이 생기면 즉시 full workflow로 복귀한다. |
 | D-046 | T12의 공개 범위는 KMA가 공식 제공하는 최근 3일 통보와 USGS `2.5_week.geojson` 최근 7일 자료를 KMA 공식 동아시아 범위 `21~45°N, 110~145°E`에서 결합하는 고정 `/api/earthquake`로 둔다. snapshot은 source별 조회 시작시각을 노출해 3일 KMA 자료를 7일 자료로 오인하지 않게 한다. provider-native ID·revision·magnitude와 양쪽 출처를 보존하고, KMA 수정 통보를 먼저 정리한 뒤 발생시각 90초 이내·거리 50km 이내·규모 차이 0.7 이하를 모두 만족하는 사건만 보수적으로 dedup한다. 한 source만 실패하면 유효 source를 명시적 partial 상태로 제공하고 둘 다 실패할 때만 last-good/error 경계로 전환한다. 지도 overlay는 T30까지 제외한다. KMA provider는 data.go.kr HTTPS `getEqkMsg`와 실제 정상 동작이 확인된 소문자 `serviceKey`를 사용한다. 지진 전용 server credential identifier는 사용자가 설정한 `KOREA_EARTHQUAKE_KEY`이며 기존 기상 adapter의 `DATA_GO_KR_SERVICE_KEY` 계약은 바꾸지 않는다. | ACCEPTED | 사용자가 T12 진행과 keyed contract 확인을 승인했고, 2026-07-28 값 미출력 gate에서 `serviceKey` 요청이 HTTP 200·`resultCode=00`·1 item을 반환했다. 공식 활용가이드는 서비스 갱신을 수시, 자료 범위를 현재일 기준 최근 3일로 명시한다. 2.5 feed는 레거시의 M2.5 동아시아 신호 밀도와 60초 polling payload 예산을 보존하고, KMA 국내 M2.0 이상 통보가 더 낮은 국내 신호를 보완한다. 경계값은 RED 테스트로 고정한다. |
+| D-048 | `npm run dev`는 Vite와 별도의 local-only API bundle을 함께 실행하고 `.env`를 명시적으로 로드한다. local entry만 `MemoryFleetStateStore`를 주입하며 production `start:api`와 Vercel/Docker의 Upstash 부재 fail-closed 계약은 그대로 유지한다. | ACCEPTED | 사용자가 네 API의 공통 `502 INVALID_RESPONSE` 원인 진단과 필요한 조치를 확인한 뒤 “진행”으로 로컬 런타임 복구를 승인했다. 현재는 Vite만 실행되고 고정 proxy 대상 `127.0.0.1:8787`에 listener가 없어 빈 text/plain 502가 발생한다. |
 
 ---
 
@@ -1739,6 +1740,60 @@ flowchart LR
   - T08 변경만 final commit하며 사용자 소유 `.env.example`은 stage하지 않는다. push·deploy는 별도 요청 전 수행하지 않는다.
 - 결과: `ACCEPTED`
 - final commit: `19183f2 feat: add portable deployment runtime`
+
+### T08-R1 — 로컬 API 개발 런타임 복구
+
+- 상태: `ACCEPTED` — 구현·정상/실패/경계/회귀 검증과 독립 리뷰가 PASS했고, 사용자가 결과와 final commit을 승인했다.
+- 승인·기준선: 사용자가 공통 502 진단 뒤 “진행”으로 승인했다. `development@36e8a8b`에서 `feature/t08-r1-local-dev-runtime` 독립 worktree를 사용하고, BLOCKED 상태인 T14 worktree는 수정하지 않는다.
+- 목적: `npm run dev` 한 번으로 최신 Vite client와 local API를 함께 실행해 `/api/*` proxy가 빈 text/plain 502를 만들지 않게 한다.
+- 재현 근거:
+  - `5173`에는 Vite만 listen하고 고정 proxy 대상 `127.0.0.1:8787`에는 listener가 없다.
+  - 네 route가 동일하게 body 없는 `502 text/plain`을 반환하고 client `fetchJson`은 non-JSON을 `INVALID_RESPONSE`로 분류한다.
+  - 기존 `dist-server/server.mjs`는 현재 server source보다 오래됐고 `start:api`는 `.env`를 자동 로드하지 않는다.
+- 포함:
+  - local-only Node entry가 `.env`로 받은 server 설정과 provider identifier를 사용하고 `MemoryFleetStateStore`를 명시적으로 주입
+  - client Vite, local server bundle watch, Node API watch를 한 명령에서 시작하고 한 process 실패·종료 시 나머지도 정리
+  - `/healthz`와 네 기존 API가 proxy를 통해 JSON transport를 반환하는 local smoke
+  - package/build/runtime contract test와 README 실행 안내
+- 제외:
+  - production `start:api`, Vercel·Docker의 Upstash fail-closed 정책 변경
+  - provider credential 값·schema·route·cache profile 변경, `.env`와 사용자 `.env.example` 수정
+  - T14 시장 기능, Docker Compose provider env 전달과 외부 배포
+- 예상 변경: `package.json`·lockfile, local dev entry/config or runner, runtime/build contract tests, README와 이 journal.
+- 완료 조건:
+  - 정상: clean current source에서 `npm run dev`가 `5173`과 `8787`을 함께 열고 `/healthz`가 proxy/direct 모두 JSON 200이다.
+  - 실패: API build/server/Vite 중 하나가 종료되면 자식 process를 남기지 않고 명확한 non-zero 결과로 끝난다.
+  - 경계: local memory store는 local entry graph에만 존재하고 production Node entry는 Upstash absent 시 계속 JSON `SERVICE_UNAVAILABLE`로 fail-closed한다.
+  - 회귀: 네 API는 credential 유무와 provider 결과에 맞는 JSON envelope를 반환하며 더는 proxy `INVALID_RESPONSE`로 뭉개지지 않는다. `npm run validate`와 server/client graph 검사가 PASS한다.
+- 구현:
+  - `npm run dev`는 local API one-shot build → bundle watcher 준비 → API JSON health 준비 → Vite 순서로 실행한다. API child만 `.env`의 server identifier를 읽으며 Vite의 기존 `VITE_*` 노출 경계는 유지한다.
+  - local Node entry는 `127.0.0.1:8787`과 `MemoryFleetStateStore`를 명시적으로 사용한다. production barrel·Node/Vercel entry에는 local runtime을 노출하지 않는다.
+  - `dev:web`을 별도로 제공해 production `start:api`와 Vite-only proxy 검증이 8787 포트에서 충돌하지 않게 했다.
+  - supervisor는 sync spawn throw와 `ChildProcess error`, readiness 실패, signal·unexpected exit를 non-zero 또는 정상 signal 결과로 수렴시키고 `finally`에서 활성 자식을 정리한다. health fetch와 JSON parsing에는 하나의 30초 절대 deadline·AbortSignal을 적용했다.
+- TDD 증거:
+  - RED: local runtime/config/build 계약 부재, watcher initial rebuild race, Vercel graph local export와 `dev:web` 부재를 각각 실패로 확인했다.
+  - 추가 RED: late spawn throw는 reject되고 peer kill 0회, child `error` listener 0개, hanging health fetch는 30초 뒤에도 pending인 세 실패를 확인했다.
+  - GREEN: architecture/runtime/supervisor 집중 검증 `3 files · 14 tests` PASS.
+- 정상·회귀 스모크:
+  - 실제 supervisor로 direct `/healthz` JSON 200, Vite proxy `/healthz` JSON 200을 확인했다.
+  - proxy 네 route는 weather `503 MISSING_CREDENTIALS`, air `503 MISSING_CREDENTIALS`, earthquake `200 SUCCESS`, macro `503 MISSING_CREDENTIALS`의 JSON envelope를 반환했다. 이 worktree에는 `.env`를 복사하지 않았으므로 provider 실키 성공이 아니라 transport와 credential failure 계약을 검증한 결과이며 `INVALID_RESPONSE`는 재현되지 않았다.
+  - signal 종료 결과 `0`, 5173·8787 모두 release를 확인했다. 기존 root Vite는 종료 후 다시 실행해 `http://localhost:5173/` 200으로 복원했다.
+- 실패·경계 검증:
+  - 기존 5173 점유로 Vite가 실패하면 supervisor가 non-zero로 끝나고 8787과 watcher를 정리한다.
+  - initial build 실패, bundle/API readiness 실패, late spawn throw, async child error, hanging health request와 잘못된 ready payload를 offline test로 고정했다.
+  - production bundle에는 local entry marker와 `new MemoryFleetStateStore` 주입이 없고 local bundle에는 local entry가 있다. production runtime의 Upstash 부재 `503 SERVICE_UNAVAILABLE` 계약도 유지된다.
+- 전체 검증:
+  - `npm run validate` PASS — Biome `240 files`, Vitest `99 passed · 4 skipped`, tests `1,148 passed · 4 skipped`, strict typecheck, client build, production server build.
+  - `npm run build:server:dev` PASS — local server bundle `452.29 kB`, gzip `89.05 kB`.
+  - `git diff --check` PASS.
+- 독립 리뷰:
+  - production barrel local export, decision ID 중복, split 실행 포트 충돌과 `.env` 문구 finding을 해소하고 재검토 PASS.
+  - spawn/error cleanup과 readiness absolute deadline finding을 RED 테스트로 해소하고 재검토 PASS. 새 actionable finding은 없다.
+- 검증 판정: `PASS`
+- 최종 수락:
+  - 2026-07-29 사용자가 PASS 보고에 “승인”으로 응답해 T08-R1 결과와 final commit을 승인했다.
+  - 이 승인은 해당 피처 브랜치의 final commit까지 허용하며 push·merge와 후속 Task 시작은 포함하지 않는다.
+- 결과: `ACCEPTED`
 
 ### T09 — development PR quality gate · Codex review
 
