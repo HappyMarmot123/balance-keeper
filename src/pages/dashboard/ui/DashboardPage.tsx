@@ -1,5 +1,6 @@
 import { AirQualityWidget } from '../../../widgets/air-quality';
 import { DashboardShell } from '../../../widgets/dashboard-shell';
+import { DisasterWidget } from '../../../widgets/disaster';
 import { EarthquakeWidget } from '../../../widgets/earthquake';
 import { KoreaMapWidget } from '../../../widgets/korea-map';
 import { MacroWidget } from '../../../widgets/macro';
@@ -11,6 +12,7 @@ export function DashboardPage() {
   return (
     <DashboardShell
       airQualitySlot={<AirQualityWidget />}
+      disasterSlot={<DisasterWidget />}
       earthquakeSlot={<EarthquakeWidget />}
       mapSlot={<KoreaMapWidget />}
       macroSlot={<MacroWidget />}

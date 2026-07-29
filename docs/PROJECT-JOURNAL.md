@@ -2514,6 +2514,33 @@ flowchart LR
 - 해제 조건:
   - 충족. 사용자 ACCEPTED 전에는 T15 final commit·push·PR을 진행하지 않는다.
 
+### T16 — 행정안전부 긴급재난문자
+
+- 상태: `ACCEPTED` — 승인된 구현, credential-gated 실데이터 smoke, 전체 회귀와 독립 서버·클라이언트 재리뷰가 통과했고 사용자가 PASS 보고 뒤 “진행”으로 결과와 final commit·push·development PR을 승인했다.
+- 공식 source:
+  - `GET https://www.safetydata.go.kr/V2/api/DSSP-IF-00247`; 필수 `serviceKey`, 선택 `pageNo`, `numOfRows`, `returnType`, `crtDt`, `rgnNm`.
+  - 원본 필드는 `SN`, `CRT_DT`, `MSG_CN`, `RCPTN_RGN_NM`, `EMRG_STEP_NM`, `DST_SE_NM`, `REG_YMD`, `MDFCN_YMD`이며 별도 제목은 없다.
+  - 회원가입·이용신청·승인 뒤 발급되는 Safetydata 키이므로 data.go.kr의 `DATA_GO_KR_SERVICE_KEY`를 재사용하지 않고 기존 정본 identifier `SAFETY_DATA_SERVICE_KEY`만 server에서 읽는다.
+- 실키 계약 확인:
+  - 값·URL·원문을 출력하지 않는 probe에서 JSON success, 서울·날짜 filter, future-date empty, XML 오류와 최대 500-row page를 확인했다. success의 `header.errorMsg`는 `null`, `REG_YMD`·`MDFCN_YMD`는 `YYYY/MM/DD HH:mm:ss.fffffffff` 형식이어서 fixture 가정과 다른 두 계약을 RED로 재현했다.
+  - provider 응답은 최신순을 보장하지 않고 page 간 overlap 가능성을 배제할 수 없다. 전날 KST부터 현재까지를 요청하고 최대 2×500 rows만 받아 strict sort·dedup하며, 그 이상은 불완전 snapshot 대신 실패시킨다.
+  - 공식 기본 한도 1,000회/일을 지키기 위해 browser refetch는 60초, origin positive·empty TTL은 모두 180초, upstream budget은 480 loads/일로 분리했다. 최대 두 provider page를 사용하는 최악의 경우도 960 calls/일이다.
+- 구현:
+  - 원문 메시지·지역·긴급단계·재해구분을 변형 없이 보존하는 Entity와 query, queryless `/api/disaster`, fixed HTTPS Safetydata provider와 production runtime 등록을 완료했다.
+  - provider는 KST 자정, strict timestamp·schema, UTF-8·MIME·4 MiB 상한, redirect 거부, abort, JSON/XML 오류, pagination total drift·1,000-row 상한, exact/ambiguous `SN` duplicate를 검증한다. 오류 envelope와 credential·request URL·raw upstream detail은 public 응답에 포함하지 않는다.
+  - gateway는 180초 fresh/negative, 1시간 last-good stale, 60초 CDN, ETag/304, rate limit·singleflight·breaker와 일 480회 provider budget을 적용한다.
+  - Dashboard Panel은 loading/error/missing/empty/stale/success, 17개 시도 client filter와 전국 메시지 포함, 긴급단계 원문 label, KST 시각과 공공누리 제4유형 기준 출처를 표시한다. 원문 요약·번역·파생 제목은 만들지 않고 fresh 갱신에서만 신규 건수 banner를 노출한다.
+- RED→GREEN:
+  - Entity·provider·route/runtime·query/Widget/FSD 경계 부재를 순차적으로 실패시킨 뒤 구현했다. 실키 smoke가 `errorMsg: null`과 나노초 audit timestamp 때문에 두 차례 `502`를 재현해 strict parser를 실제 계약에 맞췄다.
+  - 독립 UI 리뷰가 retained data+background error에서 STALE 안내와 NEW banner가 동시에 나오는 결함, JS Date 범위를 넘는 `issuedAt`, 지역 filter 검증 공백을 발견했다. 각 경로를 RED로 고정하고 banner 억제·Date 상한·서울+전국/부산 제외 검증으로 수정했다.
+  - 독립 서버 리뷰가 empty TTL 60초로 일일 quota를 조기 소진할 수 있는 결함과 top-50 밖 duplicate로 약했던 테스트를 발견했다. empty TTL을 180초로 맞추고 최신 50 안의 duplicate로 dedup 회귀를 강화했다. 최종 두 재리뷰에서 열린 finding은 없다.
+- 검증:
+  - focused T16 11 files에서 41 passed·1 credential-gated skipped. 별도 `.env` 주입 live smoke 1/1은 production gateway `200 MISS`, strict snapshot, 추가 provider 호출 없는 `HIT`, bodyless ETag `304`와 provider 1~2회 상한을 확인했다.
+  - `npm run validate`: Biome 307 files, 1,265 passed·6 credential-gated skipped, strict TypeScript, client build와 server build PASS. `git diff --check`, `.env` ignore와 tracked secret scan도 PASS했다.
+  - 연결 가능한 browser backend가 없어 실제 screenshot·상호작용 자동 QA는 수행하지 못했다. component 접근성·상태·필터 렌더 테스트와 산출 build는 통과했으며, 이는 비핵심 수동 QA 항목으로 남긴다.
+- license 경계: Safetydata의 제3유형 안내와 data.go.kr 연결 메타의 제4유형 표기가 충돌하므로 더 엄격한 출처표시·비상업·변경금지를 유지한다. 상업 공개는 제공기관 확인 전 제외한다.
+- 해제 조건: 충족. 사용자 승인에 따라 final commit·push·development PR을 진행한다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task

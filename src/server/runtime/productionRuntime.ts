@@ -3,7 +3,9 @@ import { readAirKoreaConfig } from '../providers/airkorea';
 import { readEcosCredential } from '../providers/ecos';
 import { readFscMarketCredential } from '../providers/fsc';
 import { readKmaEarthquakeCredential, readKmaWeatherCredential } from '../providers/kma';
+import { readSafetydataCredential } from '../providers/safetydata';
 import { createAirRoute } from '../routes/air';
+import { createDisasterRoute } from '../routes/disaster';
 import { createEarthquakeRoute } from '../routes/earthquake';
 import { createMacroRoute } from '../routes/macro';
 import { createMarketsRoute } from '../routes/markets';
@@ -71,6 +73,12 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     fetcher: options.fetcher ?? globalThis.fetch,
     readAdmissionSubject: readTrustedAdmissionSubject,
   });
+  const disasterRoute = createDisasterRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: readSafetydataCredential(environment),
+  });
 
   return createGatewayRuntime({
     clock,
@@ -81,7 +89,7 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     environment,
     ...(options.fleetStateStore === undefined ? {} : { fleetStateStore: options.fleetStateStore }),
     logger: createJsonGatewayLogger(options.logWriter),
-    routes: [weatherRoute, airRoute, earthquakeRoute, macroRoute, marketsRoute, newsRoute],
+    routes: [weatherRoute, airRoute, earthquakeRoute, macroRoute, marketsRoute, newsRoute, disasterRoute],
   });
 }
 

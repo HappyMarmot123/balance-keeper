@@ -1,0 +1,42 @@
+{
+  "header": {
+    "resultMsg": "NORMAL SERVICE.",
+    "resultCode": "00",
+    "errorMsg": ""
+  },
+  "numOfRows": 3,
+  "pageNo": 1,
+  "totalCount": 3,
+  "body": [
+    {
+      "MSG_CN": "야외 활동 시 충분한 물을 준비하십시오.",
+      "RCPTN_RGN_NM": "전국",
+      "CRT_DT": "2026/07/29 15:00:00",
+      "REG_YMD": "2026-07-29",
+      "EMRG_STEP_NM": "안전안내",
+      "SN": 9001,
+      "DST_SE_NM": "폭염",
+      "MDFCN_YMD": "2026-07-29"
+    },
+    {
+      "MSG_CN": "[행정안전부]  원문 공백을 그대로 보존합니다.",
+      "RCPTN_RGN_NM": "서울특별시 전체, 경기도 일부",
+      "CRT_DT": "2026/07/29 16:30:00",
+      "REG_YMD": "2026-07-29",
+      "EMRG_STEP_NM": "긴급재난",
+      "SN": 9003,
+      "DST_SE_NM": "호우",
+      "MDFCN_YMD": "2026-07-29"
+    },
+    {
+      "MSG_CN": "저지대 침수에 유의하십시오.",
+      "RCPTN_RGN_NM": "부산광역시",
+      "CRT_DT": "2026/07/29 16:00:00",
+      "REG_YMD": "2026-07-29",
+      "EMRG_STEP_NM": "위급재난",
+      "SN": 9002,
+      "DST_SE_NM": "호우",
+      "MDFCN_YMD": "2026-07-29"
+    }
+  ]
+}
