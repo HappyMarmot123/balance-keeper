@@ -63,16 +63,9 @@ jobs:
       - name: Build client and server
         run: npm run build
 
+  # OpenAI Codex 리뷰 임시 비활성화 (주석 처리)
   codex-review:
-    if: >-
-      ${{
-        needs.quality-gate.result == 'success' &&
-        github.event.pull_request.draft != true &&
-        github.event.pull_request.head.repo.full_name == github.repository &&
-        github.event.pull_request.user.type != 'Bot' &&
-        github.event.sender.type != 'Bot' &&
-        vars.CODEX_REVIEW_ENABLED == 'true'
-      }}
+    if: false # disabled temporarily
     name: codex-review
     needs: quality-gate
     outputs:
@@ -137,8 +130,9 @@ jobs:
           model: gpt-5.3-codex-spark
           effort: high
 
+  # OpenAI Codex 리뷰 피드백 게시도 임시 비활성화 (주석 처리)
   post-feedback:
-    if: ${{ always() && !cancelled() && needs.codex-review.result != 'skipped' }}
+    if: false # disabled temporarily
     name: post-feedback
     needs: codex-review
     permissions:
