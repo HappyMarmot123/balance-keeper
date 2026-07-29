@@ -31,7 +31,7 @@ interface Workflow {
     string,
     {
       env?: Record<string, string>;
-      if?: string;
+      if?: boolean | string;
       name?: string;
       needs?: string | string[];
       outputs?: Record<string, string>;
@@ -497,7 +497,7 @@ describe('GitHub pull request review contract', () => {
     expect(JSON.stringify(workflow.jobs?.['quality-gate'])).not.toContain('secrets.');
   });
 
-  it('gates the read-only Codex job on quality, trust, and explicit enablement', () => {
+  it('keeps the read-only Codex job structurally pinned but explicitly disabled', () => {
     const workflow = readWorkflow(pullRequestWorkflowPath);
     const review = workflow.jobs?.['codex-review'];
 
@@ -512,16 +512,7 @@ describe('GitHub pull request review contract', () => {
       'runs-on': 'ubuntu-latest',
       'timeout-minutes': 30,
     });
-    for (const guard of [
-      "needs.quality-gate.result == 'success'",
-      'github.event.pull_request.draft != true',
-      'github.event.pull_request.head.repo.full_name == github.repository',
-      "github.event.pull_request.user.type != 'Bot'",
-      "github.event.sender.type != 'Bot'",
-      "vars.CODEX_REVIEW_ENABLED == 'true'",
-    ]) {
-      expect(review?.if).toContain(guard);
-    }
+    expect(review?.if).toBe(false);
     expect(review?.env).toBeUndefined();
   });
 
@@ -548,7 +539,7 @@ describe('GitHub pull request review contract', () => {
       with: {
         'codex-version': '0.145.0',
         effort: 'high',
-        model: 'gpt-5.6-sol',
+        model: 'gpt-5.3-codex-spark',
         'openai-api-key': githubExpression('secrets.OPENAI_API_KEY'),
         'output-schema-file': `${githubExpression('runner.temp')}/balance-keeper-review-policy/clean-code-review.schema.json`,
         'permission-profile': ':read-only',
@@ -595,7 +586,7 @@ describe('GitHub pull request review contract', () => {
     expect(script).not.toContain('${{');
   });
 
-  it('isolates write access in one no-checkout feedback step', () => {
+  it('keeps the isolated no-checkout feedback step explicitly disabled', () => {
     const workflow = readWorkflow(pullRequestWorkflowPath);
     const feedback = workflow.jobs?.['post-feedback'];
 
@@ -606,9 +597,7 @@ describe('GitHub pull request review contract', () => {
       'runs-on': 'ubuntu-latest',
       'timeout-minutes': 5,
     });
-    expect(feedback?.if).toContain('always()');
-    expect(feedback?.if).toContain('!cancelled()');
-    expect(feedback?.if).toContain("needs.codex-review.result != 'skipped'");
+    expect(feedback?.if).toBe(false);
     expect(feedback?.env).toBeUndefined();
 
     const steps = feedback?.steps ?? [];
