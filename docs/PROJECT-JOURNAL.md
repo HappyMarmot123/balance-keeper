@@ -6,11 +6,11 @@
 | --- | --- |
 | 문서 역할 | 제품 기획·기술 결정·Task·검증·개발일지의 단일 정본 |
 | 실행 모드 | 승인모드 |
-| 기준일 | 2026-07-28 (Asia/Seoul) |
+| 기준일 | 2026-07-29 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T13 ECOS 거시 — development 병합 승인, live release gate BLOCKED |
-| 다음 단계 | T13 commit·PR quality gate·development 병합 후 `ECOS_API_KEY` live smoke |
+| 현재 단계 | T14 지연 시장 지수 — ACCEPTED |
+| 다음 단계 | T15 직접 publisher 뉴스 RSS 상세 기획 |
 
 ---
 
@@ -164,7 +164,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | 행정안전부 긴급재난문자 | `https://www.safetydata.go.kr/V2/api/DSSP-IF-00247`는 신청한 `serviceKey`로 1분 갱신 데이터를 제공한다. 공개 숫자 quota·명시적 종료일/cursor/sort 계약은 찾지 못했고 오류는 요청한 `returnType`과 무관하게 XML일 수 있으며 quota·key·IP 오류코드가 있다. FAQ상 정렬되지 않은 응답도 가능하다. Safetydata는 공공기관 데이터 제3유형을 안내하지만 data.go.kr 연결 메타는 제4유형을 표시해 이용허락 표기가 충돌한다. | `CONDITIONAL` — 더 엄격한 출처표시·비상업·변경금지를 기본으로 두고 원문은 변형하지 않는다. T16에서 실제 quota, XML error branch, pagination·dedup·정렬을 실키 검증하고 공개/상업 서비스 전 제공기관 확인을 받는다. | [Safetydata 상세](https://www.safetydata.go.kr/disaster-data/view?dataSn=228), [data.go.kr 연결 메타](https://www.data.go.kr/data/15134001/openapi.do) |
 | ECOS | 공식 서비스는 `StatisticTableList`, `StatisticItemList`, `StatisticSearch`, `KeyStatisticList`다. 검색 URL shape는 `https://ecos.bok.or.kr/api/StatisticSearch/{CERT_KEY}/{xml\|json}/{kr\|en}/{startRow}/{endRow}/{STAT_CODE}/{cycle}/{startTime}/{endTime}/{item1}/{item2}/{item3}/{item4}`이고 공식 안내의 `CERT_KEY` 길이는 30자다. 주기는 `A/S/Q/M/SM/D`, item 1~4는 선택이며 응답은 통계·항목 코드/명, 단위, 시점과 값을 제공한다. 공개 숫자 quota는 찾지 못했고 레거시 `731Y001`, `722Y001`, `732Y001`은 현재 의미가 검증되지 않은 후보다. | `CONDITIONAL` — T13에서 `StatisticTableList → StatisticItemList → StatisticSearch` 순서로 코드·항목을 발견하고 발표일, 단위, 최신 observation과 실제 제한을 실키 검증한다. 응답 순서를 최신값 보장으로 가정하지 않는다. | [한국은행 ECOS Open API](https://ecos.bok.or.kr/api/) |
 | USGS earthquake | 실시간 GeoJSON feed는 매분 갱신되며 자동화 앱의 우선 인터페이스다. 고정 숫자 quota는 없고 과다 호출 시 `429`; 대부분 USGS 정보는 public domain이며 출처표시가 권장된다. | `GO` — 60초보다 빠르게 원본을 호출하지 않고 validator/cache header를 존중한다. KMA와 상호 보완한다. | [GeoJSON feed](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php), [FDSN API](https://earthquake.usgs.gov/fdsnws/event/1/), [USGS credit](https://www.usgs.gov/information-policies-and-instructions/acknowledging-or-crediting-usgs) |
-| 시장 데이터 | Yahoo의 현재 개발자 카탈로그에는 Finance API가 없고 데이터 제공자 안내는 재배포를 금지한다. `query1.finance.yahoo.com` 도달 여부는 계약이 아니다. KRX는 승인형 일별 지수 API를, FRED는 key 기반 경제 시계열을 제공한다. | Yahoo `NO_GO`. T14 범위는 KRX 국내 일별지수와 권리 검토를 마친 FRED/승인된 유료 source의 지연 데이터로 축소하며, 실시간 시세로 표시하지 않는다. | [Yahoo API catalog](https://developer.yahoo.com/api/), [Yahoo data delays/redistribution](https://help.yahoo.com/kb/finance/article-exchanges-data-delays-sln2310.html), [KRX API 목록](https://openapi.krx.co.kr/contents/OPP/INFO/service/OPPINFO004.cmd), [FRED terms](https://fred.stlouisfed.org/docs/api/terms_of_use.html) |
+| 시장 데이터 | Yahoo의 현재 개발자 카탈로그에는 Finance API가 없고 데이터 제공자 안내는 재배포를 금지한다. KRX 직접 OPEN API 약관은 비상업 목적만 허용하고 제공받은 정보를 제3자에게 제공할 수 없게 한다. 금융위원회 `GetMarketIndexInfoService/getStockMarketIndex`는 KRX 주요 지수를 기준일 다음 영업일 13시 이후 일 1회 제공하며 이용허락범위 제한 없음, 개발 10,000회와 운영 자동승인을 명시한다. FRED는 API 이용과 제3자 소유 series의 재배포 권리를 분리하며 S&P 500·NASDAQ Composite는 별도 권리 확인이 필요하다. | Yahoo·KRX 직접·권리 미확인 FRED 지수는 `NO_GO`. T14는 금융위원회가 재개방한 KOSPI·KOSDAQ 지연 종가만 사용하고 실시간 시세로 표시하지 않는다. | [금융위원회 지수시세정보](https://www.data.go.kr/data/15094807/openapi.do), [KRX OPEN API 약관](https://openapi.krx.co.kr/contents/OPP/INFO/OPPINFO002.jsp), [FRED terms](https://fred.stlouisfed.org/docs/api/terms_of_use.html) |
 | 뉴스 RSS | Yonhap·KBS·Hani·Chosun의 현재 feed는 응답하지만 publisher별 이용범위가 다르다. Chosun은 개인 구독만 기본 허용하고 상업 이용은 문의를 요구한다. Google News search RSS에는 consumer API, quota, SLA나 재배포 허가를 설명하는 공식 계약이 없다. | 직접 publisher RSS는 `CONDITIONAL`로 제목·출처·시각·원문 링크만 제공하고 전문을 저장/재배포하지 않는다. Google News RSS는 `NO_GO`; JoongAng 우회 feed도 제거한다. | [KBS RSS](https://world.kbs.co.kr/service/about_rss.htm?lang=e), [Chosun RSS 안내](https://rssplus.chosun.com/), [Google News 변경](https://support.google.com/news/publisher-center/answer/15898024?hl=en) |
 | 항공 데이터 | OpenSky는 OAuth2와 credit quota를 문서화했지만 live product/자동 시스템의 REST 사용에 서면 계약을 요구한다. 제공 state에는 검증된 군 소유 분류가 없다. | OpenSky `NO_GO` until written license. T18은 구현 Task가 아니라 license/대체 source feasibility로 바꾸고, ADSB.lol은 ODbL·동적 제한·`mil` 분류 한계를 승인받기 전 `CONDITIONAL`이다. | [OpenSky REST](https://openskynetwork.github.io/opensky-api/rest.html), [OpenSky terms](https://opensky-network.org/about/terms-of-use), [ADSB.lol license](https://www.adsb.lol/privacy-license/) |
 | AIS | AISstream은 API key를 사용하는 backend WebSocket beta이며 CORS를 지원하지 않고 SLA·안정 schema·공개 재배포 계약이 확인되지 않았다. 군함은 AIS 탑재·송신 의무 예외가 있어 완전한 군함 지도가 될 수 없다. | 개인 군함 추적은 `NO_GO`. T24는 서면 권리와 안전성 또는 한국 공식 집계형 AIS로 범위를 바꾸는 feasibility만 수행하며, 조건 충족 전 T25를 시작하지 않는다. | [AISstream docs](https://aisstream.io/documentation.html), [IMO AIS guidance](https://www.imo.org/en/ourwork/safety/navigation/ais.aspx), [한국 연안 AIS 집계](https://www.data.go.kr/data/15084033/openapi.do) |
@@ -182,7 +182,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | A04 | AirKorea 시도별 실시간 측정+측정소 | `CONDITIONAL` | 측정시각 기준 30분 확인, 결측은 last-good와 별도 표시; `dmX=위도`, `dmY=경도` keyed fixture 고정 |
 | A05 | KMA 지진 + USGS GeoJSON | USGS `GO`, 전체 `CONDITIONAL` | USGS 원본 최소 60초, KMA keyed smoke 후 source ID·시공간 dedup |
 | A06 | ECOS table/item/search discovery | `CONDITIONAL` | 발표일 기준 6~24시간; table→item→search로 후보 통계코드·단위·정렬 실키 검증 |
-| A07 | KRX 일별 + 승인된 미국/환율 source | `CONDITIONAL` | EOD/지연 데이터만. Yahoo endpoint·실시간 표시는 `NO_GO` |
+| A07 | 금융위원회 KRX-derived 일별 주가지수 | `CONDITIONAL` | KOSPI·KOSDAQ EOD/하루 지연만. 전용 승인 key live gate 전 fixture 구현; Yahoo·KRX 직접·미국 지수는 `NO_GO` |
 | A08 | 직접 publisher RSS | `CONDITIONAL` | 5~10분, feed별 독립 실패. Google News RSS와 우회 feed는 `NO_GO` |
 | A09 | Safetydata `DSSP-IF-00247` | `CONDITIONAL` | 30~60초, 원문 보존·출처·license 확인과 keyed XML error·pagination·정렬/dedup probe |
 | A10 | A05+A07+A08 파생 조합 | `CONDITIONAL` | 별도 upstream 중복 호출 없이 가장 느린 component와 부분 실패 표시 |
@@ -264,6 +264,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-044 | T11 수동 화면 완료 조건은 반응형·테마 기능과 기존 지도·서울 기상 실황 Panel 존재 확인으로 고정한다. theme keyboard 전환의 별도 수동 검증은 현재 필요하지 않으며 T11 release gate에서 제외한다. 기존 native control과 자동 접근성 테스트는 제거하지 않는다. | ACCEPTED | 사용자가 반응형·테마 기능을 직접 PASS로 보고한 뒤 keyboard 전환은 지금 필요하지 않고 지도·서울 기상 실황 Panel이 존재한다고 명시했다. |
 | D-045 | 승인모드에 Fast Track을 추가한다. 동일 목적·최대 3개 product/test/config 파일이며 dependency·public API/schema·architecture·migration·secret 값·제품 정책을 바꾸지 않는 수정은 시작 승인 한 번으로 RED→GREEN, focused test, 최종 validate, commit과 기존 승인 PR branch push까지 연속 수행한다. merge·deploy는 별도 승인한다. | ACCEPTED | 사용자가 간단한 작업에 대형 workflow가 반복되는 문제를 지적했고, 제안한 Fast Track 규칙에 “진행”으로 승인했다. 범위 확대·검증 실패·secret 또는 사용자 변경 충돌이 생기면 즉시 full workflow로 복귀한다. |
 | D-046 | T12의 공개 범위는 KMA가 공식 제공하는 최근 3일 통보와 USGS `2.5_week.geojson` 최근 7일 자료를 KMA 공식 동아시아 범위 `21~45°N, 110~145°E`에서 결합하는 고정 `/api/earthquake`로 둔다. snapshot은 source별 조회 시작시각을 노출해 3일 KMA 자료를 7일 자료로 오인하지 않게 한다. provider-native ID·revision·magnitude와 양쪽 출처를 보존하고, KMA 수정 통보를 먼저 정리한 뒤 발생시각 90초 이내·거리 50km 이내·규모 차이 0.7 이하를 모두 만족하는 사건만 보수적으로 dedup한다. 한 source만 실패하면 유효 source를 명시적 partial 상태로 제공하고 둘 다 실패할 때만 last-good/error 경계로 전환한다. 지도 overlay는 T30까지 제외한다. KMA provider는 data.go.kr HTTPS `getEqkMsg`와 실제 정상 동작이 확인된 소문자 `serviceKey`를 사용한다. 지진 전용 server credential identifier는 사용자가 설정한 `KOREA_EARTHQUAKE_KEY`이며 기존 기상 adapter의 `DATA_GO_KR_SERVICE_KEY` 계약은 바꾸지 않는다. | ACCEPTED | 사용자가 T12 진행과 keyed contract 확인을 승인했고, 2026-07-28 값 미출력 gate에서 `serviceKey` 요청이 HTTP 200·`resultCode=00`·1 item을 반환했다. 공식 활용가이드는 서비스 갱신을 수시, 자료 범위를 현재일 기준 최근 3일로 명시한다. 2.5 feed는 레거시의 M2.5 동아시아 신호 밀도와 60초 polling payload 예산을 보존하고, KMA 국내 M2.0 이상 통보가 더 낮은 국내 신호를 보완한다. 경계값은 RED 테스트로 고정한다. |
+| D-047 | T14는 KRX 직접 API나 FRED copyrighted index 대신 금융위원회 `GetMarketIndexInfoService/getStockMarketIndex`의 KOSPI·KOSDAQ 하루 지연 지수를 사용한다. queryless route가 exact index별 bounded window를 조회하며 provider 기준일과 지연 상태를 노출한다. | ACCEPTED | 사용자가 T14 착수를 지시했다. 금융위원회 공식 metadata는 이용허락 제한 없음, 일 1회·다음 영업일 13시 이후 갱신과 개발 10,000회를 명시하고, KRX 직접·FRED 제3자 series 약관은 public 재배포 근거가 되지 않는다. |
 
 ---
 
@@ -687,7 +688,7 @@ primitive OKLCH
 | A04 | `/api/air` PM10/PM2.5 | PARTIAL | NOT_STARTED | 개발 500/일·심사 후 운영 10,000/일 안내, 2026 행정구역·결측·측정시각과 측정소 `dmX=위도/dmY=경도` 보강 | T11 |
 | A05 | `/api/earthquake` KMA+USGS | PARTIAL | ACCEPTED | KMA 3일+USGS 7일, 수정 통보·보수적 dedup·partial/stale·500건 상한과 keyed live smoke PASS | T12 |
 | A06 | `/api/macro` | PARTIAL | IN_PROGRESS | 공식 코드·항목은 `731Y001/0000001/D/원`, `722Y001/0101000/D/연%`, `732Y001/99/M/천달러`로 확정; offline 구현·전체 회귀 PASS, 발급키 live smoke 대기 | T13 |
-| A07 | `/api/markets` | MVP | NOT_STARTED | Yahoo는 `NO_GO`; KRX+권리 승인된 지연 미국/환율 source로 재기획 | T14 |
+| A07 | `/api/markets` | MVP | PASS | 금융위원회 KOSPI·KOSDAQ 하루 지연 구현, strict 실응답·2-call gateway live smoke와 전체 회귀 PASS | T14 |
 | A08 | `/api/news` | PARTIAL | NOT_STARTED | 직접 publisher RSS만 conditional, Google/우회 feed 제거, 부분 실패·권리 확인 | T15 |
 | A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
 | A10 | `/api/neighbor` | PARTIAL | NOT_STARTED | A05/A07/A08의 cache된 파생 조합으로 재설계, 별도 중복 fetch 금지 | T17 |
@@ -864,7 +865,7 @@ flowchart TD
 | T11 | AirKorea 대기질 | 지역 정규화·PM 등급·측정소 좌표 | `seoul/서울`, empty, 등급 경계 | T04,T06 |
 | T12 | KMA+USGS 지진 | 두 source 통합·dedup·bbox·정렬 | 동일 사건, source 부분 실패, live | T04,T06 |
 | T13 | ECOS 거시 | table→item→search discovery로 단위·발표일·시계열 계약 | 실키, 후보 통계코드, 응답 정렬, 부분 누락 | T04,T06 |
-| T14 | 지연 시장 지수 | Yahoo 없이 KRX와 권리 승인 source의 EOD·지연·휴장 표시 | provider 권리, 날짜·단위, quota, 휴장 | T04,T06 |
+| T14 | 지연 시장 지수 | 금융위원회가 재개방한 KOSPI·KOSDAQ EOD·하루 지연·휴장 표시 | provider 권리, 날짜·단위, pagination, 휴장, live | T04,T06 |
 | T15 | 직접 publisher 뉴스 RSS | 허용된 제목·출처·시각·원문 링크만 표시하고 한 feed 실패 시 나머지 성공 | 이용조건, malformed XML, MIME 불일치, timeout, SSRF | T04,T06 |
 | T16 | 재난문자 | 지역·신규·severity·banner 계약 | XML 오류, pagination·무정렬·duplicate, stale, live | T04,T06 |
 | T17 | 주변국 비교 | 중복 upstream 호출 없는 조합 모델 | partial failure, country mapping | T10,T12,T14,T15 |
@@ -2362,6 +2363,42 @@ flowchart LR
   - `npm run validate`: 101 files, 1,138 passed·4 credential-gated skipped, Biome·strict TypeScript·client/server build PASS. client JS `172.70 kB / gzip 51.60 kB`, CSS `15.63 kB / gzip 4.17 kB`, server `442.79 kB / gzip 87.36 kB`.
 - release condition: `ECOS_API_KEY`를 server environment에 설정하고 production gateway가 정확히 3건을 요청해 세 series가 `available|empty`로 strict parse되는 live smoke를 PASS해야 한다. 그 전에는 Task를 `PASS` 또는 production-ready `ACCEPTED`로 기록하지 않는다. 사용자가 별도로 승인한 development 병합은 이 release blocker를 제거하지 않는다.
 
+### T14 — 금융위원회 지연 시장 지수
+
+- 상태: `ACCEPTED` — offline 구현·전체 회귀, 강화된 2-call production gateway live smoke와 독립 재리뷰가 통과했고 사용자가 “진행”으로 결과와 final commit을 승인했다. T13의 `ECOS_API_KEY` live release gate는 별도 blocker로 유지한다.
+- 기준선: `origin/development@36e8a8b`, `feature/t14-delayed-markets` 독립 worktree.
+- 포함:
+  - queryless `GET /api/markets`, server-only `KOREA_MARKET_INDEX_KEY`
+  - 금융위원회 `GetMarketIndexInfoService/getStockMarketIndex`의 정확한 `코스피`, `코스닥` 일별 종가·전일 대비·등락률·기준일
+  - 기준일 다음 영업일 13시 이후 제공되는 하루 지연 데이터임을 명시하고, 마지막 거래일을 휴장일에도 유지
+  - strict Entity contract, provider pagination/date/index-name 검증, partial/empty/error/stale gateway 경계, Query와 Dashboard Panel
+- 제외: Yahoo endpoint, KRX 직접 API, FRED·미국 지수, 실시간 표현, 차트, 지도 overlay, T17 주변국 조합.
+- 결정:
+  - KRX 직접 OPEN API는 비상업 목적과 제3자 제공 금지 약관 때문에 public dashboard source로 사용하지 않는다.
+  - 금융위원회 API는 KRX-derived 자료를 이용허락 제한 없음으로 재개방하므로 국내 지수 source로 사용한다. source 표시는 `금융위원회 · 한국거래소 통계정보`로 보존한다.
+  - FRED API 자체 약관은 제3자 series 권리를 부여하지 않고 S&P 500·NASDAQ Composite는 별도 권리가 필요하므로 이번 범위에서 제외한다.
+- 완료 조건:
+  - 정상: 두 지수를 canonical order로 표시하고 provider 기준일과 gateway 수집시각을 구분한다.
+  - 실패: missing credential, provider error/non-JSON, 한 지수 partial, 둘 다 실패와 last-good stale를 구분한다.
+  - 경계: 휴일·주말의 마지막 거래일, 역순 rows, 잘못된 날짜·지수명·숫자, 중복 기준일과 pagination truncation을 추측 없이 처리한다.
+  - 회귀: Full FSD 방향, coarse gateway, map/weather/air/earthquake/macro 조합, narrow layout과 전체 `npm run validate`.
+- 구현·검증:
+  - RED → GREEN: Entity tuple/query, 금융위원회 provider, queryless gateway route, production runtime, Dashboard Panel과 public boundary를 각각 실패 테스트부터 구현했다.
+  - 정상·실패: canonical KOSPI/KOSDAQ, partial, all-fail, all-empty negative cache, stale, missing credential, abort와 secret 비노출 — PASS.
+  - 경계: KST 21일 window, 역순·중복·범위 밖 날짜, index name/classification, 숫자·pagination, 등락값/등락률 방향 모순, URL-encoded data.go.kr key 단일 decode — PASS.
+  - 회귀: Full FSD/public API, server-browser graph, 기존 map/weather/air/earthquake/macro Dashboard 조합 — PASS.
+  - 독립 리뷰: provider·security·cache와 test·FSD·접근성·출처 계약에서 남은 재현 가능한 finding 없음.
+  - 1280px에서 data Panel이 2열에서 5열로 급변하던 가독성 finding을 layout contract RED로 재현하고 `md:grid-cols-2 2xl:grid-cols-3`으로 수정했다. 1280px에서는 약 600px, 1536px에서는 약 480px/Panel을 보장하며 독립 UI 재리뷰 PASS.
+  - `npm run validate`: Biome 257 files, 1,178 passed·5 credential-gated skipped, strict TypeScript·client/server build PASS. client JS `177.67 kB / gzip 52.37 kB`, CSS `15.72 kB / gzip 4.18 kB`, server `456.87 kB / gzip 89.50 kB`.
+- 2026-07-29 live gate:
+  - 최초 값 미출력 진단에서 `.env`와 Node runtime이 동일한 63자리 hex를 로드했고 두 요청 모두 `HTTP 401`이었다. 이는 provider schema가 아니라 불완전한 local credential copy로 판정했으며 임의 보정하지 않았다.
+  - 사용자가 올바른 key로 다시 저장한 뒤 `.env`와 Node runtime이 동일한 64자리 hex임을 값 미출력 확인했다. KOSPI·KOSDAQ 두 upstream 요청은 `HTTP 200`, `resultCode=00`으로 인증에 성공했다.
+  - 실제 응답은 `idxNm=코스피/코스닥`, `idxCsf=KOSPI시리즈/KOSDAQ시리즈`였다. 기존 fixture의 축약 분류 가정을 RED 4건으로 재현하고 provider·fixture·route/runtime mock을 공식 실응답에 정렬했다.
+  - 강화한 credential-gated smoke는 production gateway `200`, 정확히 2 provider 요청, canonical KOSPI·KOSDAQ 각각 `available`, `YYYYMMDD` 기준일과 non-null finite 종가·등락·등락률을 검증해 1/1 PASS했다. credential·요청 URL·raw body는 출력하거나 커밋하지 않았다.
+  - 실제 zero-row 응답 모양과 quota exhaustion은 이번 정상 2-call smoke에서 만들지 않아 미검증이다. empty negative cache, pagination·provider error 경계는 deterministic offline fixture로 검증했으며 live PASS 범위에 포함한다고 주장하지 않는다.
+  - browser backend가 제공되지 않아 1280px 실제 screenshot 검증은 수행하지 못했다. Tailwind breakpoint contract, 산출 CSS·폭 계산과 독립 UI 재리뷰로 회귀를 검증했으며 이 제한을 수동 QA 항목으로 남긴다.
+- release condition: 충족. 승인된 T14 변경을 final commit으로 보존한다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -2604,3 +2641,7 @@ flowchart LR
 | 2026-07-28 | 사용자의 다음 단계 지시로 PR #6을 merge commit `3c636d1`로 development에 병합하고 최신 development에서 `feature/t13-ecos-macro` worktree 생성 | T12→T13 |
 | 2026-07-28 | ECOS 공식 code/item/unit을 확정하고 T13 Entity·provider·gateway·Query·Dashboard Panel을 RED→GREEN; 전체 1,138 tests·client/server build PASS. `ECOS_API_KEY` 부재로 live smoke 1건이 SKIP되어 commit 없이 BLOCKED | T13 |
 | 2026-07-28 | 사용자가 live gate 제한을 전달받은 뒤 지금까지의 피처 작업을 development에 모두 병합하라고 명시; 이미 반영된 T10~T12를 확인하고 남은 T13의 commit·push·PR·development merge를 승인하되 live release blocker는 유지 | T13 |
+| 2026-07-29 | 사용자가 T14 착수를 승인해 최신 `development@36e8a8b` 기반 독립 worktree에서 금융위원회 지연 시장 지수 Entity·provider·gateway·Query·Dashboard Panel을 RED→GREEN; 최초 local key가 63자리여서 live gate만 401 BLOCKED | T14 |
+| 2026-07-29 | 사용자가 올바른 64자리 key로 다시 저장해 KOSPI·KOSDAQ 2-call 인증 PASS; 실응답의 `KOSPI시리즈/KOSDAQ시리즈` 분류를 기존 가정 실패로 재현하고 strict provider·fixture를 정렬한 뒤 강화된 production gateway live smoke PASS | T14 |
+| 2026-07-29 | 1280px 2→5열 가독성 finding과 live-smoke all-empty false-positive를 RED→GREEN으로 해소; 전체 1,178 tests·client/server build와 독립 재리뷰 PASS, browser backend 부재 제한을 기록하고 사용자 ACCEPTED 대기 | T14 |
+| 2026-07-29 | 사용자가 PASS 보고에 “진행”으로 응답해 T14 결과와 final commit을 ACCEPTED; 검증된 단일 목적 변경만 commit하고 push·merge는 별도 승인 전 수행하지 않음 | T14 |

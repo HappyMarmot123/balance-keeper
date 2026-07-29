@@ -3,6 +3,7 @@ import { DashboardShell } from '../../../widgets/dashboard-shell';
 import { EarthquakeWidget } from '../../../widgets/earthquake';
 import { KoreaMapWidget } from '../../../widgets/korea-map';
 import { MacroWidget } from '../../../widgets/macro';
+import { MarketsWidget } from '../../../widgets/markets';
 import { WeatherNowcastWidget } from '../../../widgets/weather-nowcast';
 
 export function DashboardPage() {
@@ -12,6 +13,7 @@ export function DashboardPage() {
       earthquakeSlot={<EarthquakeWidget />}
       mapSlot={<KoreaMapWidget />}
       macroSlot={<MacroWidget />}
+      marketsSlot={<MarketsWidget />}
       weatherSlot={<WeatherNowcastWidget />}
     />
   );

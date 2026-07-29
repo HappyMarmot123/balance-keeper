@@ -175,6 +175,35 @@ const macroEnvelope = {
   },
 } as const;
 
+const marketsEnvelope = {
+  data: {
+    indices: [
+      {
+        displayUnit: 'pt',
+        id: 'kospi',
+        label: 'KOSPI',
+        observation: { change: 18.42, changePercent: 0.66, close: 2811.72, date: '20260727' },
+        providerName: '코스피',
+        status: 'available',
+      },
+      {
+        displayUnit: 'pt',
+        id: 'kosdaq',
+        label: 'KOSDAQ',
+        observation: { change: -3.15, changePercent: -0.39, close: 807.41, date: '20260727' },
+        providerName: '코스닥',
+        status: 'available',
+      },
+    ],
+  },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: earthquakeSnapshotTo,
+    requestId: 'app-markets-request',
+    source: '금융위원회 · 한국거래소 통계정보',
+  },
+} as const;
+
 beforeEach(() => {
   queryClient.clear();
   vi.stubEnv('VITE_NAVER_MAPS_KEY_ID', '');
@@ -189,7 +218,9 @@ beforeEach(() => {
           ? earthquakeEnvelope
           : requestUrl === '/api/macro'
             ? macroEnvelope
-            : weatherEnvelope;
+            : requestUrl === '/api/markets'
+              ? marketsEnvelope
+              : weatherEnvelope;
 
       return Promise.resolve(
         new Response(JSON.stringify(envelope), {
@@ -233,6 +264,7 @@ describe('application bootstrap', () => {
     expect(screen.getByRole('region', { name: '서울 대기질' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '동아시아 지진' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '한국 거시경제' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: '국내 주가지수' })).toBeTruthy();
 
     expect(screen.queryByText('STATE MATRIX')).toBeNull();
     expect(screen.queryByRole('region', { name: '시맨틱 토큰' })).toBeNull();
@@ -280,6 +312,17 @@ describe('application bootstrap', () => {
     expect(screen.getByText('4,183 억 달러')).toBeTruthy();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/macro',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('renders delayed domestic market closes through the application query provider', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('2,811.72 pt')).toBeTruthy();
+    expect(screen.getByText('상승 18.42 (+0.66%)')).toBeTruthy();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/markets',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
