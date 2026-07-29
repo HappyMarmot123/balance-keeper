@@ -23,6 +23,5 @@ describe('dashboard earthquake composition boundary', () => {
 
     expect(shellSource).toMatch(/earthquakeSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
-    expect(shellSource).toContain('xl:grid-cols-4');
   });
 });

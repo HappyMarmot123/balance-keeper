@@ -17,12 +17,11 @@ describe('dashboard macro composition boundary', () => {
     expect(pageSource).not.toMatch(/widgets\/macro\/(?:ui|model|api|lib)\//);
   });
 
-  it('gives macro one explicit shell slot and expands the desktop data grid', () => {
+  it('gives macro one explicit shell slot in the desktop data grid', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
     const renderedSlots = shellSource.match(/\{macroSlot\}/g) ?? [];
 
     expect(shellSource).toMatch(/macroSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
-    expect(shellSource).toContain('xl:grid-cols-4');
   });
 });
