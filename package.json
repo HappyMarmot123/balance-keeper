@@ -29,6 +29,7 @@
     "@preact/signals": "2.9.3",
     "@tanstack/preact-query": "5.101.2",
     "@upstash/redis": "1.38.0",
+    "@xmldom/xmldom": "0.9.10",
     "preact": "10.29.7",
     "zod": "4.4.3"
   },

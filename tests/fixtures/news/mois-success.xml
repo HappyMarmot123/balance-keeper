@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>행정안전부 보도자료</title>
+    <link>https://www.mois.go.kr/</link>
+    <description>합성 테스트 피드</description>
+    <item>
+      <title>행정안전부 최신 소식</title>
+      <link>https://www.mois.go.kr/frt/bbs/type010/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000008&amp;nttId=120002</link>
+      <description>MOIS_DESCRIPTION_MUST_NEVER_ESCAPE</description>
+      <pubDate>WED, 29 JUL 2026 12:00:00 KST</pubDate>
+      <author>synthetic</author>
+    </item>
+  </channel>
+</rss>
