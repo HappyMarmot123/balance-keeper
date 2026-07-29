@@ -1793,6 +1793,9 @@ flowchart LR
 - 최종 수락:
   - 2026-07-29 사용자가 PASS 보고에 “승인”으로 응답해 T08-R1 결과와 final commit을 승인했다.
   - 이 승인은 해당 피처 브랜치의 final commit까지 허용하며 push·merge와 후속 Task 시작은 포함하지 않는다.
+- development PR:
+  - 사용자의 Task 완료 시 development 대상 PR 게시 지시에 따라 PR #8을 생성했다.
+  - 첫 Linux quality-gate에서 test fixture의 Windows 형식 가상 workspace path가 `resolve`에 상대 경로로 해석되는 실패를 RED로 확인했다. platform-native absolute fixture로 수정해 focused 7 tests와 전체 1,148 tests·두 build를 다시 PASS했으며 production code 변경은 없다.
 - 결과: `ACCEPTED`
 - development·T14 통합:
   - 2026-07-29 사용자가 root T14 확인 중 모든 `/api/*`의 공통 502를 재보고했다. 원인은 승인된 `f5224a4`가 별도 branch에만 있고 `development@36e8a8b`와 T14에 포함되지 않아, `npm run dev`가 Vite만 시작하고 proxy 대상 `127.0.0.1:8787`을 비워 둔 것이었다.
