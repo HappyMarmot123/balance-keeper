@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-29 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T05-R1 data.go.kr 단일 credential 계약 — PASS · ACCEPTED 대기 |
-| 다음 단계 | T15 직접 publisher 뉴스 RSS 상세 기획 |
+| 현재 단계 | T09-R3 Codex 리뷰 비활성화 계약 정렬 — ACCEPTED |
+| 다음 단계 | T09-R3 final commit·development PR |
 
 ---
 
@@ -2487,6 +2487,21 @@ flowchart LR
 - 목적: 하나의 재현 가능한 finding이 여러 review area에 영향을 줄 때 valid `CHANGES_REQUESTED`를 fallback `BLOCKED`로 숨기지 않도록 schema·prompt·validator 불변식을 정렬한다.
 - 포함 후보: PR #3 actual output fixture RED, finding category와 primary ISSUE area 일치, 추가 영향 area 허용 또는 prompt의 primary-area 단일화, fallback 안전성 회귀.
 - 제외: T10 제품 bugfix와 동일 commit/PR, review write 권한·모델·secret 정책 변경.
+
+### T09-R3 — Codex 리뷰 비활성화 계약 정렬
+
+- 상태: `ACCEPTED` — 사용자가 T15 전체 검증을 막는 기존 CI 계약 불일치의 최소 수정을 승인했고, focused·전체 회귀와 독립 리뷰가 통과한 결과에 “진행”으로 최종 commit·development PR을 승인했다.
+- 목적: 임시 비활성화된 `codex-review`·`post-feedback` job과 아키텍처 테스트의 기대값을 일치시켜 quality-gate만 실행되는 현재 정책을 검증한다.
+- 포함: `tests/architecture/github-pr-review-contract.node.test.ts`의 `if: false` 계약, 이미 적용된 `gpt-5.3-codex-spark` 기대값, 관련 타입과 검증 증거.
+- 제외: workflow·권한·Secret·Variable·프롬프트·schema 변경, Codex 리뷰 재활성화, T09-R2 finding 계약, T15 제품 코드.
+- 완료 조건:
+  - 두 Codex 관련 job이 명시적으로 비활성화되고 quality-gate 구조는 유지된다는 focused 계약 테스트가 PASS한다.
+  - `npm run validate`와 독립 변경분 리뷰가 PASS한다.
+- RED: 기존 계약 테스트 3건이 `if: false`를 활성화 guard로, 현재 모델을 `gpt-5.6-sol`로 기대해 실패함을 재현했다.
+- GREEN·검증:
+  - YAML의 boolean `if` 타입을 반영하고 두 Codex 관련 job은 구조를 보존한 채 `if: false`, 모델은 `gpt-5.3-codex-spark`로 고정했다. workflow·권한·Secret·프롬프트는 변경하지 않았다.
+  - focused 1 file 52 tests와 `npm run validate`의 Biome 264 files, 1,189 passed·5 credential-gated skipped, strict TypeScript, client/server build가 PASS했다.
+  - 독립 리뷰는 quality-gate의 활성 조건·최소 권한·immutable action·`npm ci/check/test/typecheck/build` 계약이 유지되고 비활성 job 기대값만 바뀐 것을 확인해 PASS했다.
 
 ---
 
