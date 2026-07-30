@@ -358,6 +358,55 @@ const indexRows = (rows: readonly NormalizedProviderRow[]): ReadonlyMap<string, 
   return indexed;
 };
 
+export async function fetchItsCctvStillMetadata(
+  options: FetchItsCctvListOptions,
+): Promise<readonly Readonly<{ cameraId: string; url: string }>[]> {
+  const bounds = cctvBoundsSchema.parse(options.bounds);
+  if (options.serviceKey.trim().length === 0) {
+    throw new ItsCctvProviderError('ITS CCTV credential is missing');
+  }
+  if (options.signal.aborted) {
+    throw options.signal.reason ?? new DOMException('The operation was aborted', 'AbortError');
+  }
+
+  const requestController = new AbortController();
+  const forwardParentAbort = () => {
+    requestController.abort(options.signal.reason ?? new DOMException('The operation was aborted', 'AbortError'));
+  };
+  options.signal.addEventListener('abort', forwardParentAbort, { once: true });
+
+  let rows: [readonly NormalizedProviderRow[], readonly NormalizedProviderRow[]];
+  try {
+    rows = await Promise.all([
+      fetchRows({ ...options, bounds, signal: requestController.signal }, 'ex', '3'),
+      fetchRows({ ...options, bounds, signal: requestController.signal }, 'its', '3'),
+    ]);
+  } catch (error) {
+    requestController.abort(error);
+    throw error;
+  } finally {
+    options.signal.removeEventListener('abort', forwardParentAbort);
+  }
+
+  const metadataByCameraId = new Map<string, Readonly<{ cameraId: string; url: string }>>();
+  for (const roadRows of rows) {
+    for (const row of indexRows(roadRows).values()) {
+      const cameraId = toStableId(row.identity);
+      if (metadataByCameraId.has(cameraId)) {
+        throw new ItsCctvProviderError('ITS CCTV response contains a duplicate stable camera ID');
+      }
+      metadataByCameraId.set(
+        cameraId,
+        Object.freeze({
+          cameraId,
+          url: row.url,
+        }),
+      );
+    }
+  }
+  return [...metadataByCameraId.values()];
+}
+
 const mergeRoadRows = (
   roadType: ProviderRoadType,
   stillRows: readonly NormalizedProviderRow[],

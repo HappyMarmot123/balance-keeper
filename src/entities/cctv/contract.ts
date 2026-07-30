@@ -1,4 +1,4 @@
-export type { CctvBounds, CctvCamera, CctvRoadType, CctvSnapshot } from './model/cctv';
+export type { CctvBounds, CctvCamera, CctvCameraId, CctvRoadType, CctvSnapshot } from './model/cctv';
 export {
   CCTV_CAMERA_LIMIT,
   CCTV_KOREA_BOUNDS,
@@ -6,6 +6,7 @@ export {
   CCTV_SNAPSHOT_MAX_BYTES,
   canonicalizeCctvBounds,
   cctvBoundsSchema,
+  cctvCameraIdSchema,
   cctvCameraSchema,
   cctvDataSchema,
   cctvRoadTypeSchema,

@@ -1,4 +1,4 @@
-import type { GatewayRoute } from './route';
+import type { RegisteredGatewayRoute } from './route';
 import {
   assertRouteProfile,
   type BreakerProfile,
@@ -13,7 +13,7 @@ const safeApiPathPattern = /^\/api\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a
 const MAX_ROUTE_ID_LENGTH = 64;
 
 export type RouteRegistry = Readonly<{
-  getByPath(pathname: string): GatewayRoute | undefined;
+  getByPath(pathname: string): RegisteredGatewayRoute | undefined;
 }>;
 
 type FixedWindowValues = Pick<FixedWindowRateProfile, 'limit' | 'windowMs'>;
@@ -67,9 +67,9 @@ const assertConsistentBreaker = (policiesByScope: Map<string, BreakerValues>, pr
   });
 };
 
-export function createRouteRegistry(routes: readonly GatewayRoute[]): RouteRegistry {
+export function createRouteRegistry(routes: readonly RegisteredGatewayRoute[]): RouteRegistry {
   const routeIds = new Set<string>();
-  const routesByPath = new Map<string, GatewayRoute>();
+  const routesByPath = new Map<string, RegisteredGatewayRoute>();
   const admissionPoliciesByScope = new Map<string, FixedWindowValues>();
   const upstreamPoliciesByScope = new Map<string, FixedWindowValues>();
   const breakerPoliciesByScope = new Map<string, BreakerValues>();

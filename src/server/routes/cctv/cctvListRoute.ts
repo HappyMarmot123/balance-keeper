@@ -1,4 +1,4 @@
-import { type CctvBounds, cctvBoundsSchema, cctvDataSchema } from '../../../entities/cctv/contract';
+import { type CctvBounds, cctvDataSchema } from '../../../entities/cctv/contract';
 import { AppError } from '../../../shared/contracts';
 import {
   createRouteProfile,
@@ -7,9 +7,9 @@ import {
   rethrowAsUpstreamUnavailable,
 } from '../../gateway';
 import { fetchItsCctvList } from '../../providers/its';
+import { parseCctvBounds } from './cctvRequest';
 
 const CCTV_SOURCE = 'ITS 국가교통정보센터';
-const COORDINATE_PATTERN = /^(?:0|[1-9]\d{0,2})(?:\.\d{1,4})?$/u;
 
 export type CreateCctvListRouteOptions = Readonly<{
   clock?: () => number;
@@ -42,24 +42,6 @@ export const CCTV_LIST_ROUTE_PROFILE = createRouteProfile({
   cdnMaxAgeSeconds: 5 * 60,
 });
 
-const parseBbox = (value: string): CctvBounds => {
-  const parts = value.split(',');
-  if (parts.length !== 4 || parts.some((part) => !COORDINATE_PATTERN.test(part))) {
-    throw new AppError('BAD_REQUEST');
-  }
-  const [minimumLongitudeText, minimumLatitudeText, maximumLongitudeText, maximumLatitudeText] = parts;
-  const parsed = cctvBoundsSchema.safeParse({
-    maximumLatitude: Number(maximumLatitudeText),
-    maximumLongitude: Number(maximumLongitudeText),
-    minimumLatitude: Number(minimumLatitudeText),
-    minimumLongitude: Number(minimumLongitudeText),
-  });
-  if (!parsed.success) {
-    throw new AppError('BAD_REQUEST');
-  }
-  return Object.freeze(parsed.data);
-};
-
 const assertClock = (epochMs: number): void => {
   if (!Number.isSafeInteger(epochMs) || epochMs < 0) {
     throw new RangeError('CCTV route clock must return a non-negative safe epoch millisecond value');
@@ -88,7 +70,7 @@ export function createCctvListRoute(
       if (values.length !== 1) {
         throw new AppError('BAD_REQUEST');
       }
-      const bounds = parseBbox(values[0] ?? '');
+      const bounds = parseCctvBounds(values[0] ?? '');
       return {
         admissionSubject: options.readAdmissionSubject(request),
         input: bounds,

@@ -14,6 +14,7 @@ export const CCTV_CAMERA_LIMIT = 2_000;
 export const CCTV_SNAPSHOT_MAX_BYTES = 3 * 1_024 * 1_024;
 
 export const cctvRoadTypeSchema = z.enum(['expressway', 'national-road']);
+export const cctvCameraIdSchema = z.string().regex(/^its-cctv:[A-Za-z0-9_-]{16,43}$/u);
 
 const nullableCreatedAtSchema = z.number().int().nonnegative().max(MAX_DATE_EPOCH_MS).nullable();
 const nullableResolutionSchema = z.string().trim().min(1).max(100).nullable();
@@ -61,7 +62,7 @@ const createCctvMediaSourceSchema = (kind: 'live-hls' | 'still-image') =>
 
 export const cctvCameraSchema = z
   .object({
-    id: z.string().regex(/^its-cctv:[A-Za-z0-9_-]{16,43}$/u),
+    id: cctvCameraIdSchema,
     latitude: z.number().finite().min(CCTV_KOREA_BOUNDS.minimumLatitude).max(CCTV_KOREA_BOUNDS.maximumLatitude),
     longitude: z.number().finite().min(CCTV_KOREA_BOUNDS.minimumLongitude).max(CCTV_KOREA_BOUNDS.maximumLongitude),
     media: z
@@ -77,6 +78,7 @@ export const cctvCameraSchema = z
   .strict();
 
 export type CctvRoadType = z.infer<typeof cctvRoadTypeSchema>;
+export type CctvCameraId = z.infer<typeof cctvCameraIdSchema>;
 export type CctvCamera = z.infer<typeof cctvCameraSchema>;
 
 export const compareCctvCameras = (left: CctvCamera, right: CctvCamera): number => {

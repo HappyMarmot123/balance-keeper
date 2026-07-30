@@ -135,4 +135,54 @@ describe('createLocalCoalescer', () => {
     expect(removeListener).toHaveBeenCalledOnce();
     expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function));
   });
+
+  it('aborts an abortable acquisition when its only caller disconnects', async () => {
+    const coalescer = createLocalCoalescer();
+    const caller = new AbortController();
+    const reason = new Error('only viewer closed');
+    let sharedSignal: AbortSignal | undefined;
+    const acquisition = deferred<string>();
+
+    const result = coalescer.runAbortable(
+      'cctv-image',
+      (signal) => {
+        sharedSignal = signal;
+        return acquisition.promise;
+      },
+      caller.signal,
+    );
+    await Promise.resolve();
+    caller.abort(reason);
+
+    await expect(result).rejects.toBe(reason);
+    expect(sharedSignal?.aborted).toBe(true);
+    expect(sharedSignal?.reason).toBe(reason);
+    acquisition.reject(reason);
+  });
+
+  it('keeps one abortable acquisition alive while another caller is still waiting', async () => {
+    const coalescer = createLocalCoalescer();
+    const firstCaller = new AbortController();
+    const secondCaller = new AbortController();
+    const acquisition = deferred<string>();
+    let sharedSignal: AbortSignal | undefined;
+    let calls = 0;
+    const acquire = (signal: AbortSignal) => {
+      calls += 1;
+      sharedSignal = signal;
+      return acquisition.promise;
+    };
+
+    const first = coalescer.runAbortable('cctv-image', acquire, firstCaller.signal);
+    const second = coalescer.runAbortable('cctv-image', acquire, secondCaller.signal);
+    await Promise.resolve();
+    firstCaller.abort(new Error('first viewer closed'));
+
+    await expect(first).rejects.toThrow('first viewer closed');
+    expect(sharedSignal?.aborted).toBe(false);
+    expect(calls).toBe(1);
+
+    acquisition.resolve('jpeg');
+    await expect(second).resolves.toBe('jpeg');
+  });
 });

@@ -11,7 +11,14 @@ import {
   type FixedWindowConsumption,
   type FleetStateStore,
 } from '../cache';
-import { createApiResponse, type JsonBodyStatus, type JsonValue, toErrorEnvelope, toSuccessEnvelope } from '../http';
+import {
+  createApiResponse,
+  createMediaResponse,
+  type JsonBodyStatus,
+  type JsonValue,
+  toErrorEnvelope,
+  toSuccessEnvelope,
+} from '../http';
 import { type GatewayLogger, safeLog } from '../observability';
 import {
   GatewayTimeoutError,
@@ -21,7 +28,16 @@ import {
   type Scheduler,
   withTimeout,
 } from '../resilience';
-import type { GatewayRoute, ParsedGatewayRequest, UpstreamOutcome } from './route';
+import {
+  GATEWAY_MEDIA_MAX_BODY_BYTES,
+  type GatewayMediaOutcome,
+  type GatewayMediaRoute,
+  type GatewayRoute,
+  isGatewayMediaRoute,
+  type ParsedGatewayRequest,
+  type RegisteredGatewayRoute,
+  type UpstreamOutcome,
+} from './route';
 import { deriveBreakerPolicy } from './routeProfile';
 import type { RouteRegistry } from './routeRegistry';
 
@@ -124,7 +140,7 @@ const durationSince = (clock: () => number, startedAt: number): number =>
 
 const logDegraded = (
   dependencies: GatewayDependencies,
-  route: GatewayRoute,
+  route: RegisteredGatewayRoute,
   context: AcquisitionLogContext,
   phase: DegradedPhase,
 ): void => {
@@ -141,7 +157,7 @@ const logDegraded = (
 const runBestEffort = async (
   operation: () => Promise<boolean>,
   dependencies: GatewayDependencies,
-  route: GatewayRoute,
+  route: RegisteredGatewayRoute,
   context: AcquisitionLogContext,
   phase: DegradedPhase,
 ): Promise<boolean> => {
@@ -586,6 +602,146 @@ const acquireRepresentation = async (
   }
 };
 
+const assertMediaOutcome = (input: GatewayMediaOutcome): GatewayMediaOutcome => {
+  if (
+    typeof input !== 'object' ||
+    input === null ||
+    input.kind !== 'media' ||
+    input.contentType !== 'image/jpeg' ||
+    !(input.body instanceof Uint8Array) ||
+    input.body.byteLength === 0 ||
+    input.body.byteLength > GATEWAY_MEDIA_MAX_BODY_BYTES ||
+    typeof input.source !== 'string' ||
+    input.source.length === 0 ||
+    !Number.isSafeInteger(input.fetchedAt) ||
+    input.fetchedAt < 0
+  ) {
+    throw new AppError('UPSTREAM_UNAVAILABLE');
+  }
+
+  return Object.freeze({
+    ...input,
+    body: input.body.slice(),
+  });
+};
+
+const acquireMediaOutcome = async (
+  route: GatewayMediaRoute,
+  parsedRequest: ParsedGatewayRequest<unknown>,
+  dependencies: GatewayDependencies,
+  logContext: AcquisitionLogContext,
+  callerSignal: AbortSignal,
+): Promise<GatewayMediaOutcome> => {
+  const breakerKey = createStateKey('breaker', route.profile.breaker.scope);
+  const breakerPolicy = deriveBreakerPolicy(route.profile);
+  let breakerPermit: AllowedBreakerPermit | undefined;
+
+  try {
+    const permit = await dependencies.fleetStateStore.acquireBreaker(
+      breakerKey,
+      dependencies.createCoordinationToken(),
+      breakerPolicy,
+    );
+
+    if (!permit.allowed) {
+      throw new AppError('SERVICE_UNAVAILABLE');
+    }
+
+    breakerPermit = permit;
+  } catch (error) {
+    if (isAppError(error)) {
+      throw error;
+    }
+
+    logDegraded(dependencies, route, logContext, 'breaker-acquire');
+  }
+
+  const upstreamBudgetKey = createStateKey('rate', route.profile.upstreamBudget.scope);
+  let upstreamBudget: FixedWindowConsumption;
+
+  try {
+    upstreamBudget = await dependencies.fleetStateStore.consumeFixedWindow(
+      upstreamBudgetKey,
+      route.profile.upstreamBudget,
+    );
+  } catch {
+    if (breakerPermit !== undefined) {
+      await runBestEffort(
+        () => dependencies.fleetStateStore.completeBreaker(breakerKey, breakerPermit, 'NEUTRAL', breakerPolicy),
+        dependencies,
+        route,
+        logContext,
+        'breaker-complete',
+      );
+    }
+
+    throw new AppError('SERVICE_UNAVAILABLE');
+  }
+
+  if (!upstreamBudget.allowed) {
+    if (breakerPermit !== undefined) {
+      await runBestEffort(
+        () => dependencies.fleetStateStore.completeBreaker(breakerKey, breakerPermit, 'NEUTRAL', breakerPolicy),
+        dependencies,
+        route,
+        logContext,
+        'breaker-complete',
+      );
+    }
+
+    throw new AppError('SERVICE_UNAVAILABLE');
+  }
+
+  try {
+    const timeoutMs =
+      breakerPermit?.state === 'HALF_OPEN'
+        ? Math.min(route.profile.upstreamTimeoutMs, route.profile.breaker.probeTimeoutMs)
+        : route.profile.upstreamTimeoutMs;
+    const outcome = assertMediaOutcome(
+      await withTimeout((signal) => route.load(parsedRequest.input, signal), {
+        parentSignal: callerSignal,
+        ...(dependencies.scheduler === undefined ? {} : { scheduler: dependencies.scheduler }),
+        timeoutMs,
+      }),
+    );
+
+    if (breakerPermit !== undefined) {
+      await runBestEffort(
+        () => dependencies.fleetStateStore.completeBreaker(breakerKey, breakerPermit, 'SUCCESS', breakerPolicy),
+        dependencies,
+        route,
+        logContext,
+        'breaker-complete',
+      );
+    }
+
+    return outcome;
+  } catch (error) {
+    const transient = isTransientUpstreamFailure(error);
+    if (breakerPermit !== undefined) {
+      await runBestEffort(
+        () =>
+          dependencies.fleetStateStore.completeBreaker(
+            breakerKey,
+            breakerPermit,
+            transient ? 'FAILURE' : 'NEUTRAL',
+            breakerPolicy,
+          ),
+        dependencies,
+        route,
+        logContext,
+        'breaker-complete',
+      );
+    }
+
+    if (transient) {
+      throw new AppError('UPSTREAM_UNAVAILABLE');
+    }
+
+    throw error;
+  }
+};
+
 export function createGatewayHandler(registry: RouteRegistry): GatewayHandler {
   return async (request, dependencies) => {
     throwIfRequestAborted(request);
@@ -622,6 +778,31 @@ export function createGatewayHandler(registry: RouteRegistry): GatewayHandler {
       }
 
       throwIfRequestAborted(request);
+      if (isGatewayMediaRoute(route)) {
+        const mediaKey = createCacheKey(route.id, parsedRequest.publicCacheIdentity);
+        const outcome = await dependencies.localCoalescer.runAbortable(
+          mediaKey,
+          (sharedSignal) =>
+            acquireMediaOutcome(route, parsedRequest, dependencies, { requestId, startedAt }, sharedSignal),
+          request.signal,
+        );
+        throwIfRequestAborted(request);
+        const response = createMediaResponse({
+          body: outcome.body,
+          contentType: outcome.contentType,
+          requestId,
+        });
+        safeLog(dependencies.logger, {
+          event: 'gateway.request',
+          route: route.id,
+          phase: 'response',
+          outcome: 'success',
+          durationMs: durationSince(dependencies.clock, startedAt),
+          requestId,
+        });
+        return response;
+      }
+
       const cacheKey = createCacheKey(route.id, parsedRequest.publicCacheIdentity);
       const cached = await readUsableCache(route, cacheKey, dependencies);
       throwIfRequestAborted(request);

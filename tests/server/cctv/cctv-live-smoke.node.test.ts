@@ -56,4 +56,50 @@ describe('ITS CCTV credential-gated live smoke', () => {
     },
     20_000,
   );
+
+  liveIt(
+    'relays one on-demand bounded JPEG without exposing the provider URL',
+    async () => {
+      if (serviceKey === undefined || serviceKey.length === 0) {
+        throw new TypeError('ITS_API_KEY is required for the live smoke');
+      }
+
+      const clock = Date.now;
+      const runtime = createProductionGatewayRuntime({
+        clock,
+        createCoordinationToken: () => 'coordination-cctv-image-live-smoke',
+        createRequestId: () => 'request-cctv-image-live-smoke',
+        environment: { ITS_API_KEY: serviceKey },
+        fetcher: globalThis.fetch,
+        fleetStateStore: new MemoryFleetStateStore(clock),
+        logWriter: () => undefined,
+      });
+      const trustedRequest = (path: string) =>
+        withTrustedAdmissionSubject(new Request(`https://balance.test${path}`), '203.0.113.95');
+      const listResponse = await runtime.handle(trustedRequest('/api/cctv/list?bbox=126.5,37,127.5,38'));
+      expect(listResponse.status).toBe(200);
+      const snapshot = successEnvelopeSchema(cctvDataSchema).parse(await listResponse.json()).data;
+      const camera = snapshot.cameras[0];
+      expect(camera).toBeDefined();
+      if (camera === undefined) {
+        throw new TypeError('CCTV live smoke requires at least one camera');
+      }
+
+      const response = await runtime.handle(
+        trustedRequest(`/api/cctv/image?cameraId=${encodeURIComponent(camera.id)}&bbox=126.5,37,127.5,38`),
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('image/jpeg');
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(response.headers.get('etag')).toBeNull();
+      const declaredLength = Number(response.headers.get('content-length'));
+      expect(declaredLength).toBeGreaterThan(0);
+      expect(declaredLength).toBeLessThanOrEqual(512 * 1_024);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      expect(bytes.byteLength).toBe(declaredLength);
+      expect([...bytes.slice(0, 2)]).toEqual([0xff, 0xd8]);
+      expect([...bytes.slice(-2)]).toEqual([0xff, 0xd9]);
+    },
+    30_000,
+  );
 });

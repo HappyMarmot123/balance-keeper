@@ -1,12 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { createUpstashRedisClient, type FleetStateStore, UpstashFleetStateStore } from '../cache';
-import { createGatewayHandler, createRouteRegistry, type GatewayRoute, type RouteRegistry } from '../gateway';
+import {
+  createGatewayHandler,
+  createRouteRegistry,
+  isGatewayMediaRoute,
+  type RegisteredGatewayRoute,
+  type RouteRegistry,
+} from '../gateway';
 import type { GatewayLogger } from '../observability';
 import { createLocalCoalescer } from '../resilience';
 import { type RuntimeEnvironment, readFleetStateConfig } from './runtimeConfig';
 import { createUnavailableFleetStateStore } from './unavailableFleetStateStore';
 
-const defaultGatewayRoutes: readonly GatewayRoute[] = Object.freeze([]);
+const defaultGatewayRoutes: readonly RegisteredGatewayRoute[] = Object.freeze([]);
 
 export type CreateGatewayRuntimeOptions = Readonly<{
   clock?: () => number;
@@ -15,7 +21,7 @@ export type CreateGatewayRuntimeOptions = Readonly<{
   environment?: RuntimeEnvironment;
   fleetStateStore?: FleetStateStore;
   logger?: GatewayLogger;
-  routes?: readonly GatewayRoute[];
+  routes?: readonly RegisteredGatewayRoute[];
 }>;
 
 export type GatewayRuntime = Readonly<{
@@ -54,7 +60,8 @@ export function createGatewayRuntime(options: CreateGatewayRuntimeOptions = {}):
 
   return Object.freeze({
     getCdnMaxAgeSeconds(pathname: string) {
-      return registry.getByPath(pathname)?.profile.cdnMaxAgeSeconds;
+      const route = registry.getByPath(pathname);
+      return route === undefined || isGatewayMediaRoute(route) ? undefined : route.profile.cdnMaxAgeSeconds;
     },
     handle(request: Request) {
       return handler(request, dependencies);
