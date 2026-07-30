@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'preact/hooks';
 import type { KoreaMapSession, NaverMapsNamespace } from '../../../entities/map';
 import type { NaverMapsConfig } from '../../../shared/config';
+import { CctvMapLayer } from './CctvMapLayer';
 
 export type KoreaMapServices = Readonly<{
   createSession(
@@ -104,12 +105,16 @@ function FailureState({ onRetry, reason }: Readonly<{ onRetry: () => void; reaso
 }
 
 function ReadyControls({
+  isCctvEnabled,
   defaultReason,
   isCustom,
+  onCctvToggle,
   onReset,
 }: Readonly<{
+  isCctvEnabled: boolean;
   defaultReason?: 'custom-fallback' | 'style-not-configured';
   isCustom: boolean;
+  onCctvToggle: () => void;
   onReset: () => void;
 }>) {
   return (
@@ -126,13 +131,27 @@ function ReadyControls({
           </p>
         )}
       </div>
-      <button
-        className="pointer-events-auto rounded-sm border border-boundary-strong bg-surface-raised px-3 py-2 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        onClick={onReset}
-        type="button"
-      >
-        대한민국 전체 보기
-      </button>
+      <div className="pointer-events-auto flex items-center gap-2">
+        <button
+          aria-pressed={isCctvEnabled}
+          className={
+            isCctvEnabled
+              ? 'rounded-sm border border-accent bg-accent px-3 py-2 text-sm font-semibold text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
+              : 'rounded-sm border border-boundary-strong bg-surface-raised px-3 py-2 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
+          }
+          onClick={onCctvToggle}
+          type="button"
+        >
+          CCTV
+        </button>
+        <button
+          className="rounded-sm border border-boundary-strong bg-surface-raised px-3 py-2 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          onClick={onReset}
+          type="button"
+        >
+          대한민국 전체 보기
+        </button>
+      </div>
     </div>
   );
 }
@@ -142,6 +161,7 @@ export function KoreaMapView({ config, services }: KoreaMapViewProps) {
   const mapRootRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<KoreaMapSession>();
   const [attempt, setAttempt] = useState(0);
+  const [isCctvEnabled, setIsCctvEnabled] = useState(false);
   const [state, setState] = useState<MapViewState>(() =>
     config.kind === 'missing-key' ? { kind: 'missing-key' } : { kind: 'loading' },
   );
@@ -279,10 +299,24 @@ export function KoreaMapView({ config, services }: KoreaMapViewProps) {
         <FailureState onRetry={() => setAttempt((current) => current + 1)} reason={state.reason} />
       )}
       {state.kind === 'ready-custom' && (
-        <ReadyControls isCustom={true} onReset={() => sessionRef.current?.resetView()} />
+        <ReadyControls
+          isCctvEnabled={isCctvEnabled}
+          isCustom={true}
+          onCctvToggle={() => setIsCctvEnabled((current) => !current)}
+          onReset={() => sessionRef.current?.resetView()}
+        />
       )}
       {state.kind === 'ready-default' && (
-        <ReadyControls defaultReason={state.reason} isCustom={false} onReset={() => sessionRef.current?.resetView()} />
+        <ReadyControls
+          defaultReason={state.reason}
+          isCctvEnabled={isCctvEnabled}
+          isCustom={false}
+          onCctvToggle={() => setIsCctvEnabled((current) => !current)}
+          onReset={() => sessionRef.current?.resetView()}
+        />
+      )}
+      {(state.kind === 'ready-custom' || state.kind === 'ready-default') && sessionRef.current && (
+        <CctvMapLayer active={isCctvEnabled} session={sessionRef.current} />
       )}
     </section>
   );

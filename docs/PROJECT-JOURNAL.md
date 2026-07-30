@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-30 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T20 CCTV 정지영상 capability — ACCEPTED |
-| 다음 단계 | final commit·`development` PR → T21 HTTPS-HLS |
+| 현재 단계 | T20-R1 CCTV 지도 정지영상 UI — ACCEPTED |
+| 다음 단계 | final commit → development PR quality-gate |
 
 ---
 
@@ -875,6 +875,7 @@ flowchart TD
 | T18 | 항공 provider feasibility | OpenSky 서면 license 또는 ODbL·분류 한계를 승인한 대체 source 판정; 미충족 시 feature off | 권리·quota·hyperscaler egress·군 분류 정확도 | T04,T06 |
 | T19 | CCTV 목록 | current ITS `type=ex\|its`, bbox·좌표·media allowlist 계약 | 승인 quota, 악성 URL, 빈 목록, live | T04,T06,T07 |
 | T20 | CCTV 정지영상 | `cctvType=3` HTTPS·size·CORS·만료 확인 후 direct 또는 bounded fallback | content type, 크기, redirect, timeout, SSRF | T19 |
+| T20-R1 | CCTV 지도 정지영상 UI | 준비된 지도에서 명시적 CCTV toggle·viewport query·bounded marker·접근 가능한 목록·정지영상 상세를 제공 | zoom/bbox gate, 5상태, marker/list selection, Blob URL cleanup, keyboard | T07,T19,T20 |
 | T21 | CCTV HTTPS-HLS | `cctvType=4` direct playback와 1-stream UI; Function segment relay 금지 | browser CORS, URL expiry, hls.js, 대역폭 | T19,T20 |
 
 ### 17.3 미구현 12개
@@ -2746,6 +2747,59 @@ flowchart LR
   - `git diff --check`와 added secret-like value scan `0`이 PASS했다. production viewer·marker·dialog는 승인 범위대로 T30에 남겨 UI 사용자 여정을 완료했다고 주장하지 않는다.
 - 회귀 판정: `PASS` — 실패한 필수 검증과 알려진 회귀가 없다. 사용자 수락에 따라 final commit과 `development` 대상 PR을 진행한다.
 - Guardrail: `PASS` — approved fallback은 direct 실패를 우회하되 raw URL·대형/연속 relay·별도 Function을 허용하지 않는다. 외부 배포는 ITS 영상 표시·relay 조건 확인 전까지 금지한다.
+
+### T20-R1 — CCTV 지도 정지영상 UI
+
+- 상태: `ACCEPTED` — 구현·자동 회귀와 독립 리뷰 PASS 보고 및 localhost 수동 QA 목록 전달 후 사용자가 “진행”으로 결과와 final commit·`development` PR 진행을 승인했다.
+- dependency:
+  - T07·T19·T20은 `ACCEPTED`이고 T20 commit `08e9b3d`는 PR #17, merge commit `8d8eaaf`로 `development`에 반영됐다.
+  - T21 direct HLS는 실제 browser playback 증거가 없어 계속 `BLOCKED`이며 이 Task의 dependency가 아니다. 사용자의 수동 결과가 오기 전 HLS·`hls.js`·live control을 구현하지 않는다.
+- 목적:
+  - API만 준비돼 화면에서 찾을 수 없던 CCTV capability를 기존 NAVER GL 지도 안에서 명시적으로 켜고, 현재 viewport의 카메라를 선택해 T20 bounded 정지영상을 확인하게 한다.
+  - 전체 T30 layer registry를 앞당기지 않고 CCTV 한 layer의 실제 소비 계약만 완성한다.
+- 디자인 방향:
+  - 대상은 대한민국 상황을 빠르게 훑는 desktop dashboard 사용자이며, 한 번의 명시적 조작으로 CCTV 공간 신호를 켜고 한 카메라를 확인하는 것이 이 UI의 단일 작업이다.
+  - 기존 semantic token·font 체계를 그대로 사용한다. 지도 우측 상단의 `CCTV` pressed toggle을 계기판 스위치처럼 간결하게 두고, 결과·상태·목록은 지도 가장자리에 고정된 조용한 rail로 제공해 지도를 가리지 않는다.
+  - 새 raw color·gradient·장식 animation을 추가하지 않는다. marker와 목록의 동일한 선택 상태가 이 layer의 시각적 signature다.
+- 포함:
+  1. map ready 상태에서만 노출되는 `CCTV` toggle과 `aria-pressed`, visible focus, 키보드 조작
+  2. 현재 viewport·zoom을 Map Session public contract로 읽고 idle 변경을 구독하되, ITS 최대 `1° × 1°` 범위를 넘으면 요청하지 않고 확대 안내
+  3. toggle이 켜지고 유효한 canonical bbox가 있을 때만 `cctvListQueryOptions` 활성화
+  4. named overlay budget 안의 visual marker와 동일 camera를 선택할 수 있는 접근 가능한 목록 대안
+  5. 선택 camera의 loading·error·success 정지영상 상세, 목록 freshness·STALE·empty·missing credential 상태와 retry
+  6. camera 변경·닫기·layer off·viewport 이탈·unmount에서 query/image abort, marker listener·Object URL·selection 정리
+- 제외:
+  - T21 HLS·`hls.js`·live/autoplay, manifest·segment relay
+  - 모든 위치 data의 공통 layer registry, clustering·virtualization·tooltip framework와 T10~T29 통합은 T30
+  - fixed Seoul bbox, 전국 선조회, raw provider URL 표시, 3초 image polling과 background refresh
+  - modal dialog·focus trap이 필요한 overlay; 상세는 지도 내부 non-modal complementary panel로 제공
+- 예상 변경 범위:
+  - `src/entities/map`의 generic viewport·marker lifecycle public API와 offline SDK fixture
+  - `src/widgets/korea-map` 내부 CCTV layer coordinator·view states
+  - 필요한 `tests/entities/map`, `tests/widgets`의 RED/GREEN 회귀
+- 완료 조건:
+  - 정상: ready map에서 CCTV를 켜고 충분히 확대하면 현재 bbox만 조회해 marker·목록을 표시하며 선택한 카메라의 bounded JPEG를 확인한다.
+  - 실패: 지도 미준비·확대 부족·missing credential·network/schema/image 오류가 raw detail 없이 사용자가 다음 행동을 알 수 있는 상태로 표시된다.
+  - 경계: `1°` exact/+초과, empty·STALE·overlay budget 초과, rapid viewport/camera switch, layer off·close·unmount cleanup을 검증한다.
+  - 접근성: toggle·목록·retry·close에 accessible name과 visible focus가 있고 marker 정보에는 목록 대안이 존재한다.
+  - 회귀: 기존 map loading/fallback/auth/reset/theme lifecycle, T19 cache/query와 T20 loader, FSD dependency·lazy map boundary 및 `npm run validate`가 PASS한다.
+  - 실제 NAVER SDK 수동 확인은 사용자가 현재 localhost에서 수행할 QA 목록으로 별도 전달한다.
+- Guardrail: `PASS` — CCTV 정지영상 소비만으로 범위가 명확하고 T07·T19·T20 근거가 있으며, HLS와 전체 T30 scope를 침범하지 않는다.
+- RED:
+  - Map Session의 viewport·point layer와 ready-map `CCTV` control이 없어 toggle·bbox 구독·marker·목록 테스트가 실패하는 상태에서 시작했다.
+  - marker 생성 중간 실패의 부분 자원 누수, 선택 render마다 marker 재생성, bbox 복귀·same-bbox refresh의 selection 재개방, container resize 후 stale bbox를 각각 실패 테스트로 재현했다.
+- GREEN:
+  - ready 상태에만 pressed toggle을 노출하고, `idle`·ResizeObserver 기반 provider-neutral viewport와 접근 가능한 point layer lifecycle을 Map Entity public API로 제공한다.
+  - 대한민국 내부의 각 축 `1° × 1°` 이하 canonical bbox에서만 CCTV Query를 활성화하고 marker·목록을 100대로 제한한다.
+  - loading·error/retry·missing credential·empty·STALE·refresh degraded 상태와 provider freshness를 구분한다. 선택 상세는 T20 bounded same-origin JPEG만 요청하며 camera·bbox·layer 수명에 맞춰 abort·listener·Blob URL을 정리한다.
+  - rail은 NAVER attribution·우측 zoom control을 피해 왼쪽 safe area에 두며 좁은 화면에서는 상세가 목록을 대체한다. 상세 close에 focus를 이동하고 닫기·camera 소실 후 목록 또는 첫 camera로 복원한다. 선택 marker는 token 기반 focus outline과 `aria-pressed`를 공유한다.
+- 자동 검증:
+  - focused map/CCTV 4 files·41 tests, Biome, strict TypeScript가 PASS했다.
+  - `npm run validate` PASS — Biome 346 files, Vitest 1,404 passed·8 skipped, strict TypeScript, client/server production build PASS.
+  - `git diff --check`와 added secret-like value scan `0`이 PASS했다. 독립 리뷰에서 확인된 marker 부분 생성 누수, selection churn·재개방, stale camera frame, attribution·zoom·responsive rail, focus 수명, resize bbox 문제를 RED→GREEN으로 해소했다.
+- 사용자 수락:
+  - 실제 NAVER GL에서 ready 후 CCTV toggle 노출, 확대 전 무요청 안내, 서울 수준 확대 후 marker·목록, marker/목록 선택 정지영상, retry·닫기·Escape·pan·resize·layer off를 확인할 수 있는 QA 목록을 전달했다.
+  - 사용자가 최종 보고에 “진행”으로 응답해 승인모드의 `ACCEPTED`와 commit·PR 권한으로 기록한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 

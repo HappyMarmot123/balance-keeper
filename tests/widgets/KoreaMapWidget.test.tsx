@@ -1,5 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/preact-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/preact';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { KoreaMapSession, NaverMapsNamespace } from '../../src/entities/map';
 import { type KoreaMapServices, KoreaMapView } from '../../src/widgets/korea-map/ui/KoreaMapView';
@@ -24,9 +25,11 @@ function fixtureMaps(): NaverMapsNamespace {
 
 function sessionFixture(ready: Promise<void> = Promise.resolve()): KoreaMapSession {
   return {
+    createPointLayer: vi.fn(() => ({ destroy: vi.fn(), replace: vi.fn(), select: vi.fn() })),
     destroy: vi.fn(),
     ready,
     resetView: vi.fn(),
+    subscribeViewport: vi.fn(() => vi.fn()),
   };
 }
 
@@ -38,6 +41,10 @@ function servicesFixture(overrides: Partial<KoreaMapServices> = {}): KoreaMapSer
     ...overrides,
   };
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('KoreaMapView', () => {
   it('keeps a named full-height region without requesting the SDK when the canonical key is missing', () => {
@@ -103,6 +110,179 @@ describe('KoreaMapView', () => {
     expect(session.resetView).toHaveBeenCalledOnce();
     expect(services.createSession).toHaveBeenCalledOnce();
     expect(screen.getByRole('region', { name: '대한민국 상황 지도' }).getAttribute('aria-busy')).toBeNull();
+  });
+
+  it('reveals a keyboard-operable CCTV layer toggle only after the map is ready', async () => {
+    const ready = deferred<void>();
+    const session = sessionFixture(ready.promise);
+    const services = servicesFixture({ createSession: vi.fn(() => session) });
+    render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+
+    await waitFor(() => expect(services.createSession).toHaveBeenCalledOnce());
+    expect(screen.queryByRole('button', { name: 'CCTV' })).toBeNull();
+
+    ready.resolve();
+    const toggle = await screen.findByRole('button', { name: 'CCTV' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('subscribes only while CCTV is active and asks for a smaller viewport before querying', async () => {
+    let publishViewport: Parameters<KoreaMapSession['subscribeViewport']>[0] = () => undefined;
+    const unsubscribeViewport = vi.fn();
+    const session = {
+      ...sessionFixture(),
+      subscribeViewport: vi.fn((listener: Parameters<KoreaMapSession['subscribeViewport']>[0]) => {
+        publishViewport = listener;
+        return unsubscribeViewport;
+      }),
+    } satisfies KoreaMapSession;
+    const services = servicesFixture({ createSession: vi.fn(() => session) });
+    render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+
+    const toggle = await screen.findByRole('button', { name: 'CCTV' });
+    expect(session.subscribeViewport).not.toHaveBeenCalled();
+    fireEvent.click(toggle);
+    expect(session.subscribeViewport).toHaveBeenCalledOnce();
+
+    publishViewport({
+      maximumLatitude: 39,
+      maximumLongitude: 132,
+      minimumLatitude: 33,
+      minimumLongitude: 124,
+      zoom: 7,
+    });
+    expect(await screen.findByText('지도를 확대하면 CCTV 위치를 표시합니다.')).toBeTruthy();
+    expect(session.createPointLayer).not.toHaveBeenCalled();
+
+    fireEvent.click(toggle);
+    expect(unsubscribeViewport).toHaveBeenCalledOnce();
+    expect(screen.queryByText('지도를 확대하면 CCTV 위치를 표시합니다.')).toBeNull();
+  });
+
+  it('queries one valid viewport and mirrors the bounded cameras in markers and an accessible list', async () => {
+    const bounds = {
+      maximumLatitude: 37.6,
+      maximumLongitude: 127.1,
+      minimumLatitude: 37.4,
+      minimumLongitude: 126.9,
+    } as const;
+    const response = deferred<Response>();
+    const fetcher = vi.fn(() => response.promise);
+    vi.stubGlobal('fetch', fetcher);
+    let publishViewport: Parameters<KoreaMapSession['subscribeViewport']>[0] = () => undefined;
+    const replace = vi.fn();
+    const pointLayer = { destroy: vi.fn(), replace, select: vi.fn() };
+    const session = {
+      ...sessionFixture(),
+      createPointLayer: vi.fn(() => pointLayer),
+      subscribeViewport: vi.fn((listener: Parameters<KoreaMapSession['subscribeViewport']>[0]) => {
+        publishViewport = listener;
+        return vi.fn();
+      }),
+    } satisfies KoreaMapSession;
+    const services = servicesFixture({ createSession: vi.fn(() => session) });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'CCTV' }));
+    publishViewport({ ...bounds, zoom: 12 });
+    expect(await screen.findByText('CCTV 위치를 불러오는 중입니다.')).toBeTruthy();
+    await waitFor(() =>
+      expect(fetcher).toHaveBeenCalledWith(
+        '/api/cctv/list?bbox=126.9,37.4,127.1,37.6',
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      ),
+    );
+
+    response.resolve(
+      new Response(
+        JSON.stringify({
+          data: {
+            bounds,
+            cameras: [
+              {
+                id: 'its-cctv:AbCdEfGhIjKlMnOp',
+                latitude: 37.5,
+                longitude: 127,
+                media: {
+                  liveHls: {
+                    createdAt: null,
+                    resolution: null,
+                    url: `https://cctvsec.ktict.co.kr/4003/${'A'.repeat(107)}=`,
+                  },
+                  stillImage: {
+                    createdAt: null,
+                    resolution: null,
+                    url: `https://cctvsec.ktict.co.kr:8091/4003/${'B'.repeat(86)}==`,
+                  },
+                },
+                name: '서울고속도로 CCTV',
+                roadSectionId: 'road-a',
+                roadType: 'expressway',
+              },
+              {
+                id: 'its-cctv:QrStUvWxYz012345',
+                latitude: 37.55,
+                longitude: 127.05,
+                media: {
+                  liveHls: {
+                    createdAt: null,
+                    resolution: null,
+                    url: `https://cctvsec.ktict.co.kr/4004/${'C'.repeat(107)}=`,
+                  },
+                  stillImage: {
+                    createdAt: null,
+                    resolution: null,
+                    url: `https://cctvsec.ktict.co.kr:8091/4004/${'D'.repeat(86)}==`,
+                  },
+                },
+                name: '서울국도 CCTV',
+                roadSectionId: null,
+                roadType: 'national-road',
+              },
+            ],
+          },
+          meta: {
+            cache: 'MISS',
+            fetchedAt: 1_785_360_000_000,
+            requestId: 'request-cctv-map',
+            source: 'ITS 국가교통정보센터',
+          },
+        }),
+        { headers: { 'content-type': 'application/json' } },
+      ),
+    );
+
+    expect(await screen.findByText('현재 화면 · 2대')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '서울국도 CCTV 정지영상 보기' })).toBeTruthy();
+    await waitFor(() =>
+      expect(replace).toHaveBeenLastCalledWith([
+        {
+          accessibleName: '서울고속도로 CCTV 정지영상 보기',
+          id: 'its-cctv:AbCdEfGhIjKlMnOp',
+          latitude: 37.5,
+          longitude: 127,
+        },
+        {
+          accessibleName: '서울국도 CCTV 정지영상 보기',
+          id: 'its-cctv:QrStUvWxYz012345',
+          latitude: 37.55,
+          longitude: 127.05,
+        },
+      ]),
+    );
   });
 
   it('makes the default-GL degraded state explicit when no custom style is configured', async () => {

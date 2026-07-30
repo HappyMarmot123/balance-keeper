@@ -98,6 +98,14 @@
   }
 }
 
+@layer components {
+  [data-bk-map-point]:focus-visible,
+  [data-bk-map-point][data-selected="true"] {
+    outline: 3px solid var(--bk-color-focus);
+    outline-offset: 3px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
