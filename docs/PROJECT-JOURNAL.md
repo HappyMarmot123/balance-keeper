@@ -6,11 +6,11 @@
 | --- | --- |
 | 문서 역할 | 제품 기획·기술 결정·Task·검증·개발일지의 단일 정본 |
 | 실행 모드 | 승인모드 |
-| 기준일 | 2026-07-29 (Asia/Seoul) |
+| 기준일 | 2026-07-30 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T15 공공 정책 보도자료 RSS — ACCEPTED |
-| 다음 단계 | T15 final commit·development PR |
+| 현재 단계 | T18 항공 provider feasibility — ACCEPTED |
+| 다음 단계 | T19 CCTV 목록·metadata 상세 범위 제안 |
 
 ---
 
@@ -266,6 +266,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-046 | T12의 공개 범위는 KMA가 공식 제공하는 최근 3일 통보와 USGS `2.5_week.geojson` 최근 7일 자료를 KMA 공식 동아시아 범위 `21~45°N, 110~145°E`에서 결합하는 고정 `/api/earthquake`로 둔다. snapshot은 source별 조회 시작시각을 노출해 3일 KMA 자료를 7일 자료로 오인하지 않게 한다. provider-native ID·revision·magnitude와 양쪽 출처를 보존하고, KMA 수정 통보를 먼저 정리한 뒤 발생시각 90초 이내·거리 50km 이내·규모 차이 0.7 이하를 모두 만족하는 사건만 보수적으로 dedup한다. 한 source만 실패하면 유효 source를 명시적 partial 상태로 제공하고 둘 다 실패할 때만 last-good/error 경계로 전환한다. 지도 overlay는 T30까지 제외한다. KMA provider는 data.go.kr HTTPS `getEqkMsg`와 실제 정상 동작이 확인된 소문자 `serviceKey`를 사용한다. 지진 전용 server credential identifier는 사용자가 설정한 `KOREA_EARTHQUAKE_KEY`이며 기존 기상 adapter의 `DATA_GO_KR_SERVICE_KEY` 계약은 바꾸지 않는다. | ACCEPTED | 사용자가 T12 진행과 keyed contract 확인을 승인했고, 2026-07-28 값 미출력 gate에서 `serviceKey` 요청이 HTTP 200·`resultCode=00`·1 item을 반환했다. 공식 활용가이드는 서비스 갱신을 수시, 자료 범위를 현재일 기준 최근 3일로 명시한다. 2.5 feed는 레거시의 M2.5 동아시아 신호 밀도와 60초 polling payload 예산을 보존하고, KMA 국내 M2.0 이상 통보가 더 낮은 국내 신호를 보완한다. 경계값은 RED 테스트로 고정한다. |
 | D-047 | T14는 KRX 직접 API나 FRED copyrighted index 대신 금융위원회 `GetMarketIndexInfoService/getStockMarketIndex`의 KOSPI·KOSDAQ 하루 지연 지수를 사용한다. queryless route가 exact index별 bounded window를 조회하며 provider 기준일과 지연 상태를 노출한다. | ACCEPTED | 사용자가 T14 착수를 지시했다. 금융위원회 공식 metadata는 이용허락 제한 없음, 일 1회·다음 영업일 13시 이후 갱신과 개발 10,000회를 명시하고, KRX 직접·FRED 제3자 series 약관은 public 재배포 근거가 되지 않는다. |
 | D-048 | `apis.data.go.kr` 기반 provider는 활용신청별 endpoint·base allowlist는 분리하되 인증 값은 canonical server-only `DATA_GO_KR_SERVICE_KEY` 하나만 읽는다. D-043의 AirKorea 분리 key와 D-046의 지진 전용 key identifier는 이 결정으로 대체한다. ECOS·NAVER·Upstash 등 비-data.go provider credential은 통합하지 않는다. | ACCEPTED | 사용자가 AirKorea·KMA 지진 등 승인 서비스가 동일 공공데이터포털 인증키를 사용한다고 확인하고 단일 변수만 유지하겠다고 결정한 뒤 “진행하세요”로 구현을 승인했다. |
+| D-049 | 항공 신호는 현재 제품에서 `FEATURE_OFF`를 유지한다. OpenSky는 운영 REST 서면 계약을 받기 전 `NO_GO`, ADSB.lol은 ODbL 표시·파생 DB 공개 의무, 동적 제한·향후 feeder key, `filter_mil`의 군 등록 DB 분류와 수신 누락을 제품 문구·상태에 반영하는 별도 구현안이 승인되기 전 `CONDITIONAL`이다. | ACCEPTED | OpenSky state vector에는 군 소유 필드가 없고 운영 사용은 계약 대상이다. ADSB.lol은 API와 공개 데이터를 ODbL로 제공하지만 `/v2/mil`을 “military registered aircraft”로 정의하고 availability·정확성을 보증하지 않는다. 사용자가 T18 PASS 보고에 “승인”으로 응답했다. |
 
 ---
 
@@ -2541,6 +2542,43 @@ flowchart LR
 - license 경계: Safetydata의 제3유형 안내와 data.go.kr 연결 메타의 제4유형 표기가 충돌하므로 더 엄격한 출처표시·비상업·변경금지를 유지한다. 상업 공개는 제공기관 확인 전 제외한다.
 - 해제 조건: 충족. 사용자 승인에 따라 final commit·push·development PR을 진행한다.
 
+### T18 — 항공 provider feasibility
+
+- 상태: `ACCEPTED` — 제공자 타당성 판정과 기존 `FEATURE_OFF` 유지안을 사용자가 승인해 final commit·push·development PR을 허가했다.
+- 승인: 순서표상 다음 dependency-ready Task가 T18인 상태에서 사용자가 “다음작업진행”으로 조사 착수를 지시했다.
+- 선행 조건: T04·T06 `ACCEPTED`. T17 PR 병합 여부와 무관한 feasibility-only Task다.
+- 포함:
+  - 현재·레거시 항공 코드와 데이터 계약 감사
+  - OpenSky·ADSB.lol 공식 문서 기준 사용권, quota, serverless 운영 안정성, 군 분류 의미 판정
+  - `GO | CONDITIONAL | NO_GO` 결정과 feature-off 해제 조건
+- 제외:
+  - `/api/military`, provider adapter, credential 사용·live 호출, Query·Widget·지도 marker
+  - 개별 항공기 enrichment, 역사 저장, 군함 AIS와 T24~T25 범위
+- 현재 저장소:
+  - production runtime은 weather·air·earthquake·macro·markets·news·disaster 7개 route만 등록하며 `/api/military`와 항공 Entity·Widget이 없다.
+  - Dashboard에도 항공 slot이 없다. `.env.example`의 빈 OpenSky identifier는 어떤 runtime 코드에서도 읽지 않는 기존 scaffold placeholder이며 이번 Task에서 변경하지 않는다.
+- 레거시 감사:
+  - OpenSky `/states/all`의 한국 bbox `33..39, 124..132`를 60초마다 조회한 뒤 `RCH`, `KAF`, `ROKAF`, `CNV`, `PAT`, `SAM`, `JASDF`, `USAF`, `USN`, `ARMY`, `NAVY`, `NATO` prefix로 호출부호를 추정했다.
+  - 호출부호가 없거나 prefix가 다른 군 항공기는 누락되고 같은 prefix를 쓰는 비군 항공기는 오탐될 수 있다. OpenSky의 `origin_country`도 ICAO 24-bit 주소에서 추론한 등록국이지 군 소유·임무가 아니다.
+  - 임의 bbox의 순서·한국 범위·면적 상한을 검증하지 않고, 상태 vector의 최소 길이만 검사하며, 빈 결과가 실제 무자료인지 분류 누락인지 구분하지 않는다. 화면도 source·분류 근거·stale/degraded 상태 없이 “Military”로 단정한다.
+  - 이 호출부호 heuristic, legacy `@tanstack/react-query` compat, `shared/types.ts` 도메인 집합, MapLibre/deck.gl layer와 60초 cache 구현은 이식하지 않는다.
+- 제공자 판정:
+  - `OpenSky — NO_GO`: [공식 약관](https://opensky-network.org/about/terms-of-use)은 live product·service·automated system의 REST 사용에 사전 서면 계약을 요구한다. [REST 문서](https://openskynetwork.github.io/opensky-api/rest.html)는 state vector에 ICAO 주소·호출부호·등록국 추정·위치·기체 category만 제공하고 군 소유 필드를 제공하지 않는다.
+  - 기술 quota만 보면 legacy bbox 면적은 48 sq°라 2 credits/request이고 60초 단일 origin polling은 2,880 credits/day다. Standard 4,000/day 안에는 들지만 운영 계약 부재와 분류 결함을 해제하지 못하며, 30초 polling은 5,760/day로 초과한다.
+  - `ADSB.lol — CONDITIONAL`: [공식 API source](https://github.com/adsblol/api)에는 API와 공개 데이터가 ODbL이라고 명시되어 상업 사용 자체는 가능하다. 공개 결과에는 ADSB.lol·ODbL notice가 필요하고, 파생 DB를 공개 사용하면 ODbL·machine-readable 제공 의무를 함께 설계해야 한다. [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/)
+  - ADSB.lol은 rate limit을 환경 부하에 따라 동적으로 바꾸며 향후 feeder가 받는 API key를 요구할 수 있다고 명시한다. `/v2/mil`은 readsb `filter_mil`로 “military registered aircraft”를 반환하므로 현재 임무·실제 소유를 보증하는 분류가 아니다. 서비스도 정확성·완전성·가용성을 보증하지 않는다. [ADSB.lol privacy/license](https://www.adsb.lol/privacy-license/)
+  - 공식 문서에서 hyperscaler 금지는 찾지 못했지만, global `/v2/mil`의 bounded Korea payload·고정 rate·SLA가 없고 feeder-only access는 Vercel egress와 맞지 않는다. live payload 크기·한국 coverage·429 정책은 구현 Task의 승인된 gated probe 전까지 미검증으로 남긴다.
+- 판정:
+  - D-049를 `ACCEPTED`로 등록하고 항공 기능을 노출하지 않는다. 이는 빈 fixture나 setup 오류 Panel을 만드는 것이 아니라 route·Query·Widget 자체가 없는 현재 상태를 유지한다는 뜻이다.
+  - OpenSky를 사용하려면 운영·재배포·보관 범위와 quota가 적힌 서면 계약, 그리고 별도의 검증 가능한 군 등록 source가 필요하다.
+  - ADSB.lol 구현을 재개하려면 사용자가 ODbL 의무, 동적 availability, “군용기”가 아닌 “군 등록 추정 항공기” 표현, 오탐·누락·coverage 상태를 승인해야 한다. 그 뒤 별도 구현 Task에서 bounded payload와 429를 live gate로 측정한다.
+- 검증:
+  - 정상: 공식 약관·API schema·license와 현재/레거시 호출 경로를 교차 확인했다.
+  - 실패: 서면 계약 없는 OpenSky 운영, 군 소유 필드 부재, 호출부호 heuristic의 오탐·누락을 재현 가능한 코드 근거로 확인했다.
+  - 경계: secret을 읽거나 출력하지 않았고 provider live endpoint·배포·외부 설정을 호출하지 않았다.
+  - 회귀: 제품 코드는 변경하지 않았고 production route 7개와 Dashboard 8개 slot이 그대로임을 확인했다. `git diff --check`와 `npm run validate`의 Biome 307 files, 1,265 passed·6 credential-gated skipped, strict TypeScript, client/server build가 PASS했다.
+- 해제 조건: 충족. 사용자가 T18 결과와 D-049를 승인했다. 대체 source 구현은 이 승인에 포함되지 않는다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -2606,6 +2644,7 @@ flowchart LR
 | NAVER overlay 상한 | NEEDS_EVIDENCE | T07 실제 브라우저 benchmark |
 | Public API 계약·쿼터 | PARTIALLY_FROZEN | 공식 후보와 no-go는 T02에서 동결; 승인 키의 schema·실 quota는 각 구현 Task gated probe |
 | OpenSky 군용기 | NO_GO_CURRENT | 서면 live/automated product 계약 또는 권리·분류 한계가 승인된 대체 source |
+| ADSB.lol 군 등록 항공기 | CONDITIONAL | D-049의 제품 경계는 승인됨; 별도 구현 Task를 승인하고 bounded payload·429 contract를 검증 |
 | AISstream 개별 군함 | NO_GO_CURRENT | T24에서 서면 재배포·상업·retention·안전 계약 또는 공식 집계형 scope 승인; 그 전 T25 금지 |
 | Yahoo Finance | NO_GO_CURRENT | T14에서 KRX와 권리 승인된 EOD·지연 source 계약 확정 |
 | Google News search RSS | NO_GO_CURRENT | T15에서 이용범위가 확인된 직접 publisher feed만 채택 |
@@ -2695,6 +2734,8 @@ flowchart LR
 
 | 날짜 | 변경 | Task |
 | --- | --- | --- |
+| 2026-07-30 | 사용자가 T18 PASS와 D-049의 OpenSky `NO_GO`·ADSB.lol `CONDITIONAL`·제품 `FEATURE_OFF` 유지안을 승인하고 final commit·push·development PR을 허가 | T18 |
+| 2026-07-30 | OpenSky·ADSB.lol 공식 계약과 레거시 군용기 heuristic을 감사해 OpenSky `NO_GO`, ADSB.lol `CONDITIONAL`, 제품 `FEATURE_OFF` 유지안을 판정 | T18 |
 | 2026-07-20 | 제품 비전, 기술 검증, 코드 분석, API 장부와 승인 Task 정본 생성 | T00 |
 | 2026-07-20 | Tailwind가 개발 문서를 utility source로 읽지 않도록 제외하고 CSS 회귀 해소 | T00 |
 | 2026-07-20 | 레거시 `NaverStyleMapLab.tsx`를 T07 다크 NAVER GL 참고 구현으로 등록 | T00 |
