@@ -1,0 +1,84 @@
+{
+  "expressway": {
+    "still": {
+      "response": {
+        "coordtype": 1,
+        "datacount": 1,
+        "data": [
+          {
+            "cctvformat": "JPEG",
+            "cctvname": "서울고속도로 CCTV",
+            "cctvresolution": "",
+            "cctvtype": 3,
+            "cctvurl": "http://cctvsec.ktict.co.kr:8090/4003/QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ==",
+            "cctvurl2": "https://cctvsec.ktict.co.kr:8091/4003/QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ==",
+            "coordx": 127.01,
+            "coordy": 37.51,
+            "filecreatetime": "",
+            "roadsectionid": "0010"
+          }
+        ]
+      }
+    },
+    "live": {
+      "response": {
+        "coordtype": 1,
+        "datacount": 1,
+        "data": [
+          {
+            "cctvformat": "HLS",
+            "cctvname": "서울고속도로 CCTV",
+            "cctvresolution": "",
+            "cctvtype": 4,
+            "cctvurl": "https://cctvsec.ktict.co.kr/4003/Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0M=",
+            "coordx": 127.01,
+            "coordy": 37.51,
+            "filecreatetime": "",
+            "roadsectionid": "0010"
+          }
+        ]
+      }
+    }
+  },
+  "nationalRoad": {
+    "still": {
+      "response": {
+        "coordtype": 1,
+        "datacount": 1,
+        "data": [
+          {
+            "cctvformat": "JPEG",
+            "cctvname": "서울국도 CCTV",
+            "cctvresolution": "",
+            "cctvtype": 3,
+            "cctvurl": "http://cctvsec.ktict.co.kr:8090/4004/QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQg==",
+            "cctvurl2": "https://cctvsec.ktict.co.kr:8091/4004/QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQg==",
+            "coordx": 126.99,
+            "coordy": 37.49,
+            "filecreatetime": "",
+            "roadsectionid": ""
+          }
+        ]
+      }
+    },
+    "live": {
+      "response": {
+        "coordtype": 1,
+        "datacount": 1,
+        "data": [
+          {
+            "cctvformat": "HLS",
+            "cctvname": "서울국도 CCTV",
+            "cctvresolution": "",
+            "cctvtype": 4,
+            "cctvurl": "https://cctvsec.ktict.co.kr/4004/REREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ=",
+            "coordx": 126.99,
+            "coordy": 37.49,
+            "filecreatetime": "",
+            "roadsectionid": ""
+          }
+        ]
+      }
+    }
+  }
+}
