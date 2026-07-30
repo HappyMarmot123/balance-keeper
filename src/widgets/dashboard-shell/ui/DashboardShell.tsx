@@ -10,6 +10,7 @@ type DashboardShellProps = {
   macroSlot: ComponentChildren;
   marketsSlot: ComponentChildren;
   newsSlot: ComponentChildren;
+  regionalContextSlot: ComponentChildren;
   weatherSlot: ComponentChildren;
 };
 
@@ -21,6 +22,7 @@ export function DashboardShell({
   macroSlot,
   marketsSlot,
   newsSlot,
+  regionalContextSlot,
   weatherSlot,
 }: DashboardShellProps) {
   return (
@@ -58,6 +60,7 @@ export function DashboardShell({
             {macroSlot}
             {marketsSlot}
             {newsSlot}
+            {regionalContextSlot}
           </div>
         </div>
       </main>
