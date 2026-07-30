@@ -692,7 +692,7 @@ primitive OKLCH
 | A07 | `/api/markets` | MVP | PASS | 금융위원회 KOSPI·KOSDAQ 하루 지연 구현, strict 실응답·2-call gateway live smoke와 전체 회귀 PASS | T14 |
 | A08 | `/api/news` | PARTIAL | NOT_STARTED | 직접 publisher RSS만 conditional, Google/우회 feed 제거, 부분 실패·권리 확인 | T15 |
 | A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
-| A10 | `/api/neighbor` | PARTIAL | NOT_STARTED | A05/A07/A08의 cache된 파생 조합으로 재설계, 별도 중복 fetch 금지 | T17 |
+| A10 | 한국 기준 동아시아 상황 (client projection) | MVP | PASS | 기존 기상·지진·시장·보도자료 exact Query key를 재사용하고 `/api/neighbor` 없이 요청 중복 제거 | T17 |
 | A11 | `/api/military` 군용기 | PARTIAL | NOT_STARTED | OpenSky `NO_GO` until written license; T18을 provider feasibility로 변경 | T18 |
 | A12 | AIS 군함 | MISSING | NOT_STARTED | 개인 군함 추적 `NO_GO`; 서면 권리 또는 공식 집계형 scope feasibility | T24~T25 |
 | A13 | `/api/cctv/list` | MVP | NOT_STARTED | current ITS `type=ex\|its`, bbox·좌표·media URL·실 quota keyed probe | T19 |
@@ -869,7 +869,7 @@ flowchart TD
 | T14 | 지연 시장 지수 | 금융위원회가 재개방한 KOSPI·KOSDAQ EOD·하루 지연·휴장 표시 | provider 권리, 날짜·단위, pagination, 휴장, live | T04,T06 |
 | T15 | 직접 publisher 뉴스 RSS | 허용된 제목·출처·시각·원문 링크만 표시하고 한 feed 실패 시 나머지 성공 | 이용조건, malformed XML, MIME 불일치, timeout, SSRF | T04,T06 |
 | T16 | 재난문자 | 지역·신규·severity·banner 계약 | XML 오류, pagination·무정렬·duplicate, stale, live | T04,T06 |
-| T17 | 주변국 비교 | 중복 upstream 호출 없는 조합 모델 | partial failure, country mapping | T10,T12,T14,T15 |
+| T17 | 한국 기준 동아시아 상황 | 기존 네 Query를 중복 요청 없이 조합하고 국가별 동일 지표 비교가 아님을 명시 | partial/stale/empty, 비대칭 범위, exact-key dedup | T10,T12,T14,T15 |
 | T18 | 항공 provider feasibility | OpenSky 서면 license 또는 ODbL·분류 한계를 승인한 대체 source 판정; 미충족 시 feature off | 권리·quota·hyperscaler egress·군 분류 정확도 | T04,T06 |
 | T19 | CCTV 목록 | current ITS `type=ex\|its`, bbox·좌표·media allowlist 계약 | 승인 quota, 악성 URL, 빈 목록, live | T04,T06,T07 |
 | T20 | CCTV 정지영상 | `cctvType=3` HTTPS·size·CORS·만료 확인 후 direct 또는 bounded fallback | content type, 크기, redirect, timeout, SSRF | T19 |

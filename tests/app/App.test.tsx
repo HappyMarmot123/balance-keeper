@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/preact';
+import { render, screen, within } from '@testing-library/preact';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../../src/app/App';
@@ -298,7 +298,9 @@ describe('application bootstrap', () => {
     render(<App />);
 
     expect(await screen.findByText('M 3.1')).toBeTruthy();
-    expect(screen.getByText('충북 가상군 남남서쪽 9km 지역')).toBeTruthy();
+    expect(
+      within(screen.getByRole('region', { name: '동아시아 지진' })).getByText('충북 가상군 남남서쪽 9km 지역'),
+    ).toBeTruthy();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/earthquake',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
