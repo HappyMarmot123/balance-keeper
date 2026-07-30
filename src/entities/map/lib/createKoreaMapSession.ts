@@ -17,10 +17,33 @@ export class KoreaMapSessionError extends Error {
   }
 }
 
+export type KoreaMapViewport = Readonly<{
+  maximumLatitude: number;
+  maximumLongitude: number;
+  minimumLatitude: number;
+  minimumLongitude: number;
+  zoom: number;
+}>;
+
+export type KoreaMapPoint = Readonly<{
+  accessibleName: string;
+  id: string;
+  latitude: number;
+  longitude: number;
+}>;
+
+export type KoreaMapPointLayer = Readonly<{
+  destroy(): void;
+  replace(points: readonly KoreaMapPoint[]): void;
+  select(id: string | undefined): void;
+}>;
+
 export type KoreaMapSession = Readonly<{
+  createPointLayer(options: Readonly<{ onSelect: (id: string) => void }>): KoreaMapPointLayer;
   destroy(): void;
   ready: Promise<void>;
   resetView(): void;
+  subscribeViewport(listener: (viewport: KoreaMapViewport) => void): () => void;
 }>;
 
 type ResizeObserverPort = Readonly<{
@@ -90,6 +113,43 @@ export function createKoreaMapSession(options: CreateKoreaMapSessionOptions): Ko
   let tilesLoadedListener: naver.maps.MapEventListener | undefined;
   let observer: ResizeObserverPort | undefined;
   let timeoutHandle: number | undefined;
+  let viewportListener: naver.maps.MapEventListener | undefined;
+  const viewportSubscribers = new Set<(viewport: KoreaMapViewport) => void>();
+  const pointLayerDestroyers = new Set<() => void>();
+
+  const readViewport = (): KoreaMapViewport | undefined => {
+    if (!initialized || destroyed) {
+      return undefined;
+    }
+
+    try {
+      const bounds = map.getBounds();
+      const viewport = {
+        maximumLatitude: bounds.maxY(),
+        maximumLongitude: bounds.maxX(),
+        minimumLatitude: bounds.minY(),
+        minimumLongitude: bounds.minX(),
+        zoom: map.getZoom(),
+      };
+      return Object.values(viewport).every(Number.isFinite) &&
+        viewport.minimumLatitude < viewport.maximumLatitude &&
+        viewport.minimumLongitude < viewport.maximumLongitude
+        ? viewport
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const publishViewport = () => {
+    const viewport = readViewport();
+    if (viewport === undefined) {
+      return;
+    }
+    for (const listener of viewportSubscribers) {
+      safely(() => listener(viewport));
+    }
+  };
 
   const clearRenderWork = () => {
     if (timeoutHandle !== undefined) {
@@ -114,6 +174,16 @@ export function createKoreaMapSession(options: CreateKoreaMapSessionOptions): Ko
   const clearSessionWork = () => {
     clearRenderWork();
     clearInitWork();
+    if (viewportListener) {
+      const listener = viewportListener;
+      viewportListener = undefined;
+      safely(() => options.maps.Event.removeListener(listener));
+    }
+    viewportSubscribers.clear();
+    for (const destroyPointLayer of [...pointLayerDestroyers]) {
+      safely(destroyPointLayer);
+    }
+    pointLayerDestroyers.clear();
   };
 
   const terminate = (code: KoreaMapSessionErrorCode) => {
@@ -142,6 +212,7 @@ export function createKoreaMapSession(options: CreateKoreaMapSessionOptions): Ko
     initialized = true;
     safely(() => map.autoResize());
     safely(() => map.refresh(true));
+    publishViewport();
   };
 
   const handleTilesLoaded = () => {
@@ -160,6 +231,7 @@ export function createKoreaMapSession(options: CreateKoreaMapSessionOptions): Ko
     observer = createResizeObserver(() => {
       if (!destroyed) {
         safely(() => map.autoResize());
+        publishViewport();
       }
     });
     observer.observe(options.container);
@@ -177,6 +249,116 @@ export function createKoreaMapSession(options: CreateKoreaMapSessionOptions): Ko
   }
 
   return {
+    createPointLayer: ({ onSelect }) => {
+      let layerDestroyed = false;
+      let entries: Array<
+        Readonly<{
+          element: HTMLElement;
+          id: string;
+          keydownListener: (event: KeyboardEvent) => void;
+          marker: naver.maps.Marker;
+          selectListener: naver.maps.MapEventListener;
+        }>
+      > = [];
+      let selectedPointId: string | undefined;
+
+      const applySelection = () => {
+        for (const entry of entries) {
+          const selected = entry.id === selectedPointId;
+          entry.element.setAttribute('aria-pressed', String(selected));
+          entry.element.dataset.selected = String(selected);
+        }
+      };
+
+      const cleanupEntries = (ownedEntries: typeof entries) => {
+        for (const entry of ownedEntries) {
+          safely(() => options.maps.Event.removeListener(entry.selectListener));
+          entry.element.removeEventListener('keydown', entry.keydownListener);
+          safely(() => entry.marker.setMap(null));
+        }
+      };
+
+      const clearMarkers = () => {
+        cleanupEntries(entries);
+        entries = [];
+      };
+
+      const destroyPointLayer = () => {
+        if (layerDestroyed) {
+          return;
+        }
+        layerDestroyed = true;
+        clearMarkers();
+        pointLayerDestroyers.delete(destroyPointLayer);
+      };
+      pointLayerDestroyers.add(destroyPointLayer);
+
+      return {
+        destroy: destroyPointLayer,
+        replace: (points) => {
+          if (layerDestroyed || destroyed) {
+            return;
+          }
+          clearMarkers();
+          const nextEntries: typeof entries = [];
+
+          for (const point of points) {
+            let element: HTMLElement | undefined;
+            let keydownListener: ((event: KeyboardEvent) => void) | undefined;
+            let marker: naver.maps.Marker | undefined;
+            let selectListener: naver.maps.MapEventListener | undefined;
+
+            try {
+              marker = new options.maps.Marker({
+                clickable: true,
+                map,
+                position: new options.maps.LatLng(point.latitude, point.longitude),
+                title: point.accessibleName,
+              });
+              element = marker.getElement();
+              element.setAttribute('aria-label', point.accessibleName);
+              element.setAttribute('role', 'button');
+              element.dataset.bkMapPoint = '';
+              element.tabIndex = 0;
+              keydownListener = (event: KeyboardEvent) => {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                  return;
+                }
+                event.preventDefault();
+                onSelect(point.id);
+              };
+              element.addEventListener('keydown', keydownListener);
+              selectListener = options.maps.Event.addListener(marker, 'click', () => onSelect(point.id));
+              nextEntries.push({ element, id: point.id, keydownListener, marker, selectListener });
+            } catch {
+              if (selectListener !== undefined) {
+                const ownedSelectListener = selectListener;
+                safely(() => options.maps.Event.removeListener(ownedSelectListener));
+              }
+              if (element !== undefined && keydownListener !== undefined) {
+                element.removeEventListener('keydown', keydownListener);
+              }
+              if (marker !== undefined) {
+                const ownedMarker = marker;
+                safely(() => ownedMarker.setMap(null));
+              }
+              cleanupEntries(nextEntries);
+              return;
+            }
+          }
+
+          entries = nextEntries;
+          applySelection();
+        },
+        select: (id) => {
+          if (layerDestroyed || destroyed) {
+            return;
+          }
+          selectedPointId = id;
+          applySelection();
+        },
+      };
+    },
     destroy: () => terminate('SESSION_DESTROYED'),
     ready,
     resetView: () => {
@@ -187,6 +369,36 @@ export function createKoreaMapSession(options: CreateKoreaMapSessionOptions): Ko
         map.setCenter(KOREA_MAP_VIEWPORT.center);
         map.setZoom(KOREA_MAP_VIEWPORT.zoom);
       });
+    },
+    subscribeViewport: (listener) => {
+      if (destroyed) {
+        return () => undefined;
+      }
+
+      viewportSubscribers.add(listener);
+      if (!viewportListener) {
+        try {
+          viewportListener = options.maps.Event.addListener(map, 'idle', publishViewport);
+        } catch {
+          viewportSubscribers.delete(listener);
+          return () => undefined;
+        }
+      }
+      if (initialized) {
+        const viewport = readViewport();
+        if (viewport !== undefined) {
+          safely(() => listener(viewport));
+        }
+      }
+
+      return () => {
+        viewportSubscribers.delete(listener);
+        if (viewportSubscribers.size === 0 && viewportListener) {
+          const activeListener = viewportListener;
+          viewportListener = undefined;
+          safely(() => options.maps.Event.removeListener(activeListener));
+        }
+      };
     },
   };
 }
