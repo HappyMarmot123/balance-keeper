@@ -691,7 +691,7 @@ primitive OKLCH
 | A07 | `/api/markets` | MVP | PASS | 금융위원회 KOSPI·KOSDAQ 하루 지연 구현, strict 실응답·2-call gateway live smoke와 전체 회귀 PASS | T14 |
 | A08 | `/api/news` | PARTIAL | NOT_STARTED | 직접 publisher RSS만 conditional, Google/우회 feed 제거, 부분 실패·권리 확인 | T15 |
 | A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
-| A10 | `/api/neighbor` | PARTIAL | NOT_STARTED | A05/A07/A08의 cache된 파생 조합으로 재설계, 별도 중복 fetch 금지 | T17 |
+| A10 | 한국 기준 동아시아 상황 (client projection) | MVP | PASS | 기존 기상·지진·시장·보도자료 exact Query key를 재사용하고 `/api/neighbor` 없이 요청 중복 제거 | T17 |
 | A11 | `/api/military` 군용기 | PARTIAL | NOT_STARTED | OpenSky `NO_GO` until written license; T18을 provider feasibility로 변경 | T18 |
 | A12 | AIS 군함 | MISSING | NOT_STARTED | 개인 군함 추적 `NO_GO`; 서면 권리 또는 공식 집계형 scope feasibility | T24~T25 |
 | A13 | `/api/cctv/list` | MVP | NOT_STARTED | current ITS `type=ex\|its`, bbox·좌표·media URL·실 quota keyed probe | T19 |
@@ -868,7 +868,7 @@ flowchart TD
 | T14 | 지연 시장 지수 | 금융위원회가 재개방한 KOSPI·KOSDAQ EOD·하루 지연·휴장 표시 | provider 권리, 날짜·단위, pagination, 휴장, live | T04,T06 |
 | T15 | 직접 publisher 뉴스 RSS | 허용된 제목·출처·시각·원문 링크만 표시하고 한 feed 실패 시 나머지 성공 | 이용조건, malformed XML, MIME 불일치, timeout, SSRF | T04,T06 |
 | T16 | 재난문자 | 지역·신규·severity·banner 계약 | XML 오류, pagination·무정렬·duplicate, stale, live | T04,T06 |
-| T17 | 주변국 비교 | 중복 upstream 호출 없는 조합 모델 | partial failure, country mapping | T10,T12,T14,T15 |
+| T17 | 한국 기준 동아시아 상황 | 기존 네 Query를 중복 요청 없이 조합하고 국가별 동일 지표 비교가 아님을 명시 | partial/stale/empty, 비대칭 범위, exact-key dedup | T10,T12,T14,T15 |
 | T18 | 항공 provider feasibility | OpenSky 서면 license 또는 ODbL·분류 한계를 승인한 대체 source 판정; 미충족 시 feature off | 권리·quota·hyperscaler egress·군 분류 정확도 | T04,T06 |
 | T19 | CCTV 목록 | current ITS `type=ex\|its`, bbox·좌표·media allowlist 계약 | 승인 quota, 악성 URL, 빈 목록, live | T04,T06,T07 |
 | T20 | CCTV 정지영상 | `cctvType=3` HTTPS·size·CORS·만료 확인 후 direct 또는 bounded fallback | content type, 크기, redirect, timeout, SSRF | T19 |
@@ -2540,6 +2540,42 @@ flowchart LR
   - 연결 가능한 browser backend가 없어 실제 screenshot·상호작용 자동 QA는 수행하지 못했다. component 접근성·상태·필터 렌더 테스트와 산출 build는 통과했으며, 이는 비핵심 수동 QA 항목으로 남긴다.
 - license 경계: Safetydata의 제3유형 안내와 data.go.kr 연결 메타의 제4유형 표기가 충돌하므로 더 엄격한 출처표시·비상업·변경금지를 유지한다. 상업 공개는 제공기관 확인 전 제외한다.
 - 해제 조건: 충족. 사용자 승인에 따라 final commit·push·development PR을 진행한다.
+
+### T17 — 한국 기준 동아시아 상황
+
+- 상태: `ACCEPTED` — 사용자가 검증 결과를 승인했으며 final commit·push·development PR 진행을 허가했다.
+- 목적: 이미 수집한 정규화 snapshot을 같은 Query key로 재사용해 한국 중심 신호와 동아시아 지진을 한 패널에서 함께 보되, 이를 동일 지표 국가 비교로 오인시키지 않는다.
+- 의존성: T10·T12·T14·T15는 모두 `ACCEPTED`.
+- 범위 변경 근거:
+  - 레거시 `/api/neighbor`는 `CN/TW/JP/US`별 Yahoo 지수 1개와 USGS 최근 지진 1개를 직접 다시 호출했다. Yahoo endpoint는 D-016과 T14에서 `NO_GO`이고 USGS 동아시아 bbox에는 미국이 없어 US 지진은 실제로 채워질 수 없다.
+  - 현재 T10은 국내 7개 KMA 격자, T14는 KOSPI·KOSDAQ, T15는 MCST·MOIS 한국 보도자료만 제공한다. 동일한 기상·시장·뉴스 지표로 중국·대만·일본·미국을 비교할 데이터가 없다.
+  - T12만 동아시아 좌표를 제공하지만 국가코드가 없고 coverage가 국가 전체가 아니다. 레거시 문자열+중첩 사각 bbox 판정은 한국 지진을 일본으로 분류할 수 있으며 해상 사건·분쟁 지역을 안전하게 처리하지 못한다.
+  - 현재 `GatewayRoute.load(input, signal)`에는 다른 route의 normalized cache를 읽는 계약이 없다. provider나 child `route.load`를 직접 호출하면 “cache된 파생 조합·중복 upstream 금지” 조건을 위반하고, raw `FleetStateStore` key 직접 결합은 gateway의 schema·stale·ETag 경계를 우회한다.
+- 포함:
+  - `widgets/regional-context`가 서울 기상, KMA+USGS 동아시아 지진, KOSPI·KOSDAQ, MCST·MOIS 보도자료 Entity의 public query options를 그대로 구독
+  - 각 source의 loading/error/empty/stale/success와 upstream `fetchedAt`을 보존하고, fresh partial은 내부 `PARTIAL`, 실제 cache/retained failure만 Panel `STALE`로 구분
+  - 한국 기상·시장·정책과 동아시아 지진을 구분하는 비대칭 signal rail, 전체 재시도와 좁은 화면 안전성
+  - 동일 QueryClient와 exact query key에 의한 네트워크 dedup을 테스트로 증명
+- 제외:
+  - `/api/neighbor`, 새 provider·credential·server cache reader, Yahoo/Google News, 국가별 기상·시장·뉴스, 국가 geometry·risk score·sentiment·지도 overlay
+  - 국가별 동일 지표 비교, 지진의 국가 귀속·발생률·위험도·피해도 주장
+- 완료 조건:
+  - 기존 네 Widget과 함께 렌더해도 각 API path의 동시 요청이 한 번으로 dedup되고 별도 neighbor 요청이 없다.
+  - source별 관측시각·수집시각·degraded 상태가 서로 덮이지 않으며 전체 화면이 fresh처럼 오인되지 않는다.
+  - Panel은 all-loading, all-error, all-empty, partial/stale, success를 완결하고 한국 신호와 동아시아 지진의 비대칭 범위를 명시한다.
+  - Full FSD public API·page composition, 접근성, focused 정상/실패/경계/회귀와 `npm run validate`가 PASS한다.
+- 검증 계획: RED→GREEN component/query integration, source별 partial·retained error·oldest freshness, exact query-key request count, Dashboard composition·기존 Widget 회귀, 전체 품질 게이트와 독립 review.
+- RED:
+  - public widget boundary·Dashboard slot 부재로 presence/composition 4건이 실패했다.
+  - placeholder view에서 loading/error/empty/success/partial·stale 5건이 실패했고, 독립 리뷰가 혼합 pending, all-setup, zero-signal partial, partial-empty 단정, retained setup 원인과 internal retry 경계를 추가로 재현했다.
+- GREEN·검증:
+  - `RegionalContextWidget`은 `weatherNowcastQueryOptions('seoul')`, `earthquakeQueryOptions()`, `marketQueryOptions()`, `newsQueryOptions()`를 public API 그대로 구독한다. 기존 네 Widget과 동시 렌더한 integration에서 네 path가 각각 정확히 1회 호출됐고 `/api/neighbor` 호출은 0회였다.
+  - signal rail은 `KR-WX`, `EA-EQ`, `KR-MKT`, `KR-PRESS`를 구분하고 관측·발생·거래·발표시각과 source별 수집시각을 보존한다. 전체 freshness는 확인된 envelope 중 가장 오래된 `fetchedAt`을 사용하며, 한국 자료와 북위 21–45°·동경 110–145° 지진 범위의 비대칭을 명시한다.
+  - all-loading, aggregate error/retry, all-empty, authoritative empty+current, pending-only, missing credential, fresh provider partial, zero-signal mixed partial, gateway/retained stale를 component test로 검증했다.
+  - focused architecture·App·T17 6 files에서 54 tests PASS. `npm run validate`는 Biome 314 files, 1,282 passed·6 credential-gated skipped, strict TypeScript, client/server production build가 PASS했다. `git diff --check`도 PASS했다.
+  - 독립 코드·UI/접근성 리뷰에서 발견된 5개 상태 결함을 수정한 뒤 최종 재리뷰에서 열린 finding이 없었고, exact-key dedup·Full FSD 방향·production neighbor 부재를 재확인했다.
+  - 연결 가능한 browser backend가 없어 screenshot 기반 visual QA는 수행하지 못했다. 의미 구조·좁은 폭 wrap·상태 텍스트·새 창 링크는 component/독립 리뷰로 검증했으며 수동 화면 확인 항목으로 남긴다.
+- 해제 조건: 충족. 사용자 `ACCEPTED`에 따라 final commit·push·development PR을 진행한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
