@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-30 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T18 항공 provider feasibility — ACCEPTED |
-| 다음 단계 | T19 CCTV 목록·metadata 상세 범위 제안 |
+| 현재 단계 | T19 CCTV 목록·metadata — ACCEPTED |
+| 다음 단계 | commit·push·`development` 대상 PR 후 T20 상세 제안 |
 
 ---
 
@@ -267,6 +267,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-047 | T14는 KRX 직접 API나 FRED copyrighted index 대신 금융위원회 `GetMarketIndexInfoService/getStockMarketIndex`의 KOSPI·KOSDAQ 하루 지연 지수를 사용한다. queryless route가 exact index별 bounded window를 조회하며 provider 기준일과 지연 상태를 노출한다. | ACCEPTED | 사용자가 T14 착수를 지시했다. 금융위원회 공식 metadata는 이용허락 제한 없음, 일 1회·다음 영업일 13시 이후 갱신과 개발 10,000회를 명시하고, KRX 직접·FRED 제3자 series 약관은 public 재배포 근거가 되지 않는다. |
 | D-048 | `apis.data.go.kr` 기반 provider는 활용신청별 endpoint·base allowlist는 분리하되 인증 값은 canonical server-only `DATA_GO_KR_SERVICE_KEY` 하나만 읽는다. D-043의 AirKorea 분리 key와 D-046의 지진 전용 key identifier는 이 결정으로 대체한다. ECOS·NAVER·Upstash 등 비-data.go provider credential은 통합하지 않는다. | ACCEPTED | 사용자가 AirKorea·KMA 지진 등 승인 서비스가 동일 공공데이터포털 인증키를 사용한다고 확인하고 단일 변수만 유지하겠다고 결정한 뒤 “진행하세요”로 구현을 승인했다. |
 | D-049 | 항공 신호는 현재 제품에서 `FEATURE_OFF`를 유지한다. OpenSky는 운영 REST 서면 계약을 받기 전 `NO_GO`, ADSB.lol은 ODbL 표시·파생 DB 공개 의무, 동적 제한·향후 feeder key, `filter_mil`의 군 등록 DB 분류와 수신 누락을 제품 문구·상태에 반영하는 별도 구현안이 승인되기 전 `CONDITIONAL`이다. | ACCEPTED | OpenSky state vector에는 군 소유 필드가 없고 운영 사용은 계약 대상이다. ADSB.lol은 API와 공개 데이터를 ODbL로 제공하지만 `/v2/mil`을 “military registered aircraft”로 정의하고 availability·정확성을 보증하지 않는다. 사용자가 T18 PASS 보고에 “승인”으로 응답했다. |
+| D-050 | T19는 ITS `ex\|its × cctvType=3\|4` 목록을 하나의 atomic CCTV metadata snapshot으로 정규화한다. 인증·목록·media metadata는 coarse gateway만 호출하고, public 계약에는 검증된 provider-issued HTTPS URL만 포함한다. media bytes·재생 UI는 T20/T21, viewport·marker·layer registry는 T30까지 제외한다. | ACCEPTED | 현재 공식 CCTV 문서는 `type=ex\|its`, 정지영상 3, HTTPS-HLS 4와 `/cctvInfo`를 명시하지만 JSON/empty/error shape, 실제 quota, media host·만료·CORS는 승인 key probe가 필요하다. 현 map session에는 bbox·overlay API가 없어 T19에서 지도 consumer를 추가하면 T30과 중복된다. 사용자가 T19 상세 제안에 “시작”으로 착수와 선행 probe를 승인했다. |
 
 ---
 
@@ -2578,6 +2579,86 @@ flowchart LR
   - 경계: secret을 읽거나 출력하지 않았고 provider live endpoint·배포·외부 설정을 호출하지 않았다.
   - 회귀: 제품 코드는 변경하지 않았고 production route 7개와 Dashboard 8개 slot이 그대로임을 확인했다. `git diff --check`와 `npm run validate`의 Biome 307 files, 1,265 passed·6 credential-gated skipped, strict TypeScript, client/server build가 PASS했다.
 - 해제 조건: 충족. 사용자가 T18 결과와 D-049를 승인했다. 대체 source 구현은 이 승인에 포함되지 않는다.
+
+### T19 — ITS CCTV 목록·metadata
+
+- 상태: `ACCEPTED` — 구현·offline 회귀·credential-gated live smoke와 독립 review가 통과했고, 사용자가 “development까지 PR 후 다음 단계 진행”으로 결과 수락과 commit·push·PR을 승인했다.
+- 승인 근거: T04·T06·T07은 `ACCEPTED`이고 순서표상 다음 dependency-ready Task다. 사용자의 “다음작업진행”으로 상세 범위를 제안하고, 이어진 “시작”으로 아래 범위를 승인받았다.
+- 목적:
+  - ITS CCTV의 정지영상·HTTPS-HLS metadata를 strict한 하나의 CCTV 목록 계약으로 정규화한다.
+  - 임의 bbox, 악성 media URL, quota 급증과 secret 노출을 gateway 경계에서 차단한다.
+  - T20·T21 media viewer와 T30 지도 layer가 provider 세부 형식을 다시 알지 않도록 Entity public API를 만든다.
+- 현재 공식 계약:
+  - endpoint 문서값은 `https://openapi.its.go.kr:9443/cctvInfo`, 인증은 server-only `ITS_API_KEY` query parameter다.
+  - 도로 유형은 `type=ex|its`, media 유형은 `3=정지영상`, `4=HTTPS-HLS`, bbox는 `minX/maxX=경도`, `minY/maxY=위도`, 응답 형식은 명시적 `getType=json`을 사용한다.
+  - 문서 필드는 `coordtype`, `datacount`, `roadsectionid`, `filecreatetime`, `cctvtype`, `cctvurl`, `cctvresolution`, `coordx`, `coordy`, `cctvformat`, `cctvname`이다.
+  - 최신 매뉴얼의 “현재 24시간 제한 없음”과 과거 공식 Q&A의 “API당 1,000건/일”이 충돌한다. JSON nesting·empty/error shape, 좌표 타입, media host·URL 만료도 문서만으로 확정되지 않았다.
+- 코드베이스·레거시 판정:
+  - 현재 production에는 CCTV provider·route·Entity·Widget이 없고 `/api/cctv/list`는 strict 404다. coarse `api/gateway.ts` 외 별도 Function을 만들지 않는다.
+  - 현 `KoreaMapSession`에는 bbox getter, viewport event와 overlay API가 없다. T19에서 이를 확장하면 T30 layer registry 범위를 선점하므로 production query consumer와 지도 표시는 제외한다.
+  - 레거시의 `type=all`, `cctvType=1`, raw `cctvurl`, 무제한 bbox, 전국 자동 polling, HTTP/임의 port suffix allowlist, image/HLS Function relay와 raw marker HTML은 이식하지 않는다.
+- 포함:
+  - `src/entities/cctv`: bbox·camera snapshot Zod 계약, 안정 ID·source/road/media 모델, same-origin query options와 public API
+  - `src/server/providers/its`: fixed HTTPS endpoint, credential 주입, 4개 bounded 요청(`ex|its × 3|4`), raw schema·MIME·body/time limit, atomic 정규화
+  - `src/server/routes/cctv`: strict `/api/cctv/list`, bbox canonicalization, cache identity와 route profile
+  - production coarse gateway registry 등록, sanitized offline fixture와 Entity/provider/route/runtime/live-smoke 테스트
+  - initial media URL의 HTTPS·exact host/port/path, userinfo·fragment·credential query 부재 검증. 허용되지 않은 URL은 조용히 통과시키지 않고 snapshot 전체를 실패시킨다.
+- 제외:
+  - T20: image HEAD/GET, content type·크기·CORS·만료, redirect 최종 URL 검증, image bytes와 viewer
+  - T21: `hls.js`, manifest/key/init/segment/byte-range, 동시 한 stream UI와 HLS bytes
+  - T30: map viewport 구독, layer toggle·registry, marker/clustering, tooltip/click, viewer overlay와 overlay 성능 측정
+  - 별도 `api/cctv/list.ts`, browser의 `ITS_API_KEY`·provider API 직접 호출, Vercel Function media relay
+- credential-gated 선행 probe:
+  1. 값·완성 URL·원문 body를 출력하지 않고 endpoint의 TLS·`:9443` Vercel/Node 도달과 `ex|its × 3|4` success를 확인한다.
+  2. 좁은 정상 bbox와 결과 없는 bbox로 status·MIME·JSON success/empty/error shape, `datacount` 일치, 좌표축·시간·blank/duplicate를 동결한다.
+  3. media URL은 initial scheme·host·port·path와 credential 포함 여부만 수집해 allowlist를 동결한다. media bytes·redirect·CORS·expiry 요청은 T20/T21 전까지 하지 않는다.
+  4. quota header/error가 확인되지 않으면 과거 1,000회/일을 보수적 상한으로 유지한다. probe 결과가 문서와 모순되거나 안전한 HTTPS URL을 만들 수 없으면 구현을 추측하지 않고 `BLOCKED`로 전환한다.
+- 승인 probe 결과(2026-07-30, 총 13 metadata requests, key·완성 URL·원문·media token 미출력):
+  - 공식 endpoint는 Node에서 `200 application/json`으로 응답했다. success root는 `{ response }`, non-empty는 `coordtype:number=1`, `datacount:number`, `data:array`; 정상 empty는 `data`를 생략하고 `coordtype:null`, `datacount:0`만 반환한다.
+  - row의 좌표와 `cctvtype`은 number다. `filecreatetime`과 `cctvresolution`은 확인한 모든 row에서 빈 문자열이므로 현재 snapshot에서 각각 `null`로 정규화한다.
+  - type 3은 문서화된 `cctvurl`이 `http://cctvsec.ktict.co.kr:8090`이어서 public media 계약에서 거부한다. 문서화되지 않은 `cctvurl2`가 `https://cctvsec.ktict.co.kr:8091`이며 userinfo/query/fragment 없이 제공되므로 strict HTTPS still metadata 후보로 사용한다.
+  - type 4 `cctvurl`은 `https://cctvsec.ktict.co.kr` 기본 443이고 userinfo/query/fragment가 없다. bytes·redirect·CORS·expiry는 호출하지 않았으며 T20/T21에 남긴다.
+  - `126.5..127.5E × 37..38N` 국도 1×1° 표본은 type 3/4 각각 483개였고 identity set이 일치했다. raw JSON은 약 226KB/165KB, duplicate·blank name·invalid/out-of-bbox coordinate는 0건이며 국도 `roadsectionid`는 모두 빈 문자열이었다.
+  - 넓은 4×4° 국도 요청은 6,442개와 약 2.98MB/2.16MB raw body를 반환해 두 media 목록을 그대로 public payload에 합치면 Vercel 4.5MB 예산을 위협한다. public bbox는 각 축 최대 1°, 4-decimal canonicalization, 개별 response 1MiB·2,000 rows와 merged response schema limit으로 제한한다.
+  - provider가 quota header를 반환하지 않아 실제 상한 충돌은 해소되지 않았다. 4 calls/load, 하루 200 loads의 보수적 budget과 10분 fresh 후보를 유지한다.
+- 구현 계약 후보:
+  - 동일 canonical bbox에 대해 4개 upstream 응답이 모두 정상일 때만 positive snapshot을 저장한다. 한 source/type 실패 시 불완전 목록으로 last-good을 덮지 않고 stale 또는 safe error로 전환한다.
+  - `datacount=0`과 빈 row가 함께 온 경우만 정상 empty다. count 불일치, bbox/Korea 범위 밖 좌표, 충돌 duplicate, invalid timestamp·media URL은 schema failure다.
+  - camera ID는 road type·road section·좌표·이름의 canonical 조합으로 만들고 provider URL이나 key를 ID/cache/log에 포함하지 않는다.
+  - bbox의 허용 한국 범위, 정밀도, 최대 span·row·response bytes는 live probe 결과로 RED 전에 수치화한다. 임의 수치를 먼저 동결하지 않는다.
+  - quota 충돌이 해소되지 않으면 4 provider calls/load를 기준으로 하루 최대 200 loads 이하의 upstream budget과 10분 fresh 후보를 사용한다. 최종 TTL·CDN·negative·stale 수치는 probe 결과와 4.5MB budget을 계산해 기록한다.
+  - Entity query는 T30 consumer가 생기기 전 자동 실행하지 않는다. 이는 §17.2의 UI/지도 일반 규칙에 대한 명시적 T19 예외이며, 실제 map user journey는 T30 완료 전까지 제공됐다고 주장하지 않는다.
+- RED 순서:
+  1. Entity snapshot·bbox·public API 부재
+  2. ITS raw success/empty/error, 4-call merge, 악성 URL·count/coordinate/duplicate failure
+  3. route bbox/cache/quota/ETag·stale와 missing credential
+  4. production registration·coarse Function·FSD/server boundary
+  5. credential-gated live smoke
+- 완료 조건:
+  - official contract probe가 secret·raw URL 비노출로 통과하고 exact host/schema/allowlist·quota fallback이 기록된다.
+  - 정상·empty·provider failure·악성 URL·bbox 경계·cache HIT/STALE/304·runtime 404 회귀가 결정적 offline test로 통과한다.
+  - `npm run validate`, `git diff --check`, tracked secret scan과 독립 server/client review가 PASS한다.
+  - UI·지도·media bytes를 완료했다고 과장하지 않고 T20·T21·T30의 소비 계약이 public Entity API로 준비된다.
+- Guardrail: `PASS` — 범위·근거·기존 FSD/gateway와의 정합성, 회귀 검증과 `BLOCKED` 조건이 명확하다. 구현 승인은 별도로 필요하다.
+- 확정 구현:
+  - `src/entities/cctv`가 한국 범위 `124..132E × 33..39N`, 축별 최대 `1°`, 소수 4자리 canonical bbox, 최대 2,000 camera와 3MiB normalized snapshot 계약을 소유한다. camera는 안정 ID·좌표·road type·nullable metadata와 검증된 HTTPS still/HLS URL만 노출한다.
+  - media URL은 exact `cctvsec.ktict.co.kr`에서 still `:8091`, HLS 기본 443만 허용한다. 후속 probe로 확인한 path grammar는 `/<1~5자리 숫자>/<표준 Base64 token>`이며 still은 88자·`==`, HLS는 88자·`==` 또는 108자·`=`만 허용한다. 임의 path, 단일·이중 percent encoding, userinfo/query/fragment, 다른 host·port는 snapshot 전체 실패다.
+  - ITS adapter는 fixed `https://openapi.its.go.kr:9443/cctvInfo`에 `ex|its × 3|4` 네 요청만 보낸다. JSON MIME, redirect, strict UTF-8/JSON, response당 1MiB·2,000 rows, count·좌표·timestamp·inventory 일치를 검증하고, type 3 HTTP URL은 검증 후 폐기하며 `cctvurl2`만 public still metadata로 사용한다.
+  - 네 요청은 atomic `Promise.all`이고 하나가 실패하면 연결된 내부 `AbortController`로 나머지 요청을 중단한다. 부모 cancellation reason은 그대로 보존하며 일부 목록으로 last-good을 덮지 않는다.
+  - `/api/cctv/list?bbox=minLon,minLat,maxLon,maxLat`만 coarse gateway에 등록했다. fresh 10분, stale 1시간, empty 5분, CDN 5분, admission 30/분, 하루 200 load(`4 calls/load`, 최대 800 provider calls)의 보수적 profile을 사용한다.
+  - Entity query는 same-origin 상대 경로와 canonical cache key를 제공하되 기본 `enabled:false`다. UI·지도 consumer, image bytes, HLS 재생은 각각 T30·T20·T21에 남겼다.
+- TDD·review 증거:
+  - RED에서 slice boundary 8개 부재, Entity schema·media/bbox/duplicate/order/payload 불변식, query, 4-call provider merge, MIME·size·redirect, route, runtime 등록과 precision failure를 순서대로 관찰한 뒤 GREEN으로 전환했다.
+  - 독립 client/FSD review가 arbitrary·double-encoded media path 허용과 public export·response bbox 회귀 테스트 누락을 찾았다. exact live grammar를 `ex|its × 3|4`에서 값 비노출 집계로 재확인해 모두 수정했다.
+  - 독립 server/security review가 STALE·empty·404·redaction·discarded HTTP URL 테스트 누락과 첫 실패 뒤 sibling request 미취소를 찾았다. sibling abort는 RED `0/3`에서 GREEN `3/3`으로 전환했고 모든 누락 검증을 추가했다.
+- 검증:
+  - 정상: fixture value, 483-row inventory, production MISS→HIT→304, query canonicalization과 live snapshot을 확인했다.
+  - 실패: missing credential, provider network/non-2xx·MIME·redirect·invalid UTF-8/JSON·oversize·schema/count/inventory/coordinate 오류가 safe error 또는 last-good STALE로 전환되고 key·raw marker가 envelope/log에 노출되지 않음을 확인했다.
+  - 경계: malformed·duplicate·unknown·역전·한국 밖·1° 초과 bbox, 정상 atomic empty와 negative HIT, exact host/port/Base64 path grammar, 3MiB merged payload, abort reason과 sibling cancellation을 확인했다.
+  - 실환경: 초기 probe와 후속 path-shape/live 검증을 합쳐 metadata 36회를 호출했다. 최종 credential-gated production smoke는 1 PASS, 네 provider 요청 후 동일 요청 HIT와 strict Entity envelope를 확인했으며 key·완성 URL·원문 body는 저장하거나 commit하지 않았다.
+  - 회귀: 최신 `origin/development` 재베이스 후 `npm run validate` PASS — Biome 332 files, Vitest 1,332 passed·7 credential-gated skipped, strict TypeScript, client/server production build PASS. 별도 T19 live smoke 1 passed. `git diff --check`와 tracked secret scan도 PASS했다.
+- 미검증·후속 범위: media bytes의 content type·크기·redirect·CORS·만료(T20), HLS manifest/segment와 동시 1-stream UI(T21), viewport·marker·layer registry·사용자 지도 여정(T30)은 의도적으로 미검증이다.
+- 회귀 판정: `PASS` — 알려진 회귀와 실패한 필수 검증이 없다. 사용자 수락에 따라 final commit·push·`development` 대상 PR을 진행한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
