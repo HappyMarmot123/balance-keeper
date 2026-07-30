@@ -9,6 +9,8 @@ export type {
   NoStoreApiResponseOptions,
 } from './createApiResponse';
 export { createApiResponse } from './createApiResponse';
+export type { CreateMediaResponseOptions } from './createMediaResponse';
+export { createMediaResponse } from './createMediaResponse';
 export type { SerializedApiError } from './toErrorEnvelope';
 export { toErrorEnvelope } from './toErrorEnvelope';
 export { toSuccessEnvelope } from './toSuccessEnvelope';

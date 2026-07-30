@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -18,6 +19,19 @@ const successFixture = JSON.parse(
 const emptyFixture = JSON.parse(
   readFileSync(new URL('../../fixtures/its/cctv-empty.json', import.meta.url), 'utf8'),
 ) as unknown;
+
+const expresswayCameraId = `its-cctv:${createHash('sha256')
+  .update(JSON.stringify(['ex', '0010', '서울고속도로 CCTV', 127.01, 37.51]), 'utf8')
+  .digest('base64url')
+  .slice(0, 16)}`;
+
+const stillUrl =
+  'https://cctvsec.ktict.co.kr:8091/4003/QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ==';
+
+const jpegBytes = Uint8Array.from([
+  0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x20, 0x01, 0x60, 0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03,
+  0x11, 0x00, 0xff, 0xda, 0x00, 0x0c, 0x03, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x00, 0x3f, 0x00, 0x01, 0xff, 0xd9,
+]);
 
 describe('CCTV production gateway registration', () => {
   it('serves MISS, HIT and ETag revalidation through the one coarse gateway', async () => {
@@ -119,7 +133,7 @@ describe('CCTV production gateway registration', () => {
     expect(fetcher).toHaveBeenCalledTimes(8);
   });
 
-  it('negative-caches a valid atomic empty and keeps unregistered CCTV paths at 404', async () => {
+  it('negative-caches a valid atomic empty and keeps unknown CCTV paths at 404', async () => {
     let requestSequence = 0;
     const clock = () => 1_785_360_000_000;
     const fetcher = vi.fn(
@@ -148,7 +162,7 @@ describe('CCTV production gateway registration', () => {
     const hitResponse = await runtime.handle(createRequest());
     const hitEnvelope = successEnvelopeSchema(cctvDataSchema).parse(await hitResponse.json());
     const unregisteredResponse = await runtime.handle(
-      withTrustedAdmissionSubject(new Request('https://balance.test/api/cctv/image'), '203.0.113.93'),
+      withTrustedAdmissionSubject(new Request('https://balance.test/api/cctv/unknown'), '203.0.113.93'),
     );
 
     expect(missEnvelope).toMatchObject({ data: { cameras: [] }, meta: { cache: 'MISS' } });
@@ -156,6 +170,53 @@ describe('CCTV production gateway registration', () => {
     expect(fetcher).toHaveBeenCalledTimes(4);
     expect(unregisteredResponse.status).toBe(404);
     await expect(unregisteredResponse.json()).resolves.toMatchObject({ error: { code: 'NOT_FOUND' } });
+  });
+
+  it('serves one bounded JPEG through the same coarse production runtime without CDN caching', async () => {
+    const clock = () => 1_785_360_000_000;
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      if (url.hostname === 'cctvsec.ktict.co.kr') {
+        const response = new Response(jpegBytes.slice().buffer, {
+          headers: {
+            'content-length': String(jpegBytes.byteLength),
+            'content-type': 'image/jpeg',
+          },
+        });
+        Object.defineProperty(response, 'url', { value: stillUrl });
+        return response;
+      }
+      const fixture = url.searchParams.get('type') === 'ex' ? successFixture.expressway : successFixture.nationalRoad;
+      return new Response(JSON.stringify(fixture.still), {
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    const runtime = createProductionGatewayRuntime({
+      clock,
+      createCoordinationToken: () => 'coordination-cctv-image-runtime',
+      createRequestId: () => 'request-cctv-image-runtime',
+      environment: { ITS_API_KEY: 'synthetic-its-key' },
+      fetcher,
+      fleetStateStore: new MemoryFleetStateStore(clock),
+      logWriter: () => undefined,
+    });
+    const request = withTrustedAdmissionSubject(
+      new Request(
+        `https://balance.test/api/cctv/image?cameraId=${encodeURIComponent(expresswayCameraId)}&bbox=126.5,37,127.5,38`,
+      ),
+      '203.0.113.94',
+    );
+
+    const response = await runtime.handle(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/jpeg');
+    expect(response.headers.get('content-length')).toBe(String(jpegBytes.byteLength));
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('etag')).toBeNull();
+    expect(runtime.getCdnMaxAgeSeconds('/api/cctv/image')).toBeUndefined();
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(jpegBytes);
+    expect(fetcher).toHaveBeenCalledTimes(3);
   });
 
   it('sanitizes an initial provider failure from both the public envelope and gateway logs', async () => {

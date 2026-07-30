@@ -5,6 +5,8 @@ import type { GatewayRouteProfile } from './routeProfile';
 
 declare const opaqueAdmissionSubjectBrand: unique symbol;
 
+export const GATEWAY_MEDIA_MAX_BODY_BYTES = 512 * 1_024;
+
 export type OpaqueAdmissionSubject = string & {
   readonly [opaqueAdmissionSubjectBrand]: true;
 };
@@ -24,6 +26,14 @@ type UpstreamResult<Data, Kind extends 'value' | 'empty'> = Readonly<{
 
 export type UpstreamOutcome<Data = unknown> = UpstreamResult<Data, 'value'> | UpstreamResult<Data, 'empty'>;
 
+export type GatewayMediaOutcome = Readonly<{
+  body: Uint8Array;
+  contentType: 'image/jpeg';
+  fetchedAt: number;
+  kind: 'media';
+  source: string;
+}>;
+
 export interface GatewayRoute<
   Input = unknown,
   PublicCacheIdentity = unknown,
@@ -42,6 +52,23 @@ export interface GatewayRoute<
    */
   load(input: Input, signal: AbortSignal): Promise<UpstreamOutcome<unknown>>;
   readonly profile: GatewayRouteProfile;
+}
+
+export interface GatewayMediaRoute<Input = unknown, PublicCacheIdentity = unknown> {
+  readonly kind: 'media';
+  readonly id: string;
+  readonly path: `/api/${string}`;
+  parseRequest(
+    request: Request,
+  ): ParsedGatewayRequest<Input, PublicCacheIdentity> | Promise<ParsedGatewayRequest<Input, PublicCacheIdentity>>;
+  load(input: Input, signal: AbortSignal): Promise<GatewayMediaOutcome>;
+  readonly profile: GatewayRouteProfile;
+}
+
+export type RegisteredGatewayRoute = GatewayRoute | GatewayMediaRoute;
+
+export function isGatewayMediaRoute(route: RegisteredGatewayRoute): route is GatewayMediaRoute {
+  return 'kind' in route && route.kind === 'media';
 }
 
 /**

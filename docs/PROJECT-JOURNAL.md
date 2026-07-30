@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-30 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T19 CCTV 목록·metadata — ACCEPTED |
-| 다음 단계 | commit·push·`development` 대상 PR 후 T20 상세 제안 |
+| 현재 단계 | T20 CCTV 정지영상 capability — ACCEPTED |
+| 다음 단계 | final commit·`development` PR → T21 HTTPS-HLS |
 
 ---
 
@@ -268,6 +268,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-048 | `apis.data.go.kr` 기반 provider는 활용신청별 endpoint·base allowlist는 분리하되 인증 값은 canonical server-only `DATA_GO_KR_SERVICE_KEY` 하나만 읽는다. D-043의 AirKorea 분리 key와 D-046의 지진 전용 key identifier는 이 결정으로 대체한다. ECOS·NAVER·Upstash 등 비-data.go provider credential은 통합하지 않는다. | ACCEPTED | 사용자가 AirKorea·KMA 지진 등 승인 서비스가 동일 공공데이터포털 인증키를 사용한다고 확인하고 단일 변수만 유지하겠다고 결정한 뒤 “진행하세요”로 구현을 승인했다. |
 | D-049 | 항공 신호는 현재 제품에서 `FEATURE_OFF`를 유지한다. OpenSky는 운영 REST 서면 계약을 받기 전 `NO_GO`, ADSB.lol은 ODbL 표시·파생 DB 공개 의무, 동적 제한·향후 feeder key, `filter_mil`의 군 등록 DB 분류와 수신 누락을 제품 문구·상태에 반영하는 별도 구현안이 승인되기 전 `CONDITIONAL`이다. | ACCEPTED | OpenSky state vector에는 군 소유 필드가 없고 운영 사용은 계약 대상이다. ADSB.lol은 API와 공개 데이터를 ODbL로 제공하지만 `/v2/mil`을 “military registered aircraft”로 정의하고 availability·정확성을 보증하지 않는다. 사용자가 T18 PASS 보고에 “승인”으로 응답했다. |
 | D-050 | T19는 ITS `ex\|its × cctvType=3\|4` 목록을 하나의 atomic CCTV metadata snapshot으로 정규화한다. 인증·목록·media metadata는 coarse gateway만 호출하고, public 계약에는 검증된 provider-issued HTTPS URL만 포함한다. media bytes·재생 UI는 T20/T21, viewport·marker·layer registry는 T30까지 제외한다. | ACCEPTED | 현재 공식 CCTV 문서는 `type=ex\|its`, 정지영상 3, HTTPS-HLS 4와 `/cctvInfo`를 명시하지만 JSON/empty/error shape, 실제 quota, media host·만료·CORS는 승인 key probe가 필요하다. 현 map session에는 bbox·overlay API가 없어 T19에서 지도 consumer를 추가하면 T30과 중복된다. 사용자가 T19 상세 제안에 “시작”으로 착수와 선행 probe를 승인했다. |
+| D-051 | T20은 direct CORS 실패의 별도 media topology로 같은 coarse gateway 내부에 viewer-on-demand JPEG binary route 하나를 둔다. 요청은 `cameraId + canonical bbox`만 받고 서버가 최신 type-3 metadata에서 ID를 재확인한다. 성공은 검증 완료된 최대 `512 KiB` JPEG와 `no-store`만 반환하고, raw URL·redirect·Range·polling·byte cache·CDN·video/HLS relay는 금지한다. | ACCEPTED | CCTV ID는 비가역 hash라 fleet-safe reverse index 없이 ID만으로 최신 회전 URL을 복원할 수 없다. 별도 Function이나 legacy raw `src` proxy 없이 exact registry, admission·provider budget·breaker·timeout, MIME·signature·dimension·declared/actual size 검증을 공유한다. 사용자가 direct 실패와 bounded fallback 후보를 보고받은 직후 “진행”으로 이 별도 구현 범위를 승인했다. ITS 표시·relay 조건 확인은 외부 배포 전 release gate로 유지한다. |
 
 ---
 
@@ -2659,6 +2660,92 @@ flowchart LR
   - 회귀: 최신 `origin/development` 재베이스 후 `npm run validate` PASS — Biome 332 files, Vitest 1,332 passed·7 credential-gated skipped, strict TypeScript, client/server production build PASS. 별도 T19 live smoke 1 passed. `git diff --check`와 tracked secret scan도 PASS했다.
 - 미검증·후속 범위: media bytes의 content type·크기·redirect·CORS·만료(T20), HLS manifest/segment와 동시 1-stream UI(T21), viewport·marker·layer registry·사용자 지도 여정(T30)은 의도적으로 미검증이다.
 - 회귀 판정: `PASS` — 알려진 회귀와 실패한 필수 검증이 없다. 사용자 수락에 따라 final commit·push·`development` 대상 PR을 진행한다.
+
+### T20 — CCTV 정지영상 capability
+
+- 상태: `ACCEPTED` — direct topology는 CORS gate 실패로 중단됐고, D-051 bounded fallback 구현·전체 품질 게이트·credential-gated live smoke·독립 변경분 리뷰가 통과했다. 사용자가 PASS 보고 뒤 “진행하고 다음단계 진행”으로 결과와 final commit·push·`development` PR을 승인했다. T19는 commit `ce2d69f`, PR #16, merge commit `4d6ef19`로 `development`에 반영됐다.
+- dependency:
+  - T19는 `ACCEPTED`이고 strict still URL metadata 계약이 준비됐다.
+  - T20 branch는 PR #16이 병합된 최신 `development` commit `4d6ef19`로 fast-forward했다.
+- 목적:
+  - T19가 제공한 HTTPS 정지영상 URL을 브라우저가 secret·blind redirect·무제한 payload 없이 직접 읽을 수 있는지 증명한다.
+  - direct media-only 예외가 성립할 때만 후속 T21/T30이 사용할 on-demand still byte loader 계약을 제공한다.
+  - direct가 안전하지 않으면 레거시 proxy를 복원하지 않고 별도 binary topology 결정을 요청한다.
+- 코드베이스 분석:
+  - 현재 `CctvCamera.media.stillImage`는 exact host·`:8091`·Base64 path를 검증하지만 image bytes, redirect final URL, MIME·크기·CORS·만료는 읽지 않았다.
+  - coarse gateway와 `shared/fetchJson`은 same-origin JSON envelope 전용이다. T20 때문에 raw binary relay나 unchecked generic media client로 확장하지 않는다.
+  - `KoreaMapSession`에는 bbox·overlay·marker selection이 없고 CCTV query도 기본 disabled다. T20에서 production dialog를 mount하면 고정 camera·전국 query·임시 trigger를 발명해 T30 범위를 침범한다.
+  - 레거시는 raw `src` proxy가 HTTP와 넓은 suffix host를 허용하고 MIME·size·redirect·timeout을 검증하지 않은 채 body를 relay했다. viewer는 3초마다 query를 덧붙이고 focus trap·Escape·focus return 없이 HLS를 eager import했다. 모두 이식하지 않는다.
+- 포함:
+  1. 승인 credential로 T19 목록에서 `ex|its` 소수 표본만 메모리에서 선택하고 URL·token·원문을 출력하지 않는 gated media probe
+  2. HEAD 지원 여부와 bounded GET의 status, redirect 유무·final boundary, `image/jpeg`, 선언/실제 byte 크기, JPEG signature·dimensions, cache validator, ACAO/CORP/referrer 정책과 반복 접근 성공 여부 기록
+  3. 같은 provider URL의 Node 결과만으로 CORS를 단정하지 않고 실제 browser origin에서 CORS fetch와 decode 가능 여부 확인
+  4. direct 실패 후 D-051이 승인한 같은 coarse gateway의 bounded binary route와 `entities/cctv` injected fetcher·AbortSignal 기반 on-demand Blob loader
+  5. client loader는 `credentials:'omit'`, `referrerPolicy:'no-referrer'`, redirect fail-closed를 사용하고, server는 최신 metadata lookup·exact final URL·JPEG MIME/signature/dimension과 선언/stream byte 상한을 검증한다.
+  6. offline fixture와 contract/loader/live-smoke tests, server/client dependency graph, `/api/cctv/image` strict input과 unknown CCTV path 404 검증
+- topology gate:
+  - `DIRECT`: initial/final HTTPS boundary, no redirect 또는 검증 가능한 same-boundary redirect, browser CORS fetch·decode, bounded JPEG, credential 부재와 이용 조건이 모두 확인될 때만 loader 구현을 계속한다.
+  - `BLOCKED`: CORS·redirect·size·expiry·약관 중 하나라도 핵심 경로를 증명하지 못하면 direct `<img>`로 우회하지 않는다. 표준 Function의 bounded binary fallback은 gateway response model·비용·SSRF 경계를 바꾸므로 별도 결정과 재승인을 요청한다.
+  - `UNAVAILABLE`: direct와 승인된 fallback이 모두 성립하지 않으면 정지영상 capability를 명시적으로 unavailable로 둔다.
+- 제외:
+  - `/api/cctv/image?src=...` raw URL proxy, Vercel Function의 무제한 image relay, HTTP media와 broad suffix allowlist
+  - production query consumer, 고정 Seoul camera, CCTV 목록 panel, map marker·clustering·selection
+  - dialog·focus trap·viewer overlay는 T30 marker trigger와 함께 구현하며 Page가 selection state를 소유하지 않는다.
+  - HLS loader, `hls.js`, manifest/key/segment와 live 전환은 T21
+  - query-string cache busting, 3초 polling, opaque media token을 query key·log·DOM text에 노출
+- 예상 변경 범위:
+  - `src/entities/cctv`의 camera ID·path·Blob loader public contract
+  - `src/server/providers/its`, `routes/cctv`, coarse gateway media branch와 production runtime 등록
+  - bounded JPEG fixtures, Entity/provider/route/gateway/runtime contract와 credential-gated live smoke
+- RED 순서:
+  1. camera ID+canonical bbox lookup authority와 raw URL·extra/duplicate query 거부
+  2. exact final URL·redirect·JPEG MIME/signature/dimension·declared/stream size와 abort contract
+  3. binary 200 대 strict JSON error envelope, admission/budget/breaker/timeout과 byte cache·CDN 부재
+  4. client credential omit·no-referrer·Blob 검증과 production runtime·credential-gated live smoke
+- 완료 조건:
+  - 정상: representative `ex|its` still을 server가 최신 metadata에서 재확인해 bounded JPEG로 relay하고 client loader가 source metadata와 분리된 `Blob`을 반환한다.
+  - 실패: redirect/non-JPEG/oversize/network/decode failure와 cancellation이 raw URL 없이 안전하게 분류된다.
+  - 경계: declared length 누락·불일치, stream cap 직전/초과, empty body와 URL 교체·재시도를 검증하며 object URL은 T20에서 만들지 않는다.
+  - 회귀: T19 metadata snapshot·cache, coarse JSON gateway, unknown CCTV path strict 404, FSD/server dependency와 전체 `npm run validate`가 PASS한다.
+  - 실제 map/viewer 사용자 여정은 T30 전까지 완료했다고 주장하지 않는다.
+- credential-gated topology probe:
+  - URL·token·원문·credential을 출력하거나 저장하지 않고 `ex|its` 정지영상 소수 표본과 header variant만 확인했다.
+  - HTTPS URL을 `Origin` 없이 요청하면 `200 image/jpeg`, 실제 `103,110 bytes`였고 redirect는 관찰되지 않았다. browser User-Agent와 ITS referrer만 추가한 경우에도 동일한 bounded JPEG를 받았다.
+  - 같은 조건에 `Origin: http://localhost:5173`을 추가하면 `403 text/plain`, 빈 body가 반환됐고 `Access-Control-Allow-Origin`도 없었다. 따라서 브라우저 `fetch`·decode 기반 direct loader는 성립하지 않는다.
+  - HTTP 표본은 `200 image/jpeg`, `103,461 bytes`였지만 D-015의 HTTPS-only 경계와 브라우저 mixed-content 정책 때문에 후보에서 제외했다.
+  - 즉시 metadata를 다시 받아도 `ex|its` opaque media URL이 모두 교체돼 URL을 안정 식별자·장기 cache key로 사용할 수 없다.
+  - in-app Browser 세션은 연결 가능한 브라우저가 없어 실제 페이지 조작을 실행하지 못했다. 다만 provider가 browser origin을 포함한 동일 GET을 직접 `403`으로 거부하고 ACAO를 제공하지 않은 응답만으로 direct CORS gate 실패가 확정되므로 판정을 보류할 사유는 아니다.
+  - 공식 [CCTV Open API](https://www.its.go.kr/opendata/opendataList?service=cctv), [오픈데이터 소개](https://www.its.go.kr/opendata/intro), [Open API 매뉴얼](https://www.its.go.kr/file/opendata/openapi_manual.pdf)은 정지영상 URL과 웹·앱 개발 활용을 설명하지만 CORS·redirect·MIME·크기·URL 만료 계약이나 제3자 페이지의 영상 bytes 재게시 허가는 명시하지 않는다. [저작권보호 정책](https://www.its.go.kr/common/infoPolicyPage?service=copyrightPolicy)은 무단 복제·배포를 제한하고 수익 또는 이에 상응하는 혜택이 있는 이용은 사전 협의·허락을 요구한다.
+- topology 판정:
+  - `DIRECT REJECTED`: browser CORS fetch·decode와 명시적인 표시·재배포 조건을 증명하지 못했다. CORS 검증을 피하는 blind `<img>`는 final URL·MIME·signature·size를 검사할 수 없어 승인 조건을 충족하지 않는다.
+  - `BOUNDED FALLBACK APPROVED`: raw `src`를 받지 않고 `cameraId + canonical bbox`로 서버가 최신 type-3 metadata를 다시 조회하며 exact media boundary, redirect fail-closed, 짧은 timeout, `image/jpeg`와 JPEG signature·dimension, streaming cap `512 KiB`, rate-limit, `no-store`를 강제하는 coarse binary route다.
+  - CCTV ID는 비가역 hash이므로 bbox 없이 최신 URL을 재탐색할 수 없다. fleet reverse index를 새로 만들지 않고 기존 공개 snapshot의 canonical bounds를 lookup context로 사용한다.
+  - media 성공만 bounded bytes이며 모든 실패는 기존 strict JSON error envelope를 사용한다. byte cache·stale·ETag·304·CDN·Range·3초 polling은 적용하지 않는다.
+  - `entities/cctv`에는 same-origin on-demand Blob loader와 좁은 public API만 추가하고 production viewer·marker·dialog는 T30에 남긴다.
+  - type-4 inventory를 불필요하게 다시 부르지 않도록 image lookup은 `ex|its × cctvType=3` 두 metadata 요청과 JPEG 한 번으로 제한한다.
+  - 외부 공개 배포는 별도 명시 요청과 ITS 영상 표시·relay 조건 확인 전까지 release gate를 유지한다.
+- release gate:
+  - bounded fallback 구현 승인은 D-051로 충족됐다.
+  - ITS 영상 표시·relay 이용 조건은 외부 배포 전까지 별도로 확인한다.
+- 확정 구현:
+  - 기존 `api/gateway.ts`와 route registry에 `/api/cctv/image` media route를 등록했다. 입력은 strict `cameraId + canonical bbox`뿐이며 extra·duplicate query, raw URL과 `Range`를 거부한다.
+  - 서버는 요청마다 `ex|its × cctvType=3` 최신 metadata를 조회해 stable camera ID를 재확인하고, identity·stable ID 중복을 fail-closed 처리한 뒤 exact HTTPS host·port·path의 회전 URL 한 개만 사용한다.
+  - upstream JPEG는 redirect·final URL·MIME·선언 길이·실제 stream `512 KiB` 상한·SOF dimension `4096px`·SOS scan·EOI를 검증한다. header 단계 실패와 caller abort는 response body 또는 실제 upstream acquisition까지 취소한다.
+  - media 성공은 `image/jpeg`, 실제 `Content-Length`, `no-store`, `nosniff`, same-origin CORP와 no-referrer만 반환한다. 실패는 기존 strict JSON error envelope이며 byte cache·STALE·ETag·CDN은 사용하지 않는다.
+  - process-local same-key acquisition은 abort-aware singleflight로 합친다. 일부 caller만 이탈하면 나머지 waiter를 유지하고 마지막 caller가 이탈할 때 shared upstream signal을 중단한다.
+  - `entities/cctv` public API는 canonical same-origin path와 on-demand bounded `Blob` loader만 제공한다. 브라우저 loader도 `Content-Length` 없이 stream을 직접 계수해 cap 초과 즉시 취소하며 custom abort reason을 보존한다.
+- TDD·review 증거:
+  - RED에서 provider seam·metadata lookup·binary gateway·runtime registration·Entity loader 부재와 strict route, MIME·크기·dimension·unknown ID 경계를 순서대로 관찰했다.
+  - 독립 리뷰가 lone caller cancellation의 upstream 미전파, fresh metadata duplicate 선택, invalid header body 미취소, SOF-only fake JPEG 허용, browser `response.blob()` 선버퍼링, media budget·breaker·timeout·coalescing 검증 누락, 실패 JSON body 무상한 읽기와 `206 Partial Content` 허용을 찾았다.
+  - 각 finding은 전용 RED로 재현한 뒤 abort-aware coalescer, duplicate index, best-effort body cancel, SOF+SOS parser, client streaming cap과 결정적 gateway recovery tests로 GREEN 전환했다.
+- 검증:
+  - 정상: provider→route→coarse production runtime→same-origin Blob의 bounded JPEG 경로와 cache 미사용을 확인했다.
+  - 실패: missing credential, unknown ID, network/non-2xx·redirect·wrong MIME·invalid JPEG·oversize·timeout·breaker open·budget exhaustion을 safe JSON error로 확인했다.
+  - 경계: extra/duplicate query, raw URL·Range, duplicate/conflicting rotating URL, 선언 길이 누락·불일치, exact cap/+1, empty body, oversized dimension, SOF-only payload, custom abort와 single/remaining waiter cancellation을 확인했다.
+  - 회귀: `npm run validate` PASS — Biome 341 files, Vitest 1,385 passed·8 skipped, strict TypeScript, client/server production build PASS. T20 focused 64 tests와 credential-gated live smoke 2 tests도 PASS했다.
+  - `git diff --check`와 added secret-like value scan `0`이 PASS했다. production viewer·marker·dialog는 승인 범위대로 T30에 남겨 UI 사용자 여정을 완료했다고 주장하지 않는다.
+- 회귀 판정: `PASS` — 실패한 필수 검증과 알려진 회귀가 없다. 사용자 수락에 따라 final commit과 `development` 대상 PR을 진행한다.
+- Guardrail: `PASS` — approved fallback은 direct 실패를 우회하되 raw URL·대형/연속 relay·별도 Function을 허용하지 않는다. 외부 배포는 ITS 영상 표시·relay 조건 확인 전까지 금지한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
