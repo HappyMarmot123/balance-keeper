@@ -39,6 +39,7 @@ const gatewayRouteProfileSchema = z
     lockSafetyMs: positiveSafeIntegerSchema,
     admissionRate: createFixedWindowRateSchema('route'),
     upstreamBudget: createFixedWindowRateSchema('provider'),
+    upstreamBudgetCost: positiveSafeIntegerSchema.optional(),
     breaker: breakerProfileSchema,
     cdnMaxAgeSeconds: positiveSafeIntegerSchema,
   })
@@ -96,6 +97,7 @@ export type GatewayRouteProfile = Readonly<
   Omit<ParsedGatewayRouteProfile, 'admissionRate' | 'upstreamBudget' | 'breaker'> & {
     admissionRate: FixedWindowRateProfile;
     upstreamBudget: FixedWindowRateProfile;
+    upstreamBudgetCost?: number;
     breaker: BreakerProfile;
   }
 >;

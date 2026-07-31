@@ -12,7 +12,7 @@ import { createEarthquakeRoute } from '../routes/earthquake';
 import { createMacroRoute } from '../routes/macro';
 import { createMarketsRoute } from '../routes/markets';
 import { createNewsRoute } from '../routes/news';
-import { createWeatherForecastRoute, createWeatherRoute } from '../routes/weather';
+import { createWeatherAlertsRoute, createWeatherForecastRoute, createWeatherRoute } from '../routes/weather';
 import { createGatewayRuntime, type GatewayRuntime } from './createGatewayRuntime';
 import { createJsonGatewayLogger, type GatewayLogWriter } from './jsonGatewayLogger';
 import type { RuntimeEnvironment } from './runtimeConfig';
@@ -48,6 +48,12 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     serviceKey: dataGoKrServiceKey,
   });
   const weatherForecastRoute = createWeatherForecastRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: dataGoKrServiceKey,
+  });
+  const weatherAlertsRoute = createWeatherAlertsRoute({
     clock,
     fetcher: options.fetcher ?? globalThis.fetch,
     readAdmissionSubject: readTrustedAdmissionSubject,
@@ -120,6 +126,7 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     routes: [
       weatherRoute,
       weatherForecastRoute,
+      weatherAlertsRoute,
       airRoute,
       earthquakeRoute,
       macroRoute,

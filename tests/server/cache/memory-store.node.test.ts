@@ -424,6 +424,25 @@ describe('MemoryFleetStateStore fixed-window counters', () => {
     expect(results.map((result) => result.count).sort()).toEqual([1, 2]);
   });
 
+  it('atomically reserves a positive weighted cost in one consumption', async () => {
+    const store = new MemoryFleetStateStore(() => 1_000);
+
+    await expect(store.consumeFixedWindow('rate:weighted', { limit: 5, windowMs: 100 }, 3)).resolves.toEqual({
+      allowed: true,
+      count: 3,
+      remaining: 2,
+      resetAt: 1_100,
+      retryAfterMs: 0,
+    });
+    await expect(store.consumeFixedWindow('rate:weighted', { limit: 5, windowMs: 100 }, 3)).resolves.toEqual({
+      allowed: false,
+      count: 6,
+      remaining: 0,
+      resetAt: 1_100,
+      retryAfterMs: 100,
+    });
+  });
+
   it.each([
     [{ limit: 0, windowMs: 100 }, 'limit'],
     [{ limit: 1.5, windowMs: 100 }, 'limit'],
@@ -432,6 +451,11 @@ describe('MemoryFleetStateStore fixed-window counters', () => {
   ])('rejects invalid %s policy', async (invalidPolicy) => {
     const store = new MemoryFleetStateStore(() => 1_000);
     await expect(store.consumeFixedWindow('rate:a', invalidPolicy)).rejects.toThrow(RangeError);
+  });
+
+  it.each([0, 1.5, Number.MAX_SAFE_INTEGER + 1])('rejects invalid fixed-window cost %s', async (cost) => {
+    const store = new MemoryFleetStateStore(() => 1_000);
+    await expect(store.consumeFixedWindow('rate:a', policy, cost)).rejects.toThrow(RangeError);
   });
 });
 

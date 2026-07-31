@@ -7,6 +7,7 @@ import { MacroWidget } from '../../../widgets/macro';
 import { MarketsWidget } from '../../../widgets/markets';
 import { NewsWidget } from '../../../widgets/news';
 import { RegionalContextWidget } from '../../../widgets/regional-context';
+import { WeatherAlertWidget } from '../../../widgets/weather-alert';
 import { WeatherForecastWidget } from '../../../widgets/weather-forecast';
 import { WeatherNowcastWidget } from '../../../widgets/weather-nowcast';
 
@@ -22,6 +23,7 @@ export function DashboardPage() {
       marketsSlot={<MarketsWidget />}
       newsSlot={<NewsWidget />}
       regionalContextSlot={<RegionalContextWidget />}
+      weatherAlertSlot={<WeatherAlertWidget />}
       weatherSlot={<WeatherNowcastWidget />}
     />
   );

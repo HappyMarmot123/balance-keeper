@@ -43,7 +43,8 @@ local serverTime = redis.call('TIME')
 local now = tonumber(serverTime[1]) * 1000 + math.floor(tonumber(serverTime[2]) / 1000)
 local limit = tonumber(ARGV[1])
 local windowMs = tonumber(ARGV[2])
-if not now or now < 0 or now > maxSafeInteger or not limit or limit <= 0 or limit % 1 ~= 0 or not windowMs or windowMs <= 0 or windowMs % 1 ~= 0 or windowMs > maxSafeInteger - now then
+local cost = tonumber(ARGV[3])
+if not now or now < 0 or now > maxSafeInteger or not limit or limit <= 0 or limit % 1 ~= 0 or not windowMs or windowMs <= 0 or windowMs % 1 ~= 0 or windowMs > maxSafeInteger - now or not cost or cost <= 0 or cost % 1 ~= 0 or cost > maxSafeInteger then
   return redis.error_reply('invalid fixed-window arguments')
 end
 
@@ -57,16 +58,19 @@ if raw then
   end
   count = state.count
   resetAt = state.resetAt
-  if type(count) ~= 'number' or count < 1 or count % 1 ~= 0 or type(resetAt) ~= 'number' or resetAt < 0 or resetAt % 1 ~= 0 then
+  if type(count) ~= 'number' or count < 1 or count > maxSafeInteger or count % 1 ~= 0 or type(resetAt) ~= 'number' or resetAt < 0 or resetAt % 1 ~= 0 then
     return redis.error_reply('invalid fixed-window state')
   end
 end
 
 if not raw or now >= resetAt then
-  count = 1
+  count = cost
   resetAt = now + windowMs
 else
-  count = count + 1
+  if count > maxSafeInteger - cost then
+    return redis.error_reply('fixed-window count overflow')
+  end
+  count = count + cost
 end
 
 local allowed = 0
@@ -520,10 +524,11 @@ export class UpstashFleetStateStore implements FleetStateStore {
     return parseBinaryResult(result, 'Fenced cache delete EVAL');
   }
 
-  async consumeFixedWindow(key: string, policy: FixedWindowPolicy): Promise<FixedWindowConsumption> {
+  async consumeFixedWindow(key: string, policy: FixedWindowPolicy, cost = 1): Promise<FixedWindowConsumption> {
     assertPositiveInteger(policy.limit, 'Fixed-window limit');
     assertPositiveInteger(policy.windowMs, 'Fixed-window duration');
-    const result = await this.client.eval(fixedWindowScript, [key], [policy.limit, policy.windowMs]);
+    assertPositiveInteger(cost, 'Fixed-window cost');
+    const result = await this.client.eval(fixedWindowScript, [key], [policy.limit, policy.windowMs, cost]);
     return parseFixedWindowResult(result, policy);
   }
 

@@ -128,12 +128,14 @@ class LeaseAwareFakeClient implements UpstashCommandClient {
       const key = keys[0];
       const limit = args[0];
       const windowMs = args[1];
+      const cost = args[2];
       const redisNow = this.now();
 
       if (
         !key ||
         typeof limit !== 'number' ||
         typeof windowMs !== 'number' ||
+        typeof cost !== 'number' ||
         !Number.isSafeInteger(redisNow + windowMs)
       ) {
         throw new Error('Malformed fixed-window fixture command');
@@ -142,8 +144,8 @@ class LeaseAwareFakeClient implements UpstashCommandClient {
       const existing = this.#fixedWindows.get(key);
       const state =
         !existing || redisNow >= existing.resetAt
-          ? { count: 1, resetAt: redisNow + windowMs }
-          : { count: existing.count + 1, resetAt: existing.resetAt };
+          ? { count: cost, resetAt: redisNow + windowMs }
+          : { count: existing.count + cost, resetAt: existing.resetAt };
       this.#fixedWindows.set(key, state);
       const allowed = state.count <= limit;
       return [
@@ -682,7 +684,7 @@ describe('UpstashFleetStateStore fixed-window EVAL', () => {
 
     const calls = client.calls as Array<Extract<RecordedCommand, { command: 'eval' }>>;
     expect(calls[0]?.keys).toEqual(['rate:a']);
-    expect(calls[0]?.args).toEqual([2, 100]);
+    expect(calls[0]?.args).toEqual([2, 100, 1]);
     expect(calls[0]?.script).toMatch(/^#!lua flags=allow-key-locking\n-- bk:fixed-window:v1/);
     expect(calls[0]?.script).toContain('bk:fixed-window:v1');
     expect(calls[0]?.script).toContain("redis.call('TIME')");
@@ -691,6 +693,24 @@ describe('UpstashFleetStateStore fixed-window EVAL', () => {
     expect(calls[0]?.script).toContain('count < 1');
     expect(calls[0]?.script).toContain('windowMs > maxSafeInteger - now');
     expect(calls[0]?.script).toContain("redis.call('SET', KEYS[1], encoded, 'PX', ttl)");
+  });
+
+  it('passes a positive weighted cost into the atomic Redis script', async () => {
+    const client = new RecordingCommandClient([[1, 3, 2, 1_100, 0, 1_000]]);
+    const store = new UpstashFleetStateStore(client);
+
+    await expect(store.consumeFixedWindow('rate:weighted', { limit: 5, windowMs: 100 }, 3)).resolves.toEqual({
+      allowed: true,
+      count: 3,
+      remaining: 2,
+      resetAt: 1_100,
+      retryAfterMs: 0,
+    });
+
+    const call = client.calls[0] as Extract<RecordedCommand, { command: 'eval' }> | undefined;
+    expect(call?.args).toEqual([5, 100, 3]);
+    expect(call?.script).toContain('count = cost');
+    expect(call?.script).toContain('count = count + cost');
   });
 
   it('shares one atomic window across two adapters and resets exactly at the boundary', async () => {

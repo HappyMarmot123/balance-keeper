@@ -48,6 +48,41 @@ const weatherForecastEnvelope = {
   },
 } as const;
 
+const weatherAlertEnvelope = {
+  data: {
+    alerts: [
+      {
+        areaCode: 'L1010100',
+        areaName: '서울특별시',
+        command: 'change-issue',
+        commandCode: 7,
+        effectiveAt: Date.parse('2026-07-22T14:30:00+09:00'),
+        endsAt: null,
+        id: '202607221400-31-L1010100-12',
+        issuedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+        kind: 'heat-wave',
+        kindCode: 12,
+        level: 'warning',
+        levelCode: 1,
+      },
+    ],
+    bulletin: {
+      availability: 'available',
+      details: '야외 활동과 온열질환에 유의하십시오.',
+      issuedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+      title: '폭염경보 발표',
+    },
+    statusEffectiveAt: Date.parse('2026-07-22T14:30:00+09:00'),
+    statusIssuedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+  },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: Date.parse('2026-07-22T14:09:00+09:00'),
+    requestId: 'app-weather-alert-request',
+    source: 'KMA',
+  },
+} as const;
+
 const airQualityEnvelope = {
   data: {
     observedAt: Date.parse('2026-07-22T14:00:00+09:00'),
@@ -239,17 +274,19 @@ beforeEach(() => {
     vi.fn(async (input: RequestInfo | URL) => {
       const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const envelope =
-        requestUrl === '/api/weather/forecast?region=seoul'
-          ? weatherForecastEnvelope
-          : requestUrl.startsWith('/api/air?')
-            ? airQualityEnvelope
-            : requestUrl === '/api/earthquake'
-              ? earthquakeEnvelope
-              : requestUrl === '/api/macro'
-                ? macroEnvelope
-                : requestUrl === '/api/markets'
-                  ? marketsEnvelope
-                  : weatherEnvelope;
+        requestUrl === '/api/weather/alerts'
+          ? weatherAlertEnvelope
+          : requestUrl === '/api/weather/forecast?region=seoul'
+            ? weatherForecastEnvelope
+            : requestUrl.startsWith('/api/air?')
+              ? airQualityEnvelope
+              : requestUrl === '/api/earthquake'
+                ? earthquakeEnvelope
+                : requestUrl === '/api/macro'
+                  ? macroEnvelope
+                  : requestUrl === '/api/markets'
+                    ? marketsEnvelope
+                    : weatherEnvelope;
 
       return Promise.resolve(
         new Response(JSON.stringify(envelope), {
@@ -321,6 +358,17 @@ describe('application bootstrap', () => {
     expect(screen.getByText('14:00 발표')).toBeTruthy();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/weather/forecast?region=seoul',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('renders active KMA weather alerts through the dedicated query', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('서울특별시')).toBeTruthy();
+    expect(screen.getByText('폭염')).toBeTruthy();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/weather/alerts',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });

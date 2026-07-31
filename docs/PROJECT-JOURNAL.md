@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T22 KMA 단기·시간별 예보 — ACCEPTED |
-| 다음 단계 | T22 commit·development PR·병합 후 T23 기획 |
+| 현재 단계 | T23 KMA 기상특보 — ACCEPTED |
+| 다음 단계 | feature commit·development PR 게시 후 사용자 병합 판단 |
 
 ---
 
@@ -271,6 +271,8 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-051 | T20은 direct CORS 실패의 별도 media topology로 같은 coarse gateway 내부에 viewer-on-demand JPEG binary route 하나를 둔다. 요청은 `cameraId + canonical bbox`만 받고 서버가 최신 type-3 metadata에서 ID를 재확인한다. 성공은 검증 완료된 최대 `512 KiB` JPEG와 `no-store`만 반환하고, raw URL·redirect·Range·polling·byte cache·CDN·video/HLS relay는 금지한다. | ACCEPTED | CCTV ID는 비가역 hash라 fleet-safe reverse index 없이 ID만으로 최신 회전 URL을 복원할 수 없다. 별도 Function이나 legacy raw `src` proxy 없이 exact registry, admission·provider budget·breaker·timeout, MIME·signature·dimension·declared/actual size 검증을 공유한다. 사용자가 direct 실패와 bounded fallback 후보를 보고받은 직후 “진행”으로 이 별도 구현 범위를 승인했다. ITS 표시·relay 조건 확인은 외부 배포 전 release gate로 유지한다. |
 | D-052 | T21의 `native HLS 우선`을 폐기하고 gateway가 initial 302의 body를 relay하지 않은 채 allowlist된 final manifest `Location`만 검증한다. 브라우저는 선택 시 lazy `hls.js` `FetchLoader`를 사용하며 `loader`·`pLoader`·`fLoader` 전체에 URL/resource guard와 `redirect: error`, `credentials: omit`, `referrerPolicy: no-referrer`, `cache: no-store`를 강제한다. | APPROVED | native HLS와 redirect-following XHR은 child/key/map/segment 및 redirect 목적지를 요청 전에 검증할 수 없어 ACCEPTED D-015와 모순된다. Chrome/Edge 중심 MVP의 엄격한 media boundary를 우선하는 지원 범위 변경을 명시해 승인 요청했고, 사용자가 2026-07-31 “진행”으로 amendment 착수를 승인했다. 실제 browser playback 검증과 Task 수락 전에는 commit하지 않는다. |
 | D-053 | T22는 기존 `/api/weather` 실황 계약을 보존하고 `/api/weather/forecast?region=...`를 별도로 추가한다. KMA `getVilageFcst`의 발표시각과 예보시각을 분리해 현재 이후 24개 KST 시간 slot으로 정규화하고, 누락 slot은 값을 발명하지 않은 unavailable period로 보존한다. UI는 서울 고정 일반 panel에서 가장 가까운 6개 시간을 보여주며 전역 지역 선택·지도 overlay·재생 animation은 제외한다. | ACCEPTED | 기존 실황 query는 Regional Context와 dedup되므로 path·key·cadence 변경 시 회귀가 크다. KMA는 하루 8회 발표하면서 근시일 자료를 1시간 간격으로 제공하므로 독립 cache/query와 명시적 timeline이 맞다. 9번째 dashboard panel로 넣으면 2xl 3×3 구성이 완성되고 지도 높이를 침범하지 않는다. 레거시 timeline은 “더미 예보”이므로 데이터·재생 동작을 이식하지 않는다. 사용자가 2026-07-31 “시작”으로 범위를 승인하고 자동·실키 검증 결과 뒤 development 병합과 다음 단계 진행을 지시했다. |
+| D-054 | T23는 공공데이터포털 `WthrWrnInfoService/getPwnStatus`를 현재 발효 상태의 정본으로 사용하고 `getWthrWrnMsg`는 제한된 최근 통보문 보강에만 사용한다. canonical `DATA_GO_KR_SERVICE_KEY`를 재사용하며 `/api/weather/alerts`와 독립 Entity·Query·Widget을 추가한다. UI는 지도와 패널 grid 사이의 전폭 알림 영역으로 두고, 발효 중 특보가 없을 때도 명시적 empty 상태를 제공한다. 공식 지역 geometry 계약이 확인되기 전에는 polygon을 만들거나 지역명으로 active/cancel을 추론하지 않고 지도 overlay는 T30으로 미룬다. | APPROVED | 현재 공식 서비스는 목록·통보문·특보코드·현재 현황을 별도 상세기능으로 제공하며 목록 응답만으로 발효·해제를 판정할 수 없다. 기존 T23 요약의 `지역 geometry`는 근거 없는 좌표 생성 위험이 있어 공식 mapping 검증 전 범위에서 제외하는 변경안을 사용자가 2026-07-31 “시작”으로 승인했다. |
+| D-055 | data.go.kr 점검 중에는 2026-06-01 공식 활용가이드의 현황·특보코드·통보문 schema와 synthetic fixture로 T23 RED→GREEN·자동 회귀를 진행한다. `getPwnStatus`의 현재 집계문과 `getPwnCd`의 구조화된 lifecycle을 교차 사용하고, active가 있을 때만 `getWthrWrnMsg`를 최대 1회 보강한다. live smoke는 현재 Task 완료 조건에서 외부 공개 release condition으로 이동하며 실제 응답 값을 fixture에 복사하지 않는다. | APPROVED | canonical key는 다른 KMA 서비스에서 정상이고 기상특보 3개 endpoint만 403이므로 data.go.kr 점검·활용신청 불가라는 사용자의 설명과 일치한다. 사용자가 “되었다 가정하고 모킹 데이터로 다음 작업 진행”을 명시해 offline 구현과 live gate 유예를 승인했다. |
 
 ---
 
@@ -689,7 +691,7 @@ primitive OKLCH
 | --- | --- | --- | --- | --- | --- |
 | A01 | `/api/weather` 초단기실황 | PARTIAL | NOT_STARTED | `getUltraSrtNcst` 공식 확인, KST base time·게시 지연·null keyed probe | T10 |
 | A02 | 기상 단기·시간별 예보 | MISSING | ACCEPTED | `getVilageFcst` 현재 이후 24시간·누락 slot·gateway live smoke와 자동 회귀 PASS; 연결 browser 부재의 수동 시각 QA 제한을 사용자가 인지하고 병합 승인 | T22 |
-| A03 | 기상특보 | MISSING | NOT_STARTED | `WthrWrnInfoService` 확인; 목록+현황으로 발효·해제·지역 계약 검증 | T23 |
+| A03 | 기상특보 | MISSING | ACCEPTED | offline 구현·전체 자동 회귀 PASS; 사용자가 browser 시각 QA 미검증 제한을 수락, data.go.kr live는 외부 공개 release condition | T23 |
 | A04 | `/api/air` PM10/PM2.5 | PARTIAL | NOT_STARTED | 개발 500/일·심사 후 운영 10,000/일 안내, 2026 행정구역·결측·측정시각과 측정소 `dmX=위도/dmY=경도` 보강 | T11 |
 | A05 | `/api/earthquake` KMA+USGS | PARTIAL | ACCEPTED | KMA 3일+USGS 7일, 수정 통보·보수적 dedup·partial/stale·500건 상한과 keyed live smoke PASS | T12 |
 | A06 | `/api/macro` | PARTIAL | ACCEPTED | 공식 코드·항목 확정, offline 전체 회귀와 production gateway 3-call live smoke PASS | T13 |
@@ -885,7 +887,7 @@ flowchart TD
 | Task | 기능 | 완료 조건 | 핵심 검증 | 의존성 |
 | --- | --- | --- | --- | --- |
 | T22 | KMA 단기·시간별 예보 | 발표·예보시각 timeline 정규화 | KST 자정, 누락 slot, live | T10 |
-| T23 | KMA 기상특보 | 발효·해제·지역 geometry와 배너 | active/cancel/duplicate | T10 |
+| T23 | KMA 기상특보 | 현황 기반 발효 상태·공식 지역명과 전폭 알림 영역; 지도 geometry는 T30 전 별도 검증 | active/cancel/duplicate/empty/live | T10,T22 |
 | T24 | AIS feasibility | 서면 재배포·상업·retention·안전 계약 또는 공식 집계형 scope의 GO/NO-GO | 권리 확인 전 keyed probe 금지, 안전·coverage·정확도 검토 | T02,T06 |
 | T25 | AIS 군함 | T24가 GO일 때만 vessel slice와 feature flag | fixture, delayed data, live | T24 ACCEPTED |
 | T26 | ITS 9종 계약 검증 | 승인 key로 정확한 HTTPS host·path·port, 쿼터와 schema matrix 승인 | 3~5영업일 key 상태, 각 endpoint gated probe, 빈 결과 | T02,T06 |
@@ -2900,7 +2902,63 @@ flowchart LR
   - Browser runtime 연결 목록이 비어 자동 시각 검증을 수행하지 못했다. 사용자가 `http://localhost:5173/`에서 light/dark 각각 desktop 3×2·narrow 2×3, 실황 바로 뒤 배치, 미래 6개 순서, overflow·console error 부재를 확인해야 한다.
 - 사용자 수락·게시:
   - 사용자는 수동 시각 QA가 미검증임을 명시한 최종 보고 뒤 T22의 commit·development PR·병합과 다음 단계 진행을 지시했다. 이 결정은 미검증 경로를 자동 PASS로 바꾸지 않으며 외부 공개 전 수동 시각 QA 조건은 유지한다.
+  - feature commit `930b362`를 push하고 `development` 대상 PR #20을 열었다. 필수 `quality-gate`는 PASS했고 비활성화된 Codex review·feedback job은 의도대로 SKIPPED였다.
+  - 사용자의 병합 지시에 따라 merge commit `65c8e74`로 반영했으며 local `development`와 `origin/development`가 같은 commit이고 clean임을 확인했다.
 - Guardrail: `ACCEPTED` — final commit·push·development PR·병합이 승인됐다. 외부 공개 전에는 위 수동 시각 QA를 별도로 완료한다.
+
+### T23 — KMA 기상특보
+
+- 상태: `ACCEPTED` — 승인된 offline 구현과 전체 자동 회귀·독립 재리뷰가 PASS했고, 사용자가 “진행”으로 연결 browser 부재의 light/dark·desktop/narrow 수동 시각 QA 미검증 제한을 수락해 final commit·development PR을 승인했다.
+- 목적: 현재 발효 중인 KMA 기상특보를 공식 상태에 근거해 빠르게 확인하고, 발효·해제 또는 알 수 없는 상태를 제목만으로 추론하지 않는다.
+- dependency:
+  - T10·T22는 `ACCEPTED`이고 시작 기준선은 `development@65c8e74`다.
+  - 기존 기상 실황·예보 route/query/widget과 재난문자 Entity는 변경하거나 합치지 않는다.
+- 공식·코드베이스 근거:
+  - [공공데이터포털 기상특보 조회서비스](https://www.data.go.kr/data/15000415/openapi.do)는 JSON/XML, 실시간 갱신, 자동승인과 `getWthrWrnList`, `getWthrWrnMsg`, `getPwnCd`, `getPwnStatus`를 포함한 상세기능을 제공한다.
+  - 목록은 통보 식별 정보 중심이라 현재 발효 상태의 정본으로 사용하지 않는다. [KMA API Hub 특보 현황 계약](https://apihub.kma.go.kr/apiList.do?apiMov=%ED%8A%B9.%EC%A0%95%EB%B3%B4+%EC%9E%90%EB%A3%8C+%EC%A1%B0%ED%9A%8C&seqApi=10&seqApiSub=288)은 지역·발표/발효시각·종류·수준·명령을 별도 현황 필드로 제공한다.
+  - 2026-06-01 공식 활용가이드에서 `getPwnStatus`는 최근 7일의 현재 현황을 `tmFc`, `tmSeq`, `tmEf`, 집계문 `t6`, 예비특보 `t7`, `other`로 제공하고, 구조화된 `areaCode`, `areaName`, `warnVar`, `warnStress`, `command`, 발효·해제시각과 `cancel`은 `getPwnCd`가 제공함을 확인했다. 따라서 지역·수준·명령을 `t6` 문자열에서 추측하지 않고 두 계약을 교차 검증한다.
+  - 현재 dashboard는 9개 panel로 3×3을 이루므로 기상특보를 10번째 일반 panel로 넣지 않고 지도와 grid 사이의 전폭 알림 Widget으로 분리하는 안이 더 안정적이다.
+- 값 미출력 contract gate:
+  - local canonical key 존재만 확인하고 key·요청 URL·응답 본문·실제 특보 값은 출력하거나 저장하지 않았다.
+  - 같은 key로 기존 `weather-forecast-live-smoke`는 1 test PASS해 key와 `apis.data.go.kr` HTTPS 연결이 정상임을 확인했다.
+  - `getPwnStatus`, 최근 6일 `getPwnCd`, 당일 전국 `getWthrWrnMsg`는 각각 1회 요청했으나 모두 HTTP 403 `text/plain`을 반환했다. key 없는 비교 요청은 401이므로 현재 key가 이 서비스에 접근할 수 없는 상태다.
+  - 사용자는 data.go.kr 서비스 점검으로 활용신청이 불가능함을 확인하고 공식 가이드 기반 synthetic fixture 구현을 승인했다. 따라서 offline RED를 시작하되 실제 값을 복사한 fixture나 live 성공 주장은 만들지 않는다.
+  - external release condition: [기상청_기상특보 조회서비스](https://www.data.go.kr/data/15000415/openapi.do)의 활용신청이 canonical key에 활성화된 뒤 동일 세 요청이 HTTPS 200·정상 provider code를 반환하고 JSON empty/active schema와 3-call 상한을 확인해야 외부 공개한다.
+- 포함 제안:
+  1. 승인 뒤 local credential을 출력하지 않는 1회 contract gate로 `getPwnStatus`·필요 시 `getPwnCd`의 HTTPS, JSON/empty shape, region·kind·level·command·시각과 pagination을 확인
+  2. `DATA_GO_KR_SERVICE_KEY`를 재사용하는 server provider와 `/api/weather/alerts`; active snapshot과 제한된 통보문 보강
+  3. provider-native 식별자·지역 ID/명·발표·발효·종료시각·종류·수준·명령을 가진 strict Entity; 알 수 없는 code는 임의 변환하지 않음
+  4. 별도 Query와 전폭 Widget의 loading·error/retry·empty·stale·setup·success 상태, 발효 중 항목 우선순위와 중복 제거
+  5. 1분 client 확인, 짧은 CDN/cache와 KMA 공유 admission·일일 budget, 독립 breaker·last-good·ETag 적용
+- 제외:
+  - 공식 polygon/code mapping이 없는 지역 geometry·지도 overlay, 지역명 기반 좌표 추정
+  - 기존 재난문자와 결합, browser의 KMA 직접 호출, 새 credential, 특보 원문 전체 장기 보존
+  - 특보 발생 push notification·WebSocket·음향 경보와 전역 지역 선택
+- TDD·검증:
+  - RED: active/cancel/replace, duplicate, unknown code, KST 시각, empty, malformed/pagination, timeout·abort·credential·stale을 fixture로 고정한다.
+  - GREEN: Entity → provider → route/cache → Query → Widget → Page/Shell public API 순서로 최소 구현한다.
+  - 회귀: `/api/weather`, `/api/weather/forecast`, 재난문자, KMA 공유 quota, 3×3 panel grid, FSD dependency와 initial bundle을 확인한다.
+  - 완료 전 focused tests, `npm run validate`, 값 미출력 production gateway smoke와 light/dark·desktop/narrow 수동 QA가 필요하다.
+- 구현:
+  - 독립 `weather-alert` Entity·Query·Widget과 `/api/weather/alerts`를 추가했다. 지도 다음·기존 3×3 panel grid 앞에 전폭 Widget을 배치했고 기존 실황·예보·재난문자 slice는 변경하거나 합치지 않았다.
+  - `getPwnStatus`를 current empty/active 정본으로 먼저 확인하고 active일 때만 최근 6일 `getPwnCd`와 현재 status의 `tmFc/tmSeq`에 정확히 일치하는 `getWthrWrnMsg`를 보강한다. empty는 1회, active는 최대 3회 HTTPS 요청이다.
+  - 구조화 lifecycle은 발효·연장·정정·변경발표와 해제를 적용한다. 동일 provider event는 제거하고 내용이 충돌하면 fail closed한다. 미문서 kind/level은 원 code와 `unknown`으로 보존하며 미문서 command·pagination 모순은 거부한다.
+  - strict Entity는 공식 지역 ID/명, 발표·발효·nullable 종료시각, 종류·수준·명령을 보존한다. `endTime` 우선·`allEndTime` fallback으로 `endsAt`을 만들고 `issuedAt <= effectiveAt <= endsAt`을 검증한다.
+  - Widget은 loading·setup·error/retry·fresh empty·stale empty·partial bulletin·success를 구분하고 심각도·발효시각 순으로 최대 6건을 KST semantic `<time>`과 함께 표시한다. unknown code를 추측하지 않고 색 외 텍스트로 수준을 표시한다.
+  - 1분 Query, origin fresh/negative 1분, CDN 30초, stale-if-error 10분, shared `route.weather` admission과 `provider.kma` 일일 budget, 독립 `provider.kma.alerts` breaker를 적용했다. optional `upstreamBudgetCost`를 coarse gateway에 추가해 기존 route는 cost 1과 기존 profile shape을 유지하고 기상특보만 최대 실제 호출 수 3을 Memory/Upstash fixed-window에서 원자 선예약한다.
+- RED·GREEN 증거:
+  - slice/export → strict Entity → provider normalization/HTTPS → route → Query → Widget → Dashboard/App 순으로 실제 실패를 확인했다. 최종 리뷰에서 발견된 status와 무관한 통보문 선택, provider identity 충돌, 종료시각 누락, 실제 3-call quota 미계상도 각각 회귀 테스트를 먼저 실패시킨 뒤 수정했다.
+  - T23·weighted budget focused regression은 `13 files / 278 tests PASS`다. active→empty 갱신 뒤 upstream 실패에서 과거 active STALE이 되살아나지 않으며 MISS→HIT→ETag 304, missing credential, abort와 secret 비노출을 production runtime fixture로 확인했다.
+  - 최종 `npm run validate`: Biome `396 files`, Vitest `166 files / 1,553 tests PASS`, credential/explicit live gate `9 files / 11 tests SKIPPED`, TypeScript strict, client와 server build PASS다.
+  - build artifact는 client main `238.23 kB / gzip 67.87 kB`, lazy HLS `509.73 kB / gzip 157.64 kB`, server `809.66 kB / gzip 172.13 kB`다. 신규 dependency나 지도 geometry는 없다.
+  - 최종 독립 review에서 architecture·server·UI 모두 PASS했다. FSD/public API/server-browser graph, exact bulletin identity, conflict dedup, nullable `endsAt`, weighted quota, stale lifecycle, 접근성·반응형 class 계약을 확인했고 남은 재현 가능한 finding은 없다.
+- 미검증·release condition:
+  - Browser runtime 연결 목록이 비어 실제 light/dark·desktop/narrow 화면의 overflow·대비·console error를 확인하지 못했다. 자동 Widget/App/Panel/token/FSD 검증은 PASS했지만 수동 시각 성공으로 과장하지 않는다.
+  - data.go.kr 점검과 활용신청 미활성으로 live test는 기본 skip이다. 서비스 활성화 뒤 `RUN_KMA_WEATHER_ALERTS_LIVE_SMOKE=1`로 explicit gate를 실행해 HTTPS 200, strict empty/active schema와 1/3-call 상한을 확인해야 외부 공개할 수 있다.
+- 사용자 수락:
+  - 사용자가 최종 결과와 연결 browser 부재의 수동 시각 QA 미검증 제한을 보고받은 뒤 “진행”으로 T23 결과를 수락하고 final commit·development PR을 승인했다.
+  - 이 수락은 data.go.kr live 성공이나 light/dark·desktop/narrow 시각 성공을 주장하는 것이 아니다. 두 항목은 외부 공개 전 release condition으로 유지한다.
+- Guardrail: `ACCEPTED` — 범위·근거·자동 회귀·독립 review는 PASS했고 사용자가 잔여 검증 제한을 명시적으로 수락했다. final commit·development PR을 진행하되 병합은 별도 사용자 판단을 기다린다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3171,3 +3229,11 @@ flowchart LR
 | 2026-07-31 | 사용자가 “시작”으로 D-053과 T22 단기·시간별 예보 범위를 승인; 기존 실황 계약을 보존하고 값 미출력 `getVilageFcst` 서울 contract gate부터 착수 | T22 |
 | 2026-07-31 | T22 Entity·provider·gateway·Query·Dashboard Widget을 RED→GREEN; current-time anchor·hour alignment·shared admission·정시 UI 갱신 findings를 수정하고 전체 1,495 tests·두 build 및 실키 production smoke PASS. 연결 browser 부재로 수동 light/dark·desktop/narrow QA만 BLOCKED | T22 |
 | 2026-07-31 | 사용자가 수동 시각 QA 미검증 제한을 보고받은 뒤 T22 commit·development PR·병합과 다음 단계 진행을 지시해 결과를 ACCEPTED; 외부 공개 전 수동 QA 조건은 유지 | T22 |
+| 2026-07-31 | T22 commit `930b362`를 PR #20으로 게시해 quality-gate PASS 후 merge commit `65c8e74`로 development에 병합하고 local·origin 동기화 확인 | T22 |
+| 2026-07-31 | T23 공식 계약과 dashboard 구조를 조사해 D-054 제안 작성; 현황 API를 active 정본으로 사용하고 전폭 알림 Widget을 추가하되 검증되지 않은 지역 polygon은 T30 전 별도 계약으로 분리, 승인 전 구현 없음 | T23 |
+| 2026-07-31 | 사용자가 “시작”으로 D-054와 T23 범위를 승인; `feature/t23-weather-alerts`에서 값 미출력 `getPwnStatus` contract gate부터 착수 | T23 |
+| 2026-07-31 | canonical key의 기존 KMA 예보 실키는 PASS했으나 기상특보 현황·코드·통보문 3개 endpoint가 모두 HTTP 403; 공식 가이드로 status 집계문과 structured code 계약 차이를 확인하고 활용신청 활성화 전 T23 BLOCKED, 제품 코드 변경 없음 | T23 |
+| 2026-07-31 | 사용자가 data.go.kr 점검으로 활용신청이 불가능함을 확인하고 성공을 가정한 synthetic fixture 구현을 승인; D-055로 live smoke를 외부 공개 release condition으로 옮기고 T23 offline RED 재개 | T23 |
+| 2026-07-31 | T23 Entity→provider→gateway→Query→전폭 Widget을 synthetic fixture RED→GREEN하고 review findings 4건을 회귀로 수정; 전체 1,553 tests·client/server build와 독립 architecture/server/UI review PASS, live는 release gate로 분리 | T23 |
+| 2026-07-31 | 연결 browser가 없어 light/dark·desktop/narrow 실제 시각 QA를 수행하지 못해 T23 BLOCKED; 자동 상태·반응형·접근성 계약은 PASS했으며 사용자 수동 확인 또는 미검증 제한 수락 전 commit하지 않음 | T23 |
+| 2026-07-31 | 사용자가 “진행”으로 T23 결과와 browser 수동 QA 미검증 제한을 수락하고 final commit·development PR을 승인; data.go.kr live와 실제 시각 확인은 외부 공개 release condition으로 유지 | T23 |

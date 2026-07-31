@@ -1,0 +1,32 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL_SERVICE"
+    },
+    "body": {
+      "dataType": "JSON",
+      "items": {
+        "item": [
+          {
+            "other": "o 없음",
+            "stnId": 108,
+            "t1": "폭염경보·폭염주의보 발표",
+            "t2": "폭염경보 : 서울특별시\n폭염주의보 : 경기도 일부",
+            "t3": "2026년 07월 31일 10시 발효",
+            "t4": "야외 활동과 온열질환에 유의하십시오.",
+            "t5": "202607311000",
+            "t6": "o 폭염경보 :서울특별시\no 폭염주의보 :경기도 일부",
+            "t7": "o 없음",
+            "tmFc": "202607310900",
+            "tmSeq": 31,
+            "warFc": 1
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

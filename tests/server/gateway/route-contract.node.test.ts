@@ -46,6 +46,14 @@ describe('gateway route public contract', () => {
     expect(createRouteProfile(validProfile)).toEqual(validProfile);
   });
 
+  it('keeps the default profile shape while accepting an explicit positive upstream budget cost', () => {
+    expect(createRouteProfile(validProfile)).not.toHaveProperty('upstreamBudgetCost');
+    expect(createRouteProfile({ ...validProfile, upstreamBudgetCost: 3 })).toEqual({
+      ...validProfile,
+      upstreamBudgetCost: 3,
+    });
+  });
+
   it('deep-freezes a validated route profile so coordination policy cannot drift after startup', () => {
     const frozen = createRouteProfile(validProfile);
 
@@ -87,6 +95,7 @@ describe('gateway route public contract', () => {
     ['admissionRate.windowMs', { ...validProfile, admissionRate: { ...validProfile.admissionRate, windowMs: 0 } }],
     ['upstreamBudget.limit', { ...validProfile, upstreamBudget: { ...validProfile.upstreamBudget, limit: 0 } }],
     ['upstreamBudget.windowMs', { ...validProfile, upstreamBudget: { ...validProfile.upstreamBudget, windowMs: 0 } }],
+    ['upstreamBudgetCost', { ...validProfile, upstreamBudgetCost: 0 }],
     ['breaker.failureThreshold', { ...validProfile, breaker: { ...validProfile.breaker, failureThreshold: 0 } }],
     ['breaker.failureWindowMs', { ...validProfile, breaker: { ...validProfile.breaker, failureWindowMs: 0 } }],
     ['breaker.cooldownMs', { ...validProfile, breaker: { ...validProfile.breaker, cooldownMs: 0 } }],
@@ -100,6 +109,8 @@ describe('gateway route public contract', () => {
     ['fraction', { ...validProfile, freshForMs: 1.5 }],
     ['unsafe integer', { ...validProfile, freshForMs: Number.MAX_SAFE_INTEGER + 1 }],
     ['infinity', { ...validProfile, freshForMs: Number.POSITIVE_INFINITY }],
+    ['fractional upstream cost', { ...validProfile, upstreamBudgetCost: 1.5 }],
+    ['unsafe upstream cost', { ...validProfile, upstreamBudgetCost: Number.MAX_SAFE_INTEGER + 1 }],
   ])('rejects a numeric policy expressed as a %s', (_case, input) => {
     expect(() => createRouteProfile(input)).toThrow();
   });
