@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T21 CCTV 실시간 HLS — ACCEPTED |
-| 다음 단계 | T22 KMA 단기·시간별 예보 상세 기획 |
+| 현재 단계 | T22 KMA 단기·시간별 예보 — ACCEPTED |
+| 다음 단계 | T22 commit·development PR·병합 후 T23 기획 |
 
 ---
 
@@ -270,6 +270,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-050 | T19는 ITS `ex\|its × cctvType=3\|4` 목록을 하나의 atomic CCTV metadata snapshot으로 정규화한다. 인증·목록·media metadata는 coarse gateway만 호출하고, public 계약에는 검증된 provider-issued HTTPS URL만 포함한다. media bytes·재생 UI는 T20/T21, viewport·marker·layer registry는 T30까지 제외한다. | ACCEPTED | 현재 공식 CCTV 문서는 `type=ex\|its`, 정지영상 3, HTTPS-HLS 4와 `/cctvInfo`를 명시하지만 JSON/empty/error shape, 실제 quota, media host·만료·CORS는 승인 key probe가 필요하다. 현 map session에는 bbox·overlay API가 없어 T19에서 지도 consumer를 추가하면 T30과 중복된다. 사용자가 T19 상세 제안에 “시작”으로 착수와 선행 probe를 승인했다. |
 | D-051 | T20은 direct CORS 실패의 별도 media topology로 같은 coarse gateway 내부에 viewer-on-demand JPEG binary route 하나를 둔다. 요청은 `cameraId + canonical bbox`만 받고 서버가 최신 type-3 metadata에서 ID를 재확인한다. 성공은 검증 완료된 최대 `512 KiB` JPEG와 `no-store`만 반환하고, raw URL·redirect·Range·polling·byte cache·CDN·video/HLS relay는 금지한다. | ACCEPTED | CCTV ID는 비가역 hash라 fleet-safe reverse index 없이 ID만으로 최신 회전 URL을 복원할 수 없다. 별도 Function이나 legacy raw `src` proxy 없이 exact registry, admission·provider budget·breaker·timeout, MIME·signature·dimension·declared/actual size 검증을 공유한다. 사용자가 direct 실패와 bounded fallback 후보를 보고받은 직후 “진행”으로 이 별도 구현 범위를 승인했다. ITS 표시·relay 조건 확인은 외부 배포 전 release gate로 유지한다. |
 | D-052 | T21의 `native HLS 우선`을 폐기하고 gateway가 initial 302의 body를 relay하지 않은 채 allowlist된 final manifest `Location`만 검증한다. 브라우저는 선택 시 lazy `hls.js` `FetchLoader`를 사용하며 `loader`·`pLoader`·`fLoader` 전체에 URL/resource guard와 `redirect: error`, `credentials: omit`, `referrerPolicy: no-referrer`, `cache: no-store`를 강제한다. | APPROVED | native HLS와 redirect-following XHR은 child/key/map/segment 및 redirect 목적지를 요청 전에 검증할 수 없어 ACCEPTED D-015와 모순된다. Chrome/Edge 중심 MVP의 엄격한 media boundary를 우선하는 지원 범위 변경을 명시해 승인 요청했고, 사용자가 2026-07-31 “진행”으로 amendment 착수를 승인했다. 실제 browser playback 검증과 Task 수락 전에는 commit하지 않는다. |
+| D-053 | T22는 기존 `/api/weather` 실황 계약을 보존하고 `/api/weather/forecast?region=...`를 별도로 추가한다. KMA `getVilageFcst`의 발표시각과 예보시각을 분리해 현재 이후 24개 KST 시간 slot으로 정규화하고, 누락 slot은 값을 발명하지 않은 unavailable period로 보존한다. UI는 서울 고정 일반 panel에서 가장 가까운 6개 시간을 보여주며 전역 지역 선택·지도 overlay·재생 animation은 제외한다. | ACCEPTED | 기존 실황 query는 Regional Context와 dedup되므로 path·key·cadence 변경 시 회귀가 크다. KMA는 하루 8회 발표하면서 근시일 자료를 1시간 간격으로 제공하므로 독립 cache/query와 명시적 timeline이 맞다. 9번째 dashboard panel로 넣으면 2xl 3×3 구성이 완성되고 지도 높이를 침범하지 않는다. 레거시 timeline은 “더미 예보”이므로 데이터·재생 동작을 이식하지 않는다. 사용자가 2026-07-31 “시작”으로 범위를 승인하고 자동·실키 검증 결과 뒤 development 병합과 다음 단계 진행을 지시했다. |
 
 ---
 
@@ -687,7 +688,7 @@ primitive OKLCH
 | ID | 기능 | 레거시 증거 | 새 저장소 | 검증·Gap | Task |
 | --- | --- | --- | --- | --- | --- |
 | A01 | `/api/weather` 초단기실황 | PARTIAL | NOT_STARTED | `getUltraSrtNcst` 공식 확인, KST base time·게시 지연·null keyed probe | T10 |
-| A02 | 기상 단기·시간별 예보 | MISSING | NOT_STARTED | `getVilageFcst`, 하루 8회 KST 발표 확인; 자정·누락 slot keyed probe | T22 |
+| A02 | 기상 단기·시간별 예보 | MISSING | ACCEPTED | `getVilageFcst` 현재 이후 24시간·누락 slot·gateway live smoke와 자동 회귀 PASS; 연결 browser 부재의 수동 시각 QA 제한을 사용자가 인지하고 병합 승인 | T22 |
 | A03 | 기상특보 | MISSING | NOT_STARTED | `WthrWrnInfoService` 확인; 목록+현황으로 발효·해제·지역 계약 검증 | T23 |
 | A04 | `/api/air` PM10/PM2.5 | PARTIAL | NOT_STARTED | 개발 500/일·심사 후 운영 10,000/일 안내, 2026 행정구역·결측·측정시각과 측정소 `dmX=위도/dmY=경도` 보강 | T11 |
 | A05 | `/api/earthquake` KMA+USGS | PARTIAL | ACCEPTED | KMA 3일+USGS 7일, 수정 통보·보수적 dedup·partial/stale·500건 상한과 keyed live smoke PASS | T12 |
@@ -2804,7 +2805,7 @@ flowchart LR
 
 ### T21 — CCTV 실시간 HLS
 
-- 상태: `ACCEPTED` — 구현과 자동 회귀, D-052 변경 승인은 완료했다. 실제 browser playback은 미검증이라 Task `PASS`로 주장하지 않지만, 사용자가 이 제한을 보고받은 뒤 2026-07-31 “development까지 커밋하고 다음단계 진행”으로 결과 수락과 feature commit·push·PR·development 병합을 명시적으로 승인했다. 외부 공개 release gate는 유지한다.
+- 상태: `ACCEPTED` — 구현과 자동 회귀, D-052 변경 승인은 완료했다. 실제 browser playback은 미검증이라 Task `PASS`로 주장하지 않지만, 사용자가 이 제한을 보고받은 뒤 2026-07-31 “development까지 커밋하고 다음단계 진행”으로 결과 수락과 feature commit·push·PR·development 병합을 명시적으로 승인했다. commit `05de6e3`, PR #19 quality-gate PASS 후 merge commit `bfcb166`으로 development에 반영했다. 외부 공개 release gate는 유지한다.
 - dependency:
   - T19·T20·T20-R1은 `ACCEPTED`이고 최신 기준선은 `development@9522747`이다.
   - 기존 `feature/t21-cctv-hls`와 `stash@{0}`는 T20-R1 이전 기준선의 조사 기록이므로 pop하지 않고 증거만 수동 이식한다. 구현 branch는 최신 기준선의 `feature/t21-cctv-live`다.
@@ -2855,6 +2856,51 @@ flowchart LR
   - 사용자는 실제 browser gate 미검증을 명시한 최종 보고 뒤 development 병합과 다음 단계 진행을 지시했다. 이는 검증되지 않은 동작을 PASS로 바꾸는 것이 아니라 알려진 제한을 수용한 병합 결정으로 기록한다.
   - PR에는 actual playback 미검증, ITS upstream timeout과 외부 공개 전 release condition을 그대로 명시한다.
 - Guardrail: `BLOCKED` — development 병합은 사용자가 제한을 인지하고 승인했다. 외부 공개 release condition은 실제 localhost에서 `playing`, `readyState >= 2`, `currentTime` 증가와 close·layer off teardown 확인이다. 현재 ITS timeout은 strict stream 경로가 한 번 성공한 뒤 발생한 live-smoke 제약으로 기록하고 재시도 시점에 다시 확인한다.
+
+### T22 — KMA 단기·시간별 예보
+
+- 상태: `ACCEPTED` — 구현·자동 검증·실키 production gateway smoke는 PASS했다. 연결 browser 부재의 수동 시각 QA 제한을 보고받은 사용자가 development 병합과 다음 단계 진행을 승인했다.
+- dependency:
+  - T10은 `ACCEPTED`이고 T21까지 반영된 기준선은 `development@bfcb166`이다.
+  - 기존 `/api/weather`·`weatherNowcastQueryOptions`는 Regional Context와 공유되므로 변경하지 않는다.
+- 공식·코드베이스 근거:
+  - data.go.kr의 현재 단기예보 서비스는 `getVilageFcst`, JSON/XML, source 표시 조건과 개발·운영 자동승인을 제공한다. 현재 계정의 실제 quota는 포털 표기만으로 추정하지 않는다.
+  - KMA는 `02/05/08/11/14/17/20/23 KST` 하루 8회 발표하며 근시일 자료를 1시간 간격으로 제공한다. `baseDate/baseTime`과 `fcstDate/fcstTime`은 별도 시각이다.
+  - 현재 Entity의 7개 지역/grid, canonical `DATA_GO_KR_SERVICE_KEY`, gateway·Panel 상태 패턴은 재사용할 수 있다. nowcast schema·route·query cadence는 재사용하지 않는다.
+  - 레거시 `WeatherTimeline`은 `TIME_STEPS`와 지역별 baseline으로 만든 “더미 예보”이므로 실제 데이터 근거로 사용하지 않는다.
+- 값 미출력 live contract gate:
+  - 서울 `nx=60, ny=127` 최신 안전 slot을 HTTPS `getVilageFcst`, `numOfRows=2000`, JSON으로 1회 요청해 HTTP 200·`resultCode=00`을 확인했다.
+  - `totalCount=871`, item 871, page 1로 pagination이 완결됐고 base slot·grid는 각각 하나였다. 14 categories와 72개 distinct 예보시각 중 현재 이후 24시간은 24/24 존재했다.
+  - PCP는 64개 `강수없음` 계열과 연장 구간 숫자 정성 code 8개가 공존했다. T22 24시간 window 밖의 code를 mm로 오인하지 않고, 허용 window 안의 공식 정량 문자열만 category parser로 처리한다.
+  - credential·요청 URL·raw body·예보 값은 출력·저장하지 않았다.
+- 포함 제안:
+  1. 값 미출력 서울 live contract gate로 latest safe base slot, `totalCount`·pagination, grid·category·시간 범위를 동결
+  2. 별도 KMA provider와 `/api/weather/forecast?region=...` route, shared KMA admission·budget·credential 사용
+  3. `issuedAt`, `forecastAt`, 24개 연속 KST hour와 unavailable slot을 가진 strict Entity 계약
+  4. `TMP`, `SKY`, `PTY`, `POP`, `PCP`, `REH`, `WSD`만 정규화하고 알 수 없는 code·중복 category·잘못된 grid·pagination 모순은 fail closed
+  5. 별도 TanStack Query와 `weather-forecast` Widget의 loading·error/retry·empty·stale·setup·partial·success 상태
+  6. 기존 panel grid에서 실황 바로 뒤의 `서울 시간별 예보`: 24시간 계약 중 가장 가까운 6개 slot을 2xl 3×2·narrow 2×3 ordered list로 표시하고 발표시각과 예보시각을 구분
+- 제외:
+  - 기존 실황 route/query 변경, `getUltraSrtFcst`, 기상특보(T23), 일 최고·최저와 +5일 일별 요약
+  - 지도 색상 overlay·wind canvas·재생 animation, 24시간 전체를 한 화면에 펼치는 ribbon, 지역 selector·전역 signal·map click 연동
+  - 새 icon·chart dependency, browser에서 KMA 직접 호출, credential·`.env` 변경
+- TDD·검증:
+  - RED: KST 자정·월/연도·윤일과 발표 직전/직후, 안전 지연, pagination 누락·중복, 24시간 gap, category code·단위·nullable, abort·timeout·schema failure를 고정한다.
+  - GREEN: provider → route/cache → Entity query → Widget 상태 → Page/Shell public composition 순서로 최소 구현한다.
+  - 회귀: 기존 `/api/weather`·Regional Context dedup, seven-region contract, production runtime, gateway last-good, FSD/public API와 client bundle을 확인한다.
+  - 완료 전 focused tests, `npm run validate`, 값 미출력 production gateway live smoke, light/dark·desktop/narrow 6-slot panel QA가 모두 필요하다.
+- 구현·검증 증거:
+  - Entity는 exact-hour `issuedAt`·24개 연속 `forecastAt`과 available/unavailable period를 검증하고, provider는 collection time 다음 정시부터 24시간을 고정해 첫 slot 누락도 이동시키지 않는다.
+  - `/api/weather/forecast`는 canonical key, shared `route.weather` admission·`provider.kma` budget, forecast 전용 breaker와 30분 fresh/15분 CDN profile을 사용한다. 기존 `/api/weather` 계약은 변경하지 않았다.
+  - Widget은 현재 이후 가장 가까운 6개를 ordered 2×3/3×2 grid로 표시하고 정시 boundary에서 스스로 갱신한다. loading·error/retry·empty·stale·setup·partial·no-future를 검증했다.
+  - focused 10 files 96 tests와 최종 `npm run validate`의 Biome 374 files, 1,495 passed·10 gated skipped, strict TypeScript, client/server build가 PASS했다. initial client JS는 gzip 65.95 kB이고 기존 HLS lazy chunk는 분리돼 있다.
+  - local canonical key로 credential-gated production runtime smoke 1 test가 PASS했다. 실행 중 localhost gateway도 HTTP 200, 서울 24 periods, exact-hour·연속·첫 period non-past, KMA source를 값·키 출력 없이 확인했다.
+  - server·UI·architecture 독립 재리뷰는 current-time anchor, PCP shape, 공유 admission, hour alignment, 정시 UI timer와 접근성 상태 수정 후 남은 finding 없이 PASS했다.
+- 잔여 release condition:
+  - Browser runtime 연결 목록이 비어 자동 시각 검증을 수행하지 못했다. 사용자가 `http://localhost:5173/`에서 light/dark 각각 desktop 3×2·narrow 2×3, 실황 바로 뒤 배치, 미래 6개 순서, overflow·console error 부재를 확인해야 한다.
+- 사용자 수락·게시:
+  - 사용자는 수동 시각 QA가 미검증임을 명시한 최종 보고 뒤 T22의 commit·development PR·병합과 다음 단계 진행을 지시했다. 이 결정은 미검증 경로를 자동 PASS로 바꾸지 않으며 외부 공개 전 수동 시각 QA 조건은 유지한다.
+- Guardrail: `ACCEPTED` — final commit·push·development PR·병합이 승인됐다. 외부 공개 전에는 위 수동 시각 QA를 별도로 완료한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3122,3 +3168,6 @@ flowchart LR
 | 2026-07-29 | 1280px 2→5열 가독성 finding과 live-smoke all-empty false-positive를 RED→GREEN으로 해소; 전체 1,178 tests·client/server build와 독립 재리뷰 PASS, browser backend 부재 제한을 기록하고 사용자 ACCEPTED 대기 | T14 |
 | 2026-07-29 | 사용자가 PASS 보고에 “진행”으로 응답해 T14 결과와 final commit을 ACCEPTED; 검증된 단일 목적 변경만 commit하고 push·merge는 별도 승인 전 수행하지 않음 | T14 |
 | 2026-07-31 | T21 CCTV HTTPS-HLS를 strict final-manifest·resource boundary, lazy `hls.js`, one-stream UI와 teardown으로 RED→GREEN; 전체 1,441 tests·두 build와 독립 리뷰 PASS. 연결 browser 부재와 ITS timeout을 external release gate로 유지한 채 사용자가 결과 수락과 feature commit·development PR·병합, T22 기획 진행을 승인 | T21→T22 |
+| 2026-07-31 | 사용자가 “시작”으로 D-053과 T22 단기·시간별 예보 범위를 승인; 기존 실황 계약을 보존하고 값 미출력 `getVilageFcst` 서울 contract gate부터 착수 | T22 |
+| 2026-07-31 | T22 Entity·provider·gateway·Query·Dashboard Widget을 RED→GREEN; current-time anchor·hour alignment·shared admission·정시 UI 갱신 findings를 수정하고 전체 1,495 tests·두 build 및 실키 production smoke PASS. 연결 browser 부재로 수동 light/dark·desktop/narrow QA만 BLOCKED | T22 |
+| 2026-07-31 | 사용자가 수동 시각 QA 미검증 제한을 보고받은 뒤 T22 commit·development PR·병합과 다음 단계 진행을 지시해 결과를 ACCEPTED; 외부 공개 전 수동 QA 조건은 유지 | T22 |
