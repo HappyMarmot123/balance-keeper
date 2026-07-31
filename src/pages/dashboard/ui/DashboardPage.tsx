@@ -7,6 +7,7 @@ import { MacroWidget } from '../../../widgets/macro';
 import { MarketsWidget } from '../../../widgets/markets';
 import { NewsWidget } from '../../../widgets/news';
 import { RegionalContextWidget } from '../../../widgets/regional-context';
+import { WeatherForecastWidget } from '../../../widgets/weather-forecast';
 import { WeatherNowcastWidget } from '../../../widgets/weather-nowcast';
 
 export function DashboardPage() {
@@ -15,6 +16,7 @@ export function DashboardPage() {
       airQualitySlot={<AirQualityWidget />}
       disasterSlot={<DisasterWidget />}
       earthquakeSlot={<EarthquakeWidget />}
+      forecastSlot={<WeatherForecastWidget />}
       mapSlot={<KoreaMapWidget />}
       macroSlot={<MacroWidget />}
       marketsSlot={<MarketsWidget />}

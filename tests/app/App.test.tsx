@@ -23,6 +23,31 @@ const weatherEnvelope = {
   },
 } as const;
 
+const weatherForecastFirstAt = Date.parse('2026-07-22T15:00:00+09:00');
+const weatherForecastEnvelope = {
+  data: {
+    issuedAt: Date.parse('2026-07-22T14:00:00+09:00'),
+    periods: Array.from({ length: 24 }, (_, index) => ({
+      availability: 'available',
+      forecastAt: weatherForecastFirstAt + index * 60 * 60_000,
+      precipitationAmount: { kind: 'none' },
+      precipitationProbabilityPercent: 10,
+      precipitationType: 'none',
+      relativeHumidityPercent: 65,
+      skyCondition: 'clear',
+      temperatureCelsius: 28 - index,
+      windSpeedMetersPerSecond: 2.1,
+    })),
+    region: 'seoul',
+  },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: Date.parse('2026-07-22T14:09:00+09:00'),
+    requestId: 'app-weather-forecast-request',
+    source: 'KMA',
+  },
+} as const;
+
 const airQualityEnvelope = {
   data: {
     observedAt: Date.parse('2026-07-22T14:00:00+09:00'),
@@ -206,21 +231,25 @@ const marketsEnvelope = {
 
 beforeEach(() => {
   queryClient.clear();
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-22T14:10:00+09:00'));
   vi.stubEnv('VITE_NAVER_MAPS_KEY_ID', '');
   vi.stubEnv('VITE_NAVER_MAP_STYLE_ID', '');
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      const envelope = requestUrl.startsWith('/api/air?')
-        ? airQualityEnvelope
-        : requestUrl === '/api/earthquake'
-          ? earthquakeEnvelope
-          : requestUrl === '/api/macro'
-            ? macroEnvelope
-            : requestUrl === '/api/markets'
-              ? marketsEnvelope
-              : weatherEnvelope;
+      const envelope =
+        requestUrl === '/api/weather/forecast?region=seoul'
+          ? weatherForecastEnvelope
+          : requestUrl.startsWith('/api/air?')
+            ? airQualityEnvelope
+            : requestUrl === '/api/earthquake'
+              ? earthquakeEnvelope
+              : requestUrl === '/api/macro'
+                ? macroEnvelope
+                : requestUrl === '/api/markets'
+                  ? marketsEnvelope
+                  : weatherEnvelope;
 
       return Promise.resolve(
         new Response(JSON.stringify(envelope), {
@@ -234,6 +263,7 @@ beforeEach(() => {
 
 afterEach(() => {
   queryClient.clear();
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
@@ -261,6 +291,7 @@ describe('application bootstrap', () => {
 
     expect(screen.getByRole('group', { name: '화면 테마' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '서울 기상 실황' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: '서울 시간별 예보' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '서울 대기질' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '동아시아 지진' })).toBeTruthy();
     expect(screen.getByRole('region', { name: '한국 거시경제' })).toBeTruthy();
@@ -279,6 +310,17 @@ describe('application bootstrap', () => {
     expect(screen.getByText('14:00 기준')).toBeTruthy();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/weather?region=seoul',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('renders the nearest KMA forecast periods through the dedicated query', async () => {
+    render(<App />);
+
+    expect(await screen.findByText('28 °C')).toBeTruthy();
+    expect(screen.getByText('14:00 발표')).toBeTruthy();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/weather/forecast?region=seoul',
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });

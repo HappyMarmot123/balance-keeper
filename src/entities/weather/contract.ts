@@ -1,4 +1,24 @@
 export type {
+  WeatherForecast,
+  WeatherForecastAvailablePeriod,
+  WeatherForecastData,
+  WeatherForecastEnvelope,
+  WeatherForecastPeriod,
+  WeatherForecastPrecipitationAmount,
+  WeatherForecastPrecipitationType,
+  WeatherForecastSkyCondition,
+} from './model/weatherForecast';
+export {
+  weatherForecastAvailablePeriodSchema,
+  weatherForecastDataSchema,
+  weatherForecastPeriodSchema,
+  weatherForecastPrecipitationAmountSchema,
+  weatherForecastPrecipitationTypeSchema,
+  weatherForecastSchema,
+  weatherForecastSkyConditionSchema,
+  weatherForecastUnavailablePeriodSchema,
+} from './model/weatherForecast';
+export type {
   WeatherNowcast,
   WeatherNowcastData,
   WeatherNowcastEnvelope,

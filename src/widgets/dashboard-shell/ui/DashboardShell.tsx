@@ -6,6 +6,7 @@ type DashboardShellProps = {
   airQualitySlot: ComponentChildren;
   disasterSlot: ComponentChildren;
   earthquakeSlot: ComponentChildren;
+  forecastSlot: ComponentChildren;
   mapSlot: ComponentChildren;
   macroSlot: ComponentChildren;
   marketsSlot: ComponentChildren;
@@ -18,6 +19,7 @@ export function DashboardShell({
   airQualitySlot,
   disasterSlot,
   earthquakeSlot,
+  forecastSlot,
   mapSlot,
   macroSlot,
   marketsSlot,
@@ -54,6 +56,7 @@ export function DashboardShell({
 
           <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
             {weatherSlot}
+            {forecastSlot}
             {airQualitySlot}
             {earthquakeSlot}
             {disasterSlot}
