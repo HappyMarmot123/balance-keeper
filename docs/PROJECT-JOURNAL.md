@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T23 KMA 기상특보 — ACCEPTED |
-| 다음 단계 | feature commit·development PR 게시 후 사용자 병합 판단 |
+| 현재 단계 | T24 AIS feasibility — ACCEPTED |
+| 다음 단계 | T24 commit·development PR → T25 격자형 해상교통 상세 범위 승인 |
 
 ---
 
@@ -273,6 +273,8 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-053 | T22는 기존 `/api/weather` 실황 계약을 보존하고 `/api/weather/forecast?region=...`를 별도로 추가한다. KMA `getVilageFcst`의 발표시각과 예보시각을 분리해 현재 이후 24개 KST 시간 slot으로 정규화하고, 누락 slot은 값을 발명하지 않은 unavailable period로 보존한다. UI는 서울 고정 일반 panel에서 가장 가까운 6개 시간을 보여주며 전역 지역 선택·지도 overlay·재생 animation은 제외한다. | ACCEPTED | 기존 실황 query는 Regional Context와 dedup되므로 path·key·cadence 변경 시 회귀가 크다. KMA는 하루 8회 발표하면서 근시일 자료를 1시간 간격으로 제공하므로 독립 cache/query와 명시적 timeline이 맞다. 9번째 dashboard panel로 넣으면 2xl 3×3 구성이 완성되고 지도 높이를 침범하지 않는다. 레거시 timeline은 “더미 예보”이므로 데이터·재생 동작을 이식하지 않는다. 사용자가 2026-07-31 “시작”으로 범위를 승인하고 자동·실키 검증 결과 뒤 development 병합과 다음 단계 진행을 지시했다. |
 | D-054 | T23는 공공데이터포털 `WthrWrnInfoService/getPwnStatus`를 현재 발효 상태의 정본으로 사용하고 `getWthrWrnMsg`는 제한된 최근 통보문 보강에만 사용한다. canonical `DATA_GO_KR_SERVICE_KEY`를 재사용하며 `/api/weather/alerts`와 독립 Entity·Query·Widget을 추가한다. UI는 지도와 패널 grid 사이의 전폭 알림 영역으로 두고, 발효 중 특보가 없을 때도 명시적 empty 상태를 제공한다. 공식 지역 geometry 계약이 확인되기 전에는 polygon을 만들거나 지역명으로 active/cancel을 추론하지 않고 지도 overlay는 T30으로 미룬다. | APPROVED | 현재 공식 서비스는 목록·통보문·특보코드·현재 현황을 별도 상세기능으로 제공하며 목록 응답만으로 발효·해제를 판정할 수 없다. 기존 T23 요약의 `지역 geometry`는 근거 없는 좌표 생성 위험이 있어 공식 mapping 검증 전 범위에서 제외하는 변경안을 사용자가 2026-07-31 “시작”으로 승인했다. |
 | D-055 | data.go.kr 점검 중에는 2026-06-01 공식 활용가이드의 현황·특보코드·통보문 schema와 synthetic fixture로 T23 RED→GREEN·자동 회귀를 진행한다. `getPwnStatus`의 현재 집계문과 `getPwnCd`의 구조화된 lifecycle을 교차 사용하고, active가 있을 때만 `getWthrWrnMsg`를 최대 1회 보강한다. live smoke는 현재 Task 완료 조건에서 외부 공개 release condition으로 이동하며 실제 응답 값을 fixture에 복사하지 않는다. | APPROVED | canonical key는 다른 KMA 서비스에서 정상이고 기상특보 3개 endpoint만 403이므로 data.go.kr 점검·활용신청 불가라는 사용자의 설명과 일치한다. 사용자가 “되었다 가정하고 모킹 데이터로 다음 작업 진행”을 명시해 offline 구현과 live gate 유예를 승인했다. |
+| D-056 | T24는 AISstream 개별 군함 구현이 아니라 feasibility-only Task로 진행한다. 공개 재배포·상업 이용·자동 수집·파생 데이터·retention과 안전 조건이 공식 서면 근거로 모두 확인될 때만 개별 vessel 범위를 재검토하고, 그 전에는 key 발급·WebSocket probe·payload 저장을 금지한다. 동시에 한국 공식 AIS 집계형 데이터가 실시간 군함 추적이 아닌 해상교통 맥락으로 사용 가능한지 별도 판정한다. | APPROVED | T23 병합 뒤 사용자가 “다음 단계 진행”을 지시했고 순서상 T24의 완료 조건은 구현이 아니라 권리·안전·coverage GO/NO-GO다. 현재 D-016과 T02는 AISstream production 기본 source와 개별 군함 추적을 `NO_GO_CURRENT`로 고정하므로, 새 서면 근거 없이 T25를 시작하면 기존 승인 결정과 충돌한다. |
+| D-057 | AISstream 기반 공개 개별 군함 추적은 `NO_GO`를 유지한다. 별도 제품 후보는 군함 식별·개별 좌표·항로 추론이 없는 격자별 해상교통량·밀집도로 한정하며, KOMSA MTIS를 1순위·해양수산부 GICOMS를 2순위 `CONDITIONAL` 후보로 둔다. | ACCEPTED | AISstream의 공개 재배포·상업 이용·파생 데이터·retention 권리는 공식 공개 문서에서 확인되지 않았고 beta·no SLA다. IMO는 군함·정부선의 AIS 의무 예외와 송신 중단·불완전성을 명시하며 웹 공개의 안전·보안 위험을 경고한다. 두 한국 공식 후보는 이용허락 제한이 없지만 집계 데이터일 뿐이며 운영 승인·quota·HTTPS·실 schema contract gate가 남았다. 사용자가 2026-07-31 T24 판정과 T25의 격자형 해상교통 재정의 방향을 수락했으며, 상세 Task 승인 전 구현은 시작하지 않는다. |
 
 ---
 
@@ -700,7 +702,7 @@ primitive OKLCH
 | A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
 | A10 | 한국 기준 동아시아 상황 (client projection) | MVP | PASS | 기존 기상·지진·시장·보도자료 exact Query key를 재사용하고 `/api/neighbor` 없이 요청 중복 제거 | T17 |
 | A11 | `/api/military` 군용기 | PARTIAL | NOT_STARTED | OpenSky `NO_GO` until written license; T18을 provider feasibility로 변경 | T18 |
-| A12 | AIS 군함 | MISSING | NOT_STARTED | 개인 군함 추적 `NO_GO`; 서면 권리 또는 공식 집계형 scope feasibility | T24~T25 |
+| A12 | AIS 군함 | MISSING | NO_GO | 공개 개별 군함 추적은 권리·coverage·안전 조건 미충족. 비식별 격자형 해상교통 후보는 별도 범위 승인 필요 | T24~T25 |
 | A13 | `/api/cctv/list` | MVP | NOT_STARTED | current ITS `type=ex\|its`, bbox·좌표·media URL·실 quota keyed probe | T19 |
 | A14 | `/api/cctv/image` | BROKEN_FLOW | NOT_STARTED | 레거시는 null이나 current ITS `cctvType=3` 존재; HTTPS·크기·CORS 검증 | T20 |
 | A15 | `/api/cctv/stream` | PARTIAL | NOT_STARTED | `cctvType=4` HTTPS-HLS 우선, Vercel segment relay 제거·browser 검증 | T21 |
@@ -2958,7 +2960,59 @@ flowchart LR
 - 사용자 수락:
   - 사용자가 최종 결과와 연결 browser 부재의 수동 시각 QA 미검증 제한을 보고받은 뒤 “진행”으로 T23 결과를 수락하고 final commit·development PR을 승인했다.
   - 이 수락은 data.go.kr live 성공이나 light/dark·desktop/narrow 시각 성공을 주장하는 것이 아니다. 두 항목은 외부 공개 전 release condition으로 유지한다.
+- 병합:
+  - PR `#21`의 `quality-gate` 성공과 mergeable 상태를 확인한 뒤 merge commit `08f36e6`으로 `development`에 병합했다. local·origin `development`가 같은 commit이고 clean임을 확인했다.
 - Guardrail: `ACCEPTED` — 범위·근거·자동 회귀·독립 review는 PASS했고 사용자가 잔여 검증 제한을 명시적으로 수락했다. final commit·development PR을 진행하되 병합은 별도 사용자 판단을 기다린다.
+
+### T24 — AIS feasibility
+
+- 상태: `ACCEPTED` — 공식 권리·안전·coverage 조사와 전체 자동 검증이 PASS했고, 사용자가 공개 개별 군함 `NO_GO`와 비식별 격자형 해상교통 `CONDITIONAL` 판정을 수락해 final commit·development PR을 승인했다.
+- 목적:
+  - AISstream 기반 개별 군함 위치를 public dashboard에 표시할 수 있는지 기술 도달성과 별개로 공식 권리·안전·coverage 근거로 판정한다.
+  - 개별 vessel 범위가 불가능하면 한국 공식 AIS 집계형 데이터가 군함 추적이 아닌 해상교통 맥락으로 제품 가치를 제공할 수 있는지 별도로 판정한다.
+- dependency:
+  - T02·T06은 `ACCEPTED`이고 시작 기준선은 T23 merge가 반영된 `development@08f36e6`다.
+  - D-016의 production 기본 source `NO_GO`와 T02의 개별 군함 `NO_GO_CURRENT`를 출발점으로 삼는다. 새 공식 서면 근거가 없으면 기존 결정을 유지한다.
+- 포함:
+  1. AISstream 공식 문서·약관·privacy·지원 범위에서 공개 재배포, 상업 이용, 자동 수집, 파생 데이터, 저장·retention과 SLA/schema 안정성을 확인
+  2. IMO 공식 AIS 지침에서 군함·정부선박 적용 예외, 송신 중단 가능성과 coverage·정확도 한계를 확인
+  3. 한국 공공데이터포털·해양수산부 공식 AIS 집계형 후보의 데이터 단위, 갱신 주기, 라이선스와 군함 식별 가능 여부 확인
+  4. 제품 안전 경계로 exact 군함 식별·실시간 위치·항로 추론과 집계·지연 해상교통 맥락을 분리
+  5. 각 후보를 `GO`, `CONDITIONAL`, `NO_GO`로 판정하고 T25 착수 조건 또는 폐기 조건을 명시
+- 제외:
+  - API key 발급·사용, WebSocket 또는 keyed HTTP probe, payload·식별자·좌표 저장
+  - provider 문의·계약 체결, 결제·구독, runtime·Entity·Widget·지도 overlay 구현
+  - 비공식 선박 분류 DB 결합, 이름·MMSI로 군함을 추정하거나 누락 선박을 보간하는 행위
+- 완료 조건:
+  - 권리, 기술 안정성, coverage, 정확도, 안전, 운영 topology를 서로 분리해 공식 근거와 확인 불가 항목을 기록한다.
+  - 개별 실시간 군함과 공식 집계형 해상교통을 별도 verdict로 내리고, `GO`가 아니면 T25를 시작하지 않는다.
+  - 코드·secret·외부 계정 변경이 없고 기존 production runtime에 영향이 없음을 확인한다.
+- 검증:
+  - 정상: 공식 서면 근거가 모든 필수 권리와 안전 조건을 명시해 bounded scope를 정의할 수 있다.
+  - 실패: 약관 부재·재배포 불명·상업 제한·retention 불명·개별 군함 안전 위험 중 하나라도 있으면 개별 추적은 `NO_GO` 또는 `CONDITIONAL`이다.
+  - 경계: AIS 송신 예외·수신 공백·잘못된 vessel type·지연·중복·MMSI 재사용을 완전한 군함 현황으로 표현하지 않는다.
+  - 회귀: T17 군 등록 항공기, T19~T21 CCTV와 T26 ITS 범위로 AIS 결정을 전파하거나 기존 지도/query를 변경하지 않는다.
+- 공식 근거:
+  - [AISstream 공식 문서](https://aisstream.io/documentation.html)는 backend WebSocket 수집과 자체 client 중계 topology를 안내하지만 서비스가 beta이고 SLA가 없으며 API/object model이 불안정하다고 명시한다. 공식 home·문서·privacy navigation에는 feed의 공개 재배포·상업 이용·파생 데이터·저장·retention을 허가하는 약관이나 license가 확인되지 않았다. Privacy 문서는 방문자·계정 정보 정책이지 AIS feed 이용허락이 아니다.
+  - [IMO AIS 안내](https://www.imo.org/en/ourwork/safety/pages/ais.aspx)는 웹 등에 AIS 데이터를 공개하면 선박·항만 안전과 보안에 해로울 수 있다고 경고한다. [Resolution A.1106(29)](https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/AssemblyDocuments/A.1106%2829%29.pdf)은 군함·해군 보조함·정부선이 탑재 의무 대상이 아니며 송신 중단, 누락·오류와 약 20~30해리 VHF 한계가 있어 완전한 교통 그림이나 단일 정본으로 사용할 수 없다고 명시한다.
+  - [KOMSA 실시간 교통정보](https://www.data.go.kr/data/15128233/openapi.do)는 5분 단위 해양격자별 선박 척수·밀집도 REST 데이터이며 무료·이용허락 제한 없음이다. 개별 식별자가 없는 비식별 집계라 제품 대안 1순위지만 개발 500건, 운영 심의승인과 실제 HTTPS/schema/quota 검증이 남았다.
+  - [해양수산부 연안 AIS 통계](https://www.data.go.kr/data/15084033/openapi.do)는 1시간 단위 해양구역별 선박 척수 WMS/WFS 데이터이며 무료·이용허락 제한 없음이다. GICOMS 별도 key/domain과 기관별 traffic 정책, 실제 HTTPS/schema 검증이 남아 2순위다.
+- 판정:
+
+  | 후보 | 판정 | 이유·release condition |
+  | --- | --- | --- |
+  | AISstream 공개 개별 군함 | `NO_GO` | 권리·SLA·coverage·정확도·안전 조건 미충족. 명시적 공개·상업 relay, 파생·보관·attribution 권리와 상주 ingestion topology가 서면 확인되더라도 안전 범위를 다시 승인받아야 한다. |
+  | KOMSA MTIS 격자 교통량 | `CONDITIONAL` | 군함 식별 없는 5분 집계로만 재기획 가능. 운영 승인·quota와 keyed HTTPS/schema/empty/coverage contract gate 뒤 별도 Task 승인이 필요하다. |
+  | GICOMS 연안 AIS 통계 | `CONDITIONAL` | 군함 식별 없는 1시간 집계 대안. 별도 key/domain·quota와 WMS/WFS 계약 검증 뒤에만 fallback 후보가 된다. |
+
+- 실제 검증:
+  - 저장소와 레거시를 검색해 현재 AIS runtime 구현이 없고 레거시에는 미사용 `AISSTREAM_API_KEY` 예시만 있음을 확인했다.
+  - API key·WebSocket·keyed HTTP probe·payload 저장·외부 신청을 수행하지 않았다. 변경은 이 저널뿐이며 production runtime·기존 query·지도·다른 Task에는 영향이 없다.
+  - `npm run validate`: Biome `396 files`, Vitest `166 files / 1,553 tests PASS`와 explicit credential gates `9 files / 11 tests SKIPPED`, strict TypeScript, client/server build가 모두 PASS했다. 기존 HLS chunk 크기 경고 외 새 오류는 없다.
+- 사용자 수락:
+  - 사용자가 “네”로 T24 판정과 T25의 격자형 해상교통 재정의 방향을 수락하고 final commit·development PR을 승인했다.
+  - 이 수락은 MTIS/GICOMS의 운영 승인·quota·HTTPS·실 schema가 검증됐다는 뜻이 아니다. 상세 T25 Task와 keyed contract gate는 별도 승인을 받아야 한다.
+- Guardrail: `ACCEPTED` — 범위·공식 근거·실패·경계·회귀 검증이 완료됐고, secret·probe·구현 없이 기존 runtime을 보존한 결과를 사용자가 수락했다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3237,3 +3291,6 @@ flowchart LR
 | 2026-07-31 | T23 Entity→provider→gateway→Query→전폭 Widget을 synthetic fixture RED→GREEN하고 review findings 4건을 회귀로 수정; 전체 1,553 tests·client/server build와 독립 architecture/server/UI review PASS, live는 release gate로 분리 | T23 |
 | 2026-07-31 | 연결 browser가 없어 light/dark·desktop/narrow 실제 시각 QA를 수행하지 못해 T23 BLOCKED; 자동 상태·반응형·접근성 계약은 PASS했으며 사용자 수동 확인 또는 미검증 제한 수락 전 commit하지 않음 | T23 |
 | 2026-07-31 | 사용자가 “진행”으로 T23 결과와 browser 수동 QA 미검증 제한을 수락하고 final commit·development PR을 승인; data.go.kr live와 실제 시각 확인은 외부 공개 release condition으로 유지 | T23 |
+| 2026-07-31 | PR #21 quality-gate PASS 후 merge commit `08f36e6`으로 T23을 development에 병합하고 local·origin 동기화 확인; 사용자 지시에 따라 T24 feasibility-only 조사 시작 | T23→T24 |
+| 2026-07-31 | AISstream 권리·운영 계약, IMO 안전·coverage 지침과 한국 공식 집계 후보를 교차 검증; 공개 개별 군함은 NO_GO, MTIS 5분 격자와 GICOMS 1시간 집계는 별도 범위·keyed contract gate가 필요한 CONDITIONAL로 판정. 구현·key·probe 없이 `npm run validate` PASS, 사용자 수락 전 commit하지 않음 | T24 |
+| 2026-07-31 | 사용자가 T24 판정과 T25의 비식별 격자형 해상교통 재정의 방향을 수락하고 T24 final commit·development PR을 승인; T25 상세 범위와 keyed contract gate는 별도 승인 전 시작하지 않음 | T24→T25 |
