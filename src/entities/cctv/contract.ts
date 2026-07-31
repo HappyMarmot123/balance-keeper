@@ -1,4 +1,4 @@
-export type { CctvBounds, CctvCamera, CctvCameraId, CctvRoadType, CctvSnapshot } from './model/cctv';
+export type { CctvBounds, CctvCamera, CctvCameraId, CctvLiveSource, CctvRoadType, CctvSnapshot } from './model/cctv';
 export {
   CCTV_CAMERA_LIMIT,
   CCTV_KOREA_BOUNDS,
@@ -9,8 +9,12 @@ export {
   cctvCameraIdSchema,
   cctvCameraSchema,
   cctvDataSchema,
+  cctvLiveSourceSchema,
   cctvRoadTypeSchema,
   cctvSnapshotSchema,
   compareCctvCameras,
+  isSafeCctvHlsManifestUrl,
+  isSafeCctvHlsTransportUrl,
+  isSafeCctvInitialHlsUrl,
   isSafeCctvMediaPath,
 } from './model/cctv';

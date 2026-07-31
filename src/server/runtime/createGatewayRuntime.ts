@@ -3,7 +3,7 @@ import { createUpstashRedisClient, type FleetStateStore, UpstashFleetStateStore 
 import {
   createGatewayHandler,
   createRouteRegistry,
-  isGatewayMediaRoute,
+  isGatewayUncachedRoute,
   type RegisteredGatewayRoute,
   type RouteRegistry,
 } from '../gateway';
@@ -61,7 +61,7 @@ export function createGatewayRuntime(options: CreateGatewayRuntimeOptions = {}):
   return Object.freeze({
     getCdnMaxAgeSeconds(pathname: string) {
       const route = registry.getByPath(pathname);
-      return route === undefined || isGatewayMediaRoute(route) ? undefined : route.profile.cdnMaxAgeSeconds;
+      return route === undefined || isGatewayUncachedRoute(route) ? undefined : route.profile.cdnMaxAgeSeconds;
     },
     handle(request: Request) {
       return handler(request, dependencies);

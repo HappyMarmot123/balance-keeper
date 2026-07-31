@@ -8,6 +8,8 @@ import {
   CCTV_MAX_BBOX_SPAN_DEGREES,
   cctvBoundsSchema,
   cctvDataSchema,
+  cctvLiveSourceSchema,
+  isSafeCctvHlsTransportUrl,
 } from '../../../src/entities/cctv/contract';
 
 const liveMediaUrl = `https://cctvsec.ktict.co.kr/4003/${'A'.repeat(107)}=`;
@@ -91,6 +93,38 @@ describe('CCTV entity contract', () => {
     }
     credentialQueryCamera.media.liveHls.url = `${liveMediaUrl}?token=secret`;
     expect(cctvDataSchema.safeParse(credentialQuery).success).toBe(false);
+  });
+
+  it('allows only the approved HLS redirect, playlist, and segment boundary', () => {
+    const masterUrl = 'https://cctvsec.ktict.co.kr:8082/live/master.m3u8?wmsAuthSign=opaque-master-signature';
+    const mediaUrl =
+      'https://cctvsec.ktict.co.kr:8082/live/channel/index.m3u8?nimblesessionid=opaque-session&wmsAuthSign=opaque-media-signature';
+    const segmentUrl =
+      'https://cctvsec.ktict.co.kr:8082/live/channel/segment-1.ts?wmsAuthSign=opaque-media-signature&nimblesessionid=opaque-session';
+
+    expect(cctvLiveSourceSchema.safeParse({ url: liveMediaUrl }).success).toBe(false);
+    expect(cctvLiveSourceSchema.safeParse({ url: masterUrl }).success).toBe(true);
+    expect(cctvLiveSourceSchema.safeParse({ url: segmentUrl }).success).toBe(false);
+    expect(isSafeCctvHlsTransportUrl(liveMediaUrl)).toBe(false);
+    expect(isSafeCctvHlsTransportUrl(masterUrl)).toBe(true);
+    expect(isSafeCctvHlsTransportUrl(mediaUrl)).toBe(true);
+    expect(isSafeCctvHlsTransportUrl(segmentUrl)).toBe(true);
+
+    for (const unsafeUrl of [
+      masterUrl.replace('cctvsec.ktict.co.kr', 'example.com'),
+      masterUrl.replace('https://', 'http://'),
+      masterUrl.replace(':8082', ':8091'),
+      `${masterUrl}&next=https%3A%2F%2Fexample.com`,
+      `${masterUrl}&wmsAuthSign=duplicate`,
+      masterUrl.replace('.m3u8', '.key'),
+      masterUrl.replace('/live/master.m3u8', '/live/%2e%2e/master.m3u8'),
+      masterUrl.replace('/live/master.m3u8', '/live/master%00.m3u8'),
+      masterUrl.replace('/live/master.m3u8', '/live/master%3f.m3u8'),
+      segmentUrl.replace('wmsAuthSign=opaque-media-signature&', ''),
+      `${segmentUrl}#fragment`,
+    ]) {
+      expect(isSafeCctvHlsTransportUrl(unsafeUrl)).toBe(false);
+    }
   });
 
   it('rejects unsafe media paths and merged snapshots above the public payload budget', () => {

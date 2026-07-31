@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { cctvDataSchema } from '../../../src/entities/cctv/contract';
+import { cctvDataSchema, cctvLiveSourceSchema } from '../../../src/entities/cctv/contract';
 import { MemoryFleetStateStore } from '../../../src/server/cache';
 import { createProductionGatewayRuntime, withTrustedAdmissionSubject } from '../../../src/server/runtime';
 import { successEnvelopeSchema } from '../../../src/shared/contracts';
@@ -217,6 +217,73 @@ describe('CCTV production gateway registration', () => {
     expect(runtime.getCdnMaxAgeSeconds('/api/cctv/image')).toBeUndefined();
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(jpegBytes);
     expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('resolves a fresh no-store live source for every sequential playback attempt', async () => {
+    let requestSequence = 0;
+    let redirectSequence = 0;
+    const clock = () => 1_785_360_000_000;
+    const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      if (url.hostname === 'cctvsec.ktict.co.kr') {
+        redirectSequence += 1;
+        expect(init?.redirect).toBe('manual');
+        return new Response(null, {
+          headers: {
+            location: `https://cctvsec.ktict.co.kr:8082/live/master.m3u8?wmsAuthSign=opaque-signature-${redirectSequence}`,
+          },
+          status: 302,
+        });
+      }
+      const fixture = structuredClone(
+        url.searchParams.get('type') === 'ex' ? successFixture.expressway.live : successFixture.nationalRoad.live,
+      ) as { response: { data: Array<{ cctvurl: string }> } };
+      if (redirectSequence > 0) {
+        const row = fixture.response.data[0];
+        if (row !== undefined) {
+          row.cctvurl = row.cctvurl.replace('/4003/Q', '/4003/R').replace('/4004/R', '/4004/S');
+        }
+      }
+      return new Response(JSON.stringify(fixture), {
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    const runtime = createProductionGatewayRuntime({
+      clock,
+      createCoordinationToken: () => `coordination-cctv-stream-${requestSequence}`,
+      createRequestId: () => `request-cctv-stream-${++requestSequence}`,
+      environment: { ITS_API_KEY: 'synthetic-its-key' },
+      fetcher,
+      fleetStateStore: new MemoryFleetStateStore(clock),
+      logWriter: () => undefined,
+    });
+    const createRequest = () =>
+      withTrustedAdmissionSubject(
+        new Request(
+          `https://balance.test/api/cctv/stream?cameraId=${encodeURIComponent(expresswayCameraId)}&bbox=126.5,37,127.5,38`,
+        ),
+        '203.0.113.96',
+      );
+
+    const firstResponse = await runtime.handle(createRequest());
+    const firstEnvelope = successEnvelopeSchema(cctvLiveSourceSchema).parse(await firstResponse.json());
+    const secondResponse = await runtime.handle(createRequest());
+    const secondEnvelope = successEnvelopeSchema(cctvLiveSourceSchema).parse(await secondResponse.json());
+
+    expect(firstResponse.status).toBe(200);
+    expect(firstResponse.headers.get('cache-control')).toBe('no-store');
+    expect(firstResponse.headers.get('etag')).toBeNull();
+    expect(firstEnvelope.meta.cache).toBe('MISS');
+    expect(secondEnvelope.meta.cache).toBe('MISS');
+    expect(secondEnvelope.data.url).not.toBe(firstEnvelope.data.url);
+    expect(runtime.getCdnMaxAgeSeconds('/api/cctv/stream')).toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(6);
+    expect(
+      fetcher.mock.calls.filter(([input]) => new URL(input.toString()).hostname === 'openapi.its.go.kr'),
+    ).toHaveLength(4);
+    expect(
+      fetcher.mock.calls.filter(([input]) => new URL(input.toString()).hostname === 'cctvsec.ktict.co.kr'),
+    ).toHaveLength(2);
   });
 
   it('sanitizes an initial provider failure from both the public envelope and gateway logs', async () => {

@@ -210,6 +210,27 @@ describe('ITS CCTV metadata provider', () => {
     expect(fetcher).toHaveBeenCalledTimes(4);
   });
 
+  it('accepts the provider zero-row response when coordtype remains 1', async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        response: {
+          coordtype: 1,
+          datacount: 0,
+        },
+      }),
+    );
+
+    await expect(
+      fetchItsCctvList({
+        bounds,
+        fetcher,
+        serviceKey: 'synthetic-its-key',
+        signal: new AbortController().signal,
+      }),
+    ).resolves.toEqual({ bounds, cameras: [] });
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
   it.each([
     {
       name: 'a mismatched row count',

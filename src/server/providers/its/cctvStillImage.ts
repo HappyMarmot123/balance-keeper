@@ -1,16 +1,10 @@
 import type { CctvBounds } from '../../../entities/cctv/contract';
 import { isSafeCctvMediaPath } from '../../../entities/cctv/contract';
 import { fetchItsCctvStillMetadata, ItsCctvProviderError } from './cctvList';
+import { selectItsCctvMetadataById } from './cctvMetadata';
 
 export const ITS_CCTV_STILL_IMAGE_MAX_BYTES = 512 * 1_024;
 export const ITS_CCTV_STILL_IMAGE_MAX_DIMENSION = 4_096;
-
-export class ItsCctvCameraNotFoundError extends Error {
-  constructor() {
-    super('ITS CCTV camera was not found');
-    this.name = 'ItsCctvCameraNotFoundError';
-  }
-}
 
 export type FetchItsCctvStillMetadataByIdOptions = Readonly<{
   bounds: CctvBounds;
@@ -41,11 +35,7 @@ export async function fetchItsCctvStillMetadataById(
   options: FetchItsCctvStillMetadataByIdOptions,
 ): Promise<ItsCctvStillMetadata> {
   const metadata = await fetchItsCctvStillMetadata(options);
-  const selected = metadata.find((candidate) => candidate.cameraId === options.cameraId);
-  if (selected === undefined) {
-    throw new ItsCctvCameraNotFoundError();
-  }
-  return selected;
+  return selectItsCctvMetadataById(metadata, options.cameraId);
 }
 
 const parseStillImageUrl = (value: string): string => {

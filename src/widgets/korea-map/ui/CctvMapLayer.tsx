@@ -4,7 +4,7 @@ import { type CctvBounds, cctvListQueryOptions } from '../../../entities/cctv';
 import type { KoreaMapPointLayer, KoreaMapSession, KoreaMapViewport } from '../../../entities/map';
 import { isAppError } from '../../../shared/contracts';
 import { CCTV_POINT_BUDGET, resolveCctvBounds } from '../model/cctvViewport';
-import { CctvStillPanel } from './CctvStillPanel';
+import { CctvLivePanel } from './CctvLivePanel';
 
 const cctvFreshnessFormatter = new Intl.DateTimeFormat('ko-KR', {
   day: '2-digit',
@@ -44,7 +44,7 @@ function CctvDataLayer({ bounds, session }: Readonly<{ bounds: CctvBounds; sessi
   useEffect(() => {
     pointLayerRef.current?.replace(
       cameras.map((camera) => ({
-        accessibleName: `${camera.name} 정지영상 보기`,
+        accessibleName: `${camera.name} 실시간 영상 보기`,
         id: camera.id,
         latitude: camera.latitude,
         longitude: camera.longitude,
@@ -160,7 +160,7 @@ function CctvDataLayer({ bounds, session }: Readonly<{ bounds: CctvBounds; sessi
             {cameras.map((camera) => (
               <li key={camera.id}>
                 <button
-                  aria-label={`${camera.name} 정지영상 보기`}
+                  aria-label={`${camera.name} 실시간 영상 보기`}
                   aria-pressed={selectedCameraId === camera.id}
                   className={
                     selectedCameraId === camera.id
@@ -179,7 +179,7 @@ function CctvDataLayer({ bounds, session }: Readonly<{ bounds: CctvBounds; sessi
                 >
                   <span className="block break-words font-semibold">{camera.name}</span>
                   <span className="mt-1 block text-xs text-muted">
-                    {camera.roadType === 'expressway' ? '고속도로' : '국도'} · 정지영상 보기
+                    {camera.roadType === 'expressway' ? '고속도로' : '국도'} · 실시간 영상 보기
                   </span>
                 </button>
               </li>
@@ -188,7 +188,7 @@ function CctvDataLayer({ bounds, session }: Readonly<{ bounds: CctvBounds; sessi
         )}
       </aside>
       {selectedCamera !== undefined && (
-        <CctvStillPanel
+        <CctvLivePanel
           bounds={query.data.data.bounds}
           camera={selectedCamera}
           key={selectedCamera.id}

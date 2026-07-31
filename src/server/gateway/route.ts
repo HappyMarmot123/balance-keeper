@@ -54,6 +54,22 @@ export interface GatewayRoute<
   readonly profile: GatewayRouteProfile;
 }
 
+export interface GatewayNoStoreRoute<
+  Input = unknown,
+  PublicCacheIdentity = unknown,
+  DataSchema extends z.ZodType = z.ZodType,
+> {
+  readonly kind: 'no-store';
+  readonly id: string;
+  readonly path: `/api/${string}`;
+  readonly dataSchema: DataSchema;
+  parseRequest(
+    request: Request,
+  ): ParsedGatewayRequest<Input, PublicCacheIdentity> | Promise<ParsedGatewayRequest<Input, PublicCacheIdentity>>;
+  load(input: Input, signal: AbortSignal): Promise<UpstreamOutcome<unknown>>;
+  readonly profile: GatewayRouteProfile;
+}
+
 export interface GatewayMediaRoute<Input = unknown, PublicCacheIdentity = unknown> {
   readonly kind: 'media';
   readonly id: string;
@@ -65,10 +81,20 @@ export interface GatewayMediaRoute<Input = unknown, PublicCacheIdentity = unknow
   readonly profile: GatewayRouteProfile;
 }
 
-export type RegisteredGatewayRoute = GatewayRoute | GatewayMediaRoute;
+export type GatewayJsonRoute = GatewayRoute | GatewayNoStoreRoute;
+export type GatewayUncachedRoute = GatewayMediaRoute | GatewayNoStoreRoute;
+export type RegisteredGatewayRoute = GatewayRoute | GatewayUncachedRoute;
 
 export function isGatewayMediaRoute(route: RegisteredGatewayRoute): route is GatewayMediaRoute {
   return 'kind' in route && route.kind === 'media';
+}
+
+export function isGatewayNoStoreRoute(route: RegisteredGatewayRoute): route is GatewayNoStoreRoute {
+  return 'kind' in route && route.kind === 'no-store';
+}
+
+export function isGatewayUncachedRoute(route: RegisteredGatewayRoute): route is GatewayUncachedRoute {
+  return isGatewayMediaRoute(route) || isGatewayNoStoreRoute(route);
 }
 
 /**
