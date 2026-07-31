@@ -141,6 +141,7 @@ describe('server build contract', () => {
       resolve(workspaceRoot, 'src/entities/cctv/contract.ts'),
       resolve(workspaceRoot, 'src/entities/earthquake/contract.ts'),
       resolve(workspaceRoot, 'src/entities/macro/contract.ts'),
+      resolve(workspaceRoot, 'src/entities/maritime-traffic/contract.ts'),
       resolve(workspaceRoot, 'src/entities/weather/contract.ts'),
       resolve(workspaceRoot, 'src/entities/weather-alert/contract.ts'),
     ];
@@ -149,6 +150,7 @@ describe('server build contract', () => {
       resolve(workspaceRoot, 'src/entities/cctv/index.ts'),
       resolve(workspaceRoot, 'src/entities/earthquake/index.ts'),
       resolve(workspaceRoot, 'src/entities/macro/index.ts'),
+      resolve(workspaceRoot, 'src/entities/maritime-traffic/index.ts'),
       resolve(workspaceRoot, 'src/entities/weather/index.ts'),
       resolve(workspaceRoot, 'src/entities/weather-alert/index.ts'),
     ];

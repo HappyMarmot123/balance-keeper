@@ -10,6 +10,7 @@ import { createCctvListRoute, createCctvLiveStreamRoute, createCctvStillImageRou
 import { createDisasterRoute } from '../routes/disaster';
 import { createEarthquakeRoute } from '../routes/earthquake';
 import { createMacroRoute } from '../routes/macro';
+import { createMaritimeTrafficRoute } from '../routes/maritime-traffic';
 import { createMarketsRoute } from '../routes/markets';
 import { createNewsRoute } from '../routes/news';
 import { createWeatherAlertsRoute, createWeatherForecastRoute, createWeatherRoute } from '../routes/weather';
@@ -94,6 +95,12 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     readAdmissionSubject: readTrustedAdmissionSubject,
     serviceKey: readSafetydataCredential(environment),
   });
+  const maritimeTrafficRoute = createMaritimeTrafficRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: dataGoKrServiceKey,
+  });
   const itsServiceKey = readItsCredential(environment);
   const cctvListRoute = createCctvListRoute({
     clock,
@@ -133,6 +140,7 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
       marketsRoute,
       newsRoute,
       disasterRoute,
+      maritimeTrafficRoute,
       cctvListRoute,
       cctvStillImageRoute,
       cctvLiveStreamRoute,

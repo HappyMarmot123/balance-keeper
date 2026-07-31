@@ -1,0 +1,29 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL_SERVICE"
+    },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "grid_id": "G3SYNTHETIC_B2",
+            "vmtc": 7,
+            "dnsty": 18.25
+          },
+          {
+            "grid_id": "G3SYNTHETIC_A1",
+            "vmtc": 12,
+            "dnsty": 43.5
+          }
+        ]
+      },
+      "dataType": "JSON",
+      "pageNo": 1,
+      "numOfRows": 5000,
+      "totalCount": 2,
+      "regDt": "2026-07-31 12:30:00"
+    }
+  }
+}

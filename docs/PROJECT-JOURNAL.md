@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T24 AIS feasibility — ACCEPTED |
-| 다음 단계 | T24 commit·development PR → T25 격자형 해상교통 상세 범위 승인 |
+| 현재 단계 | T25 MTIS 격자형 해상교통 — ACCEPTED |
+| 다음 단계 | T25 final commit·development PR·merge → T26 상세 범위 확인 |
 
 ---
 
@@ -275,6 +275,8 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-055 | data.go.kr 점검 중에는 2026-06-01 공식 활용가이드의 현황·특보코드·통보문 schema와 synthetic fixture로 T23 RED→GREEN·자동 회귀를 진행한다. `getPwnStatus`의 현재 집계문과 `getPwnCd`의 구조화된 lifecycle을 교차 사용하고, active가 있을 때만 `getWthrWrnMsg`를 최대 1회 보강한다. live smoke는 현재 Task 완료 조건에서 외부 공개 release condition으로 이동하며 실제 응답 값을 fixture에 복사하지 않는다. | APPROVED | canonical key는 다른 KMA 서비스에서 정상이고 기상특보 3개 endpoint만 403이므로 data.go.kr 점검·활용신청 불가라는 사용자의 설명과 일치한다. 사용자가 “되었다 가정하고 모킹 데이터로 다음 작업 진행”을 명시해 offline 구현과 live gate 유예를 승인했다. |
 | D-056 | T24는 AISstream 개별 군함 구현이 아니라 feasibility-only Task로 진행한다. 공개 재배포·상업 이용·자동 수집·파생 데이터·retention과 안전 조건이 공식 서면 근거로 모두 확인될 때만 개별 vessel 범위를 재검토하고, 그 전에는 key 발급·WebSocket probe·payload 저장을 금지한다. 동시에 한국 공식 AIS 집계형 데이터가 실시간 군함 추적이 아닌 해상교통 맥락으로 사용 가능한지 별도 판정한다. | APPROVED | T23 병합 뒤 사용자가 “다음 단계 진행”을 지시했고 순서상 T24의 완료 조건은 구현이 아니라 권리·안전·coverage GO/NO-GO다. 현재 D-016과 T02는 AISstream production 기본 source와 개별 군함 추적을 `NO_GO_CURRENT`로 고정하므로, 새 서면 근거 없이 T25를 시작하면 기존 승인 결정과 충돌한다. |
 | D-057 | AISstream 기반 공개 개별 군함 추적은 `NO_GO`를 유지한다. 별도 제품 후보는 군함 식별·개별 좌표·항로 추론이 없는 격자별 해상교통량·밀집도로 한정하며, KOMSA MTIS를 1순위·해양수산부 GICOMS를 2순위 `CONDITIONAL` 후보로 둔다. | ACCEPTED | AISstream의 공개 재배포·상업 이용·파생 데이터·retention 권리는 공식 공개 문서에서 확인되지 않았고 beta·no SLA다. IMO는 군함·정부선의 AIS 의무 예외와 송신 중단·불완전성을 명시하며 웹 공개의 안전·보안 위험을 경고한다. 두 한국 공식 후보는 이용허락 제한이 없지만 집계 데이터일 뿐이며 운영 승인·quota·HTTPS·실 schema contract gate가 남았다. 사용자가 2026-07-31 T24 판정과 T25의 격자형 해상교통 재정의 방향을 수락했으며, 상세 Task 승인 전 구현은 시작하지 않는다. |
+| D-058 | T25는 공공데이터포털 KOMSA MTIS의 최신 비식별 level-4 격자 snapshot을 `/api/maritime-traffic` 데이터 수직 슬라이스로 준비한다. canonical `DATA_GO_KR_SERVICE_KEY`를 재사용하고 public route에는 provider pagination을 노출하지 않는다. Entity Query는 기본 비활성화하며 지도 toggle·geometry·렌더링은 T30에 남긴다. | APPROVED | 공식 OpenAPI는 5분 생성 `grid_id`, `vmtc`, `dnsty`, `regDt`와 pagination만 제공하고 좌표·polygon, 선박용도·톤수·시각·grid level 선택 요청은 제공하지 않는다. 실제 HTTPS, item cardinality, page 수, quota와 공식 grid geometry가 확인되지 않아 값 미출력 keyed gate 전에는 fixture·cache cadence·production route를 확정할 수 없다. 사용자가 2026-07-31 “시작하세요.”로 이 범위와 선행 gate 착수를 승인했다. |
+| D-059 | MTIS 활용승인이 완료됐다고 가정하고 T25 offline 구현을 진행한다. fixture는 공식 Swagger의 `header/body/items.item`, `grid_id/vmtc/dnsty`, `regDt/pageNo/numOfRows/totalCount`만 사용한 synthetic 값으로 작성하며 production은 fixture fallback 없이 실제 provider만 호출한다. 현재 403 때문에 확인하지 못한 다건·empty cardinality, 최대 page size·실 page 수·quota·시간대는 보수적으로 검증하고 live smoke를 외부 공개 release gate로 남긴다. | APPROVED | 사용자가 2026-07-31 “T25 승인됬다 가정하고 작업 진행”으로 기존 keyed gate BLOCKED를 인지한 상태에서 mock-first 범위 변경을 명시적으로 승인했다. 이는 실제 활용승인·live schema 성공을 주장하거나 geometry를 추측하도록 허용하지 않는다. |
 
 ---
 
@@ -702,7 +704,7 @@ primitive OKLCH
 | A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
 | A10 | 한국 기준 동아시아 상황 (client projection) | MVP | PASS | 기존 기상·지진·시장·보도자료 exact Query key를 재사용하고 `/api/neighbor` 없이 요청 중복 제거 | T17 |
 | A11 | `/api/military` 군용기 | PARTIAL | NOT_STARTED | OpenSky `NO_GO` until written license; T18을 provider feasibility로 변경 | T18 |
-| A12 | AIS 군함 | MISSING | NO_GO | 공개 개별 군함 추적은 권리·coverage·안전 조건 미충족. 비식별 격자형 해상교통 후보는 별도 범위 승인 필요 | T24~T25 |
+| A12 | `/api/maritime-traffic` 해상교통 밀도 | PARTIAL | ACCEPTED | 비식별 latest snapshot Entity·기본 비활성 Query·strict KOMSA provider·coarse gateway offline PASS; live 200 JSON·pagination·quota와 grid geometry는 release gate | T24~T25 |
 | A13 | `/api/cctv/list` | MVP | NOT_STARTED | current ITS `type=ex\|its`, bbox·좌표·media URL·실 quota keyed probe | T19 |
 | A14 | `/api/cctv/image` | BROKEN_FLOW | NOT_STARTED | 레거시는 null이나 current ITS `cctvType=3` 존재; HTTPS·크기·CORS 검증 | T20 |
 | A15 | `/api/cctv/stream` | PARTIAL | NOT_STARTED | `cctvType=4` HTTPS-HLS 우선, Vercel segment relay 제거·browser 검증 | T21 |
@@ -891,7 +893,7 @@ flowchart TD
 | T22 | KMA 단기·시간별 예보 | 발표·예보시각 timeline 정규화 | KST 자정, 누락 slot, live | T10 |
 | T23 | KMA 기상특보 | 현황 기반 발효 상태·공식 지역명과 전폭 알림 영역; 지도 geometry는 T30 전 별도 검증 | active/cancel/duplicate/empty/live | T10,T22 |
 | T24 | AIS feasibility | 서면 재배포·상업·retention·안전 계약 또는 공식 집계형 scope의 GO/NO-GO | 권리 확인 전 keyed probe 금지, 안전·coverage·정확도 검토 | T02,T06 |
-| T25 | AIS 군함 | T24가 GO일 때만 vessel slice와 feature flag | fixture, delayed data, live | T24 ACCEPTED |
+| T25 | MTIS 격자 해상교통 데이터 | keyed contract 뒤 비식별 최신 snapshot Entity·gateway·기본 비활성 Query 준비; 지도는 T30 | HTTPS, pagination·quota, empty/schema, 시간·값 경계, secret 비노출 | T24 ACCEPTED |
 | T26 | ITS 9종 계약 검증 | 승인 key로 정확한 HTTPS host·path·port, 쿼터와 schema matrix 승인 | 3~5영업일 key 상태, 각 endpoint gated probe, 빈 결과 | T02,T06 |
 | T27 | ITS 흐름군 | 교통소통·예측·차량검지 공통 segment 모델 | 부분 실패, TTL, 단위 | T26 |
 | T28 | ITS 사건군 | 돌발·재난·위험물 event 모델 | severity, 만료, malformed event | T26 |
@@ -3012,7 +3014,55 @@ flowchart LR
 - 사용자 수락:
   - 사용자가 “네”로 T24 판정과 T25의 격자형 해상교통 재정의 방향을 수락하고 final commit·development PR을 승인했다.
   - 이 수락은 MTIS/GICOMS의 운영 승인·quota·HTTPS·실 schema가 검증됐다는 뜻이 아니다. 상세 T25 Task와 keyed contract gate는 별도 승인을 받아야 한다.
+- 병합:
+  - commit `6b2a8cc`, PR `#22`의 `quality-gate` 성공 뒤 merge commit `d7cb0ae`로 `development`에 병합했고 local·origin 동기화를 확인했다.
 - Guardrail: `ACCEPTED` — 범위·공식 근거·실패·경계·회귀 검증이 완료됐고, secret·probe·구현 없이 기존 runtime을 보존한 결과를 사용자가 수락했다.
+
+### T25 — MTIS 격자형 해상교통 데이터
+
+- 상태: `ACCEPTED` — D-059의 공식 문서 기반 synthetic fixture 범위에서 Entity→provider→gateway→기본 비활성 Query와 전체 자동 회귀를 검증했고, 사용자가 2026-07-31 “PR 머지까지 하고 다음 단계 진행”으로 결과와 final commit·push·development PR·병합을 승인했다. 실제 MTIS live 성공·quota·geometry는 계속 외부 release gate다.
+- 목적: 군함이나 개별 선박을 추적하지 않고 한국 관할 해역의 최신 격자별 선박 척수·밀집도를 T30 지도 통합이 소비할 수 있는 안전한 데이터 계약으로 준비한다.
+- dependency·근거:
+  - T24는 `ACCEPTED`, 시작 기준선은 `development@d7cb0ae`다.
+  - [공공데이터포털 MTIS 실시간 교통정보](https://www.data.go.kr/data/15128233/openapi.do)는 `GET /B554035/realtime/get_realtime`, 필수 `serviceKey/pageNo/numOfRows/dataType`, 5분 생성 `grid_id/vmtc/dnsty/regDt`와 pagination을 문서화한다.
+  - 한국어 메타는 개발 500건·운영 심의승인, 영문 상세는 10,000건·운영 불가로 충돌한다. Swagger의 `item` object 표기와 실제 다건/empty cardinality, HTTPS, 최대 page size도 실계약 확인이 필요하다.
+- 포함:
+  1. 승인된 서비스와 canonical `DATA_GO_KR_SERVICE_KEY`로 값을 출력하지 않는 1회 HTTPS contract gate를 실행해 provider code, JSON MIME, item cardinality, empty, `regDt` 시간대·지연, 값 범위, `totalCount/numOfRows/pageNo`, 최대 page size·payload와 실제 quota를 동결
+  2. `entities/maritime-traffic`의 strict snapshot(`generatedAt`, unique `gridId`, non-negative `vesselCount`, `0..100 densityPercent`)과 `/api/maritime-traffic` Query를 추가하고 Query는 T30 activation 전 기본 `enabled:false`
+  3. `server/providers/komsa`, `server/routes/maritime-traffic`, production coarse gateway 등록과 공식 page 수를 반영한 cache·upstream budget·ETag·stale/empty 정책 구현
+  4. fixture→Entity→provider→route→Query 순서 RED/GREEN, production runtime·secret 비노출·public boundary·전체 회귀 검증
+- 제외:
+  - MMSI·선명·개별 좌표·항로·군함 분류, 선박용도·톤수 breakdown과 과거 시각 조회
+  - `grid_id`로 geometry를 추측하거나 명목 격자 크기로 polygon을 생성하는 행위
+  - 지도 button·legend·polygon/heat overlay, Page·DashboardShell·KoreaMapWidget·KoreaMapSession 변경 — 모두 공식 geometry와 layer registry를 다루는 T30
+  - GICOMS fallback, 별도 MTIS direct key, 외부 활용신청·운영승인 변경
+- 예상 변경: `src/entities/maritime-traffic`, `src/server/providers/komsa`, `src/server/routes/maritime-traffic`, `src/server/runtime/productionRuntime.ts`, 관련 fixture·Entity/provider/route/runtime 테스트. 새 환경변수·dependency·Widget은 없다.
+- 완료 조건·검증:
+  - 정상: 최신 snapshot과 정상 empty가 결정적으로 정렬·정규화되고 MISS→HIT→ETag 304, 기본 비활성 Query가 동작한다.
+  - 실패: missing credential은 provider 호출 전 setup 오류, HTTP·redirect·MIME·size·JSON·provider code·schema·pagination 오류는 stale/error 경계로 처리하며 raw body와 key를 노출하지 않는다.
+  - 경계: duplicate grid, 음수 척수, `0..100` 밖 밀집도, 잘못된 `regDt`, page 불일치, payload/cell 상한과 abort를 거부한다.
+  - 회귀: 기존 data.go credential·KMA/AirKorea/시장 route, gateway budget, CCTV 지도, FSD public API와 client initial bundle을 보존하고 `npm run validate`를 통과한다.
+- `BLOCKED` 조건: 공식 문서와 모순되는 schema가 필요하거나 offline 정상·실패·경계·회귀 검증이 실패하면 중단한다. 실제 item cardinality·empty·시간대·pagination·quota는 live gate 전에는 확정 사실로 승격하지 않으며, 한 snapshot 호출량이 보수적 budget을 넘으면 외부 공개하지 않는다. 공식 geometry 부재는 T25 데이터 계약을 막지 않지만 T30 지도 표시의 선행 해제 조건이다.
+- 외부 공개 release condition: 공공데이터포털 15128233 활용승인 상태에서 canonical key로 공식 HTTPS endpoint가 `resultCode=00` JSON을 반환하고 다건·empty cardinality, `regDt` 시간대·지연, 최대 page size·실 page 수·payload와 quota를 값 미출력 live smoke로 검증한다.
+- 구현:
+  - `entities/maritime-traffic`은 `generatedAt`과 비식별 `gridId/vesselCount/densityPercent`만 허용한다. grid ID는 canonical·unique·오름차순·최대 128자, cell은 최대 5,000개, normalized snapshot은 최대 2 MiB이며 MMSI·선명·좌표·항로와 추가 필드를 거부한다.
+  - Entity Query는 `/api/maritime-traffic`, key `['maritime-traffic']`, 5분 cadence이며 T30 전에는 기본 `enabled:false`다. server-safe `contract.ts`와 browser public barrel을 분리했다.
+  - KOMSA provider는 공식 HTTPS endpoint의 JSON MIME, final origin/path, 선언·실수신 2 MiB, fatal UTF-8, strict header/body/item, `resultCode=00`, object/array/empty, page 1·5,000행·`totalCount`, KST `regDt`, duplicate·수치 경계와 abort를 fail-closed로 검증한다. fixture fallback과 raw body·`resultMsg`·key 노출은 없다.
+  - coarse gateway에 query-free `/api/maritime-traffic`을 등록했다. canonical `DATA_GO_KR_SERVICE_KEY`, 5분 fresh·1분 negative·1시간 stale·CDN 60초·400회/일 cost 1, breaker·ETag를 사용하며 지도·Widget·Page는 변경하지 않았다.
+  - `RUN_KOMSA_MARITIME_TRAFFIC_LIVE_SMOKE=1` 명시적 gate를 추가했으며 기본 suite에서는 skip한다.
+- RED→GREEN 증거:
+  - slice presence → strict Entity → 수치·ID·cell cap → Query → provider transport/schema/pagination/time → route → runtime 순으로 실패를 확인했다.
+  - provider transport 오류가 credential 포함 URL을 노출한 RED를 안전한 오류로 수정했고, strict provider 강화에서 provider code·pagination·duplicate·시간 등 14개 실패를 확인한 뒤 GREEN으로 전환했다.
+  - 독립 리뷰가 5 MiB `gridId`를 public schema가 허용하는 payload 결함을 재현했다. 128자 ID·2 MiB normalized snapshot 테스트를 RED로 추가한 뒤 수정했으며 동일 재현은 `accepted:false`, 관련 77 tests PASS다.
+- 최종 검증:
+  - focused Entity/provider/route/runtime/FSD 회귀는 `8 files / 77 tests PASS`, 명시적 live gate는 기본 skip이다.
+  - `npm run validate`: Biome `412 files`, Vitest `172 passed / 10 skipped files`, `1,599 passed / 12 skipped tests`, strict TypeScript, client·server build PASS다.
+  - client build는 main `238.23 kB / gzip 67.87 kB`, lazy HLS `509.73 kB / gzip 157.64 kB`; server build는 `822.44 kB / gzip 174.51 kB`다. 기존 HLS chunk 경고 외 새 오류는 없다.
+  - 독립 Entity/FSD, provider 공식계약, server gateway/security 리뷰는 최종 PASS다. payload finding 수정 뒤 재검증에서도 새 회귀가 없었다.
+- 미검증·회귀 경계:
+  - 실제 endpoint의 `numOfRows=5000`, 단일 page, object/array/empty, `regDt` 형식·시간대, JSON MIME, 값 범위·payload·quota는 live gate 전까지 provisional이다. 불일치 시 일부 결과를 조용히 자르지 않고 provider failure로 처리한다.
+  - 공식 grid geometry가 없어 T30 지도 표시를 시작할 수 없다. T25는 데이터 vertical slice만 완료했으며 현재 화면 변화는 없다.
+- Guardrail: `ACCEPTED` — 승인 범위의 정상·실패·경계·회귀 검증과 독립 review가 모두 통과했고 알려진 offline 회귀는 없다. 사용자가 잔여 live contract·geometry 제한을 인지한 상태에서 final commit·push·development PR·병합을 승인했다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3294,3 +3344,11 @@ flowchart LR
 | 2026-07-31 | PR #21 quality-gate PASS 후 merge commit `08f36e6`으로 T23을 development에 병합하고 local·origin 동기화 확인; 사용자 지시에 따라 T24 feasibility-only 조사 시작 | T23→T24 |
 | 2026-07-31 | AISstream 권리·운영 계약, IMO 안전·coverage 지침과 한국 공식 집계 후보를 교차 검증; 공개 개별 군함은 NO_GO, MTIS 5분 격자와 GICOMS 1시간 집계는 별도 범위·keyed contract gate가 필요한 CONDITIONAL로 판정. 구현·key·probe 없이 `npm run validate` PASS, 사용자 수락 전 commit하지 않음 | T24 |
 | 2026-07-31 | 사용자가 T24 판정과 T25의 비식별 격자형 해상교통 재정의 방향을 수락하고 T24 final commit·development PR을 승인; T25 상세 범위와 keyed contract gate는 별도 승인 전 시작하지 않음 | T24→T25 |
+| 2026-07-31 | T24 PR #22 quality-gate PASS 후 merge commit `d7cb0ae`로 development에 병합·동기화; 최신 development에서 `feature/t25-maritime-traffic-density` 생성 | T24→T25 |
+| 2026-07-31 | 공식 MTIS Swagger와 현재 Entity/gateway/map 경계를 교차 분석해 T25를 비식별 latest level-4 데이터 수직 슬라이스로 제안; keyed contract 전 구현 금지, geometry·지도 activation은 T30으로 분리 | T25 |
+| 2026-07-31 | 사용자가 “시작하세요.”로 D-058과 T25 범위를 승인; secret·실제 grid 값·raw body를 출력하지 않는 MTIS keyed contract gate부터 착수 | T25 |
+| 2026-07-31 | canonical key 존재·평문 영숫자형을 값 없이 확인한 뒤 MTIS 공식 HTTPS endpoint를 1회 probe했으나 `403 text/plain`, no redirect·no provider code로 실패; 실계약을 검증할 수 없어 T25 BLOCKED, production code·fixture는 생성하지 않음 | T25 |
+| 2026-07-31 | 사용자가 “T25 승인됬다 가정하고 작업 진행”으로 D-059 mock-first 범위 변경을 승인; 공식 Swagger 필드만 사용한 synthetic fixture RED→GREEN을 재개하고 live 200 JSON·pagination·quota는 외부 공개 release gate로 유지 | T25 |
+| 2026-07-31 | T25 비식별 Entity·기본 비활성 Query·strict KOMSA provider·coarse gateway를 synthetic fixture RED→GREEN; transport URL secret leak RED와 provider code·pagination·time 등 14개 strict RED를 수정 | T25 |
+| 2026-07-31 | 독립 리뷰가 public Entity의 5 MiB grid ID 허용을 재현해 128자·2 MiB payload cap 회귀를 RED→GREEN; 전체 `1,599 tests PASS`, 두 build와 3개 영역 재리뷰 PASS, live·geometry는 release gate로 유지 | T25 |
+| 2026-07-31 | 사용자가 “PR 머지까지 하고 다음 단계 진행”으로 T25 결과와 잔여 live·geometry release gate를 수락하고 final commit·push·development PR·quality-gate 후 병합을 승인 | T25→T26 |
