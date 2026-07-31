@@ -6,11 +6,11 @@
 | --- | --- |
 | 문서 역할 | 제품 기획·기술 결정·Task·검증·개발일지의 단일 정본 |
 | 실행 모드 | 승인모드 |
-| 기준일 | 2026-07-30 (Asia/Seoul) |
+| 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T20-R1 CCTV 지도 정지영상 UI — ACCEPTED |
-| 다음 단계 | final commit → development PR quality-gate |
+| 현재 단계 | T21 CCTV 실시간 HLS — ACCEPTED |
+| 다음 단계 | T22 KMA 단기·시간별 예보 상세 기획 |
 
 ---
 
@@ -269,6 +269,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-049 | 항공 신호는 현재 제품에서 `FEATURE_OFF`를 유지한다. OpenSky는 운영 REST 서면 계약을 받기 전 `NO_GO`, ADSB.lol은 ODbL 표시·파생 DB 공개 의무, 동적 제한·향후 feeder key, `filter_mil`의 군 등록 DB 분류와 수신 누락을 제품 문구·상태에 반영하는 별도 구현안이 승인되기 전 `CONDITIONAL`이다. | ACCEPTED | OpenSky state vector에는 군 소유 필드가 없고 운영 사용은 계약 대상이다. ADSB.lol은 API와 공개 데이터를 ODbL로 제공하지만 `/v2/mil`을 “military registered aircraft”로 정의하고 availability·정확성을 보증하지 않는다. 사용자가 T18 PASS 보고에 “승인”으로 응답했다. |
 | D-050 | T19는 ITS `ex\|its × cctvType=3\|4` 목록을 하나의 atomic CCTV metadata snapshot으로 정규화한다. 인증·목록·media metadata는 coarse gateway만 호출하고, public 계약에는 검증된 provider-issued HTTPS URL만 포함한다. media bytes·재생 UI는 T20/T21, viewport·marker·layer registry는 T30까지 제외한다. | ACCEPTED | 현재 공식 CCTV 문서는 `type=ex\|its`, 정지영상 3, HTTPS-HLS 4와 `/cctvInfo`를 명시하지만 JSON/empty/error shape, 실제 quota, media host·만료·CORS는 승인 key probe가 필요하다. 현 map session에는 bbox·overlay API가 없어 T19에서 지도 consumer를 추가하면 T30과 중복된다. 사용자가 T19 상세 제안에 “시작”으로 착수와 선행 probe를 승인했다. |
 | D-051 | T20은 direct CORS 실패의 별도 media topology로 같은 coarse gateway 내부에 viewer-on-demand JPEG binary route 하나를 둔다. 요청은 `cameraId + canonical bbox`만 받고 서버가 최신 type-3 metadata에서 ID를 재확인한다. 성공은 검증 완료된 최대 `512 KiB` JPEG와 `no-store`만 반환하고, raw URL·redirect·Range·polling·byte cache·CDN·video/HLS relay는 금지한다. | ACCEPTED | CCTV ID는 비가역 hash라 fleet-safe reverse index 없이 ID만으로 최신 회전 URL을 복원할 수 없다. 별도 Function이나 legacy raw `src` proxy 없이 exact registry, admission·provider budget·breaker·timeout, MIME·signature·dimension·declared/actual size 검증을 공유한다. 사용자가 direct 실패와 bounded fallback 후보를 보고받은 직후 “진행”으로 이 별도 구현 범위를 승인했다. ITS 표시·relay 조건 확인은 외부 배포 전 release gate로 유지한다. |
+| D-052 | T21의 `native HLS 우선`을 폐기하고 gateway가 initial 302의 body를 relay하지 않은 채 allowlist된 final manifest `Location`만 검증한다. 브라우저는 선택 시 lazy `hls.js` `FetchLoader`를 사용하며 `loader`·`pLoader`·`fLoader` 전체에 URL/resource guard와 `redirect: error`, `credentials: omit`, `referrerPolicy: no-referrer`, `cache: no-store`를 강제한다. | APPROVED | native HLS와 redirect-following XHR은 child/key/map/segment 및 redirect 목적지를 요청 전에 검증할 수 없어 ACCEPTED D-015와 모순된다. Chrome/Edge 중심 MVP의 엄격한 media boundary를 우선하는 지원 범위 변경을 명시해 승인 요청했고, 사용자가 2026-07-31 “진행”으로 amendment 착수를 승인했다. 실제 browser playback 검증과 Task 수락 전에는 commit하지 않는다. |
 
 ---
 
@@ -2750,7 +2751,7 @@ flowchart LR
 
 ### T20-R1 — CCTV 지도 정지영상 UI
 
-- 상태: `ACCEPTED` — 구현·자동 회귀와 독립 리뷰 PASS 보고 및 localhost 수동 QA 목록 전달 후 사용자가 “진행”으로 결과와 final commit·`development` PR 진행을 승인했다.
+- 상태: `ACCEPTED` — 구현·자동 회귀와 독립 리뷰 PASS 보고 및 localhost 수동 QA 목록 전달 후 사용자가 “진행”으로 결과와 final commit·`development` PR 진행을 승인했다. commit `200306f`, PR #18 quality-gate PASS, merge commit `9522747`로 `development`에 반영됐다.
 - dependency:
   - T07·T19·T20은 `ACCEPTED`이고 T20 commit `08e9b3d`는 PR #17, merge commit `8d8eaaf`로 `development`에 반영됐다.
   - T21 direct HLS는 실제 browser playback 증거가 없어 계속 `BLOCKED`이며 이 Task의 dependency가 아니다. 사용자의 수동 결과가 오기 전 HLS·`hls.js`·live control을 구현하지 않는다.
@@ -2800,6 +2801,60 @@ flowchart LR
 - 사용자 수락:
   - 실제 NAVER GL에서 ready 후 CCTV toggle 노출, 확대 전 무요청 안내, 서울 수준 확대 후 marker·목록, marker/목록 선택 정지영상, retry·닫기·Escape·pan·resize·layer off를 확인할 수 있는 QA 목록을 전달했다.
   - 사용자가 최종 보고에 “진행”으로 응답해 승인모드의 `ACCEPTED`와 commit·PR 권한으로 기록한다.
+
+### T21 — CCTV 실시간 HLS
+
+- 상태: `ACCEPTED` — 구현과 자동 회귀, D-052 변경 승인은 완료했다. 실제 browser playback은 미검증이라 Task `PASS`로 주장하지 않지만, 사용자가 이 제한을 보고받은 뒤 2026-07-31 “development까지 커밋하고 다음단계 진행”으로 결과 수락과 feature commit·push·PR·development 병합을 명시적으로 승인했다. 외부 공개 release gate는 유지한다.
+- dependency:
+  - T19·T20·T20-R1은 `ACCEPTED`이고 최신 기준선은 `development@9522747`이다.
+  - 기존 `feature/t21-cctv-hls`와 `stash@{0}`는 T20-R1 이전 기준선의 조사 기록이므로 pop하지 않고 증거만 수동 이식한다. 구현 branch는 최신 기준선의 `feature/t21-cctv-live`다.
+- 목적:
+  - 선택한 CCTV의 정상 상세을 정지 JPEG가 아니라 ITS `cctvType=4` provider-issued HTTPS-HLS 실시간 영상으로 제공한다.
+  - 회전 URL을 cached list에서 재사용하지 않고 선택 시 fresh source를 얻으며 manifest·segment bytes는 브라우저가 provider에서 직접 읽는다.
+- 포함:
+  1. 작은 bbox의 정상 `coordtype=1, datacount=0` 응답을 empty로 수용하는 provider 회귀 수정
+  2. strict `cameraId + canonical bbox`만 받는 fresh/no-store type-4 source resolver와 same-origin Entity 계약
+  3. D-052 승인 조건으로 native HLS를 사용하지 않고 선택 시에만 dynamic import하는 pinned `hls.js`와 guarded `FetchLoader`
+  4. marker·목록 문구와 정지영상 패널을 실시간 `<video controls playsInline>` 단일-stream UI로 교체
+  5. source 만료·fatal playback·unsupported·network failure, retry와 A→B·close·Escape·layer off·viewport change·unmount cleanup
+- 제외:
+  - manifest·key·init·segment·video bytes의 Vercel Function relay와 raw URL proxy
+  - autoplay, background playback, 다중 동시 stream, cached HLS URL을 재생 시작 source로 사용
+  - `/api/cctv/image` backend 제거와 정지영상 자동 fallback은 별도 결정 전 포함하지 않는다.
+- 조사 증거:
+  - credential-gated production gateway smoke에서 목록·bounded JPEG 2 tests가 PASS했다.
+  - 작은 서울 bbox에서 `ex` type-3/4는 각각 40개지만 `its` type-3/4는 실제 정상 `coordtype=1, datacount=0`을 반환한다. current empty schema가 `coordtype=null`만 허용해 `/api/cctv/list`를 `502`로 오판한다.
+  - 최신 type-4 redacted probe는 approved HTTPS boundary에서 initial `302`, master/media `200 application/vnd.apple.mpegurl`, wildcard CORS, live 7 segments와 첫 Range `206`·CORS를 확인했다. URL·token·playlist 원문은 출력·저장하지 않았다.
+  - 이는 transport 가능성만 증명하며 Chromium/Edge의 MSE decode·`playing`·시간 진행 증거를 대신하지 않는다.
+- RED:
+  - 작은 bbox의 정상 empty 응답, fresh source route, final manifest allowlist, child·key·map·range·redirect 경계, fatal 이후 late manifest, lazy import 중 media error, rapid A→B·unmount cleanup을 실패 테스트로 고정했다.
+  - HLS 생성자의 동기 예외가 unhandled rejection과 무한 connecting을 만드는 독립 리뷰 finding을 추가 RED로 재현했다.
+- GREEN·구현:
+  - gateway는 type-4 inventory에서 camera를 재확인하고 initial HTTPS URL의 단일 `302 Location`만 manual redirect로 검증한다. HLS body·segment bytes는 읽거나 relay하지 않는다.
+  - Entity 계약은 exact provider host·port·path·query를 구분해 initial URL, final manifest, media playlist와 segment만 허용한다. key·init map·비정상 range·추가 query·percent-encoded 우회·후속 redirect는 fail closed 처리한다.
+  - client는 `hls.js@1.6.16`을 선택 시 lazy import하고 동일 guarded `FetchLoader`를 `loader`·`pLoader`·`fLoader`에 적용한다. `redirect: error`, `credentials: omit`, `referrerPolicy: no-referrer`, `cache: no-store`, `progressive: false`를 강제한다.
+  - player는 autoplay 없이 controls를 제공하고 source·fatal·media·초기화 실패를 retry 가능한 상태로 전환한다. late event, camera 교체, close·layer off·viewport change·unmount에서 이전 instance와 media element를 정리한다.
+- 자동 검증:
+  - 최신 `npm run validate` PASS — Biome 359 files, Vitest 1,441 passed·9 skipped, strict TypeScript, client/server production build PASS.
+  - initial client JS는 `222.49 kB`이고 `hls.js`는 `509.73 kB` 별도 lazy chunk로 유지된다.
+  - `git diff --check`, added secret-like value scan, exact `hls.js@1.6.16` 확인이 PASS했다.
+  - 독립 server·architecture·UI 재검토에서 재현 가능한 잔여 finding이 없었다. 동기 초기화 예외는 RED→GREEN 후 player 7/7로 재검증했다.
+- gated live smoke:
+  - 한 차례 fresh type-4 source의 manual `302`와 direct master/media playlist를 strict boundary로 검증했다. 이후 재시도에서는 ITS 목록 upstream이 약 8초 후 `502`로 불안정해 전체 live smoke를 반복 완료하지 못했다.
+  - token·provider URL·playlist 원문은 로그·문서·응답에 기록하지 않았다.
+- 완료 조건:
+  - 정상: 사용자 선택 후 fresh source와 lazy player로 한 stream만 재생되고 `playing`, `currentTime` 증가, `readyState >= 2`를 실제 localhost 브라우저에서 확인한다.
+  - 실패: empty bbox·expired source·CORS·unsupported browser·manifest/player fatal error가 raw URL 없이 안전한 상태와 retry로 전환된다.
+  - 경계: URL rotation, relative child URI, key/map/byte-range 거부 또는 명시 처리, rapid A→B, close·layer off·viewport change·unmount 완전 teardown을 검증한다.
+  - 회귀: T19 metadata·T20 image backend·T20-R1 map lifecycle, initial bundle lazy boundary와 `npm run validate`가 PASS한다.
+  - ITS 영상 표시·재생 이용 조건 확인 전에는 외부 공개 배포하지 않는다.
+- 잔여 browser gate:
+  - Browser/Chrome 연결 목록이 비어 있어 자동 브라우저 검증을 시작할 수 없었다. 사용자가 연결된 브라우저에서 `http://localhost:5173` 탭을 열거나 동일 항목을 수동 확인해야 한다.
+  - 실제 browser에서 manifest·media·segment fetch, MSE decode·playing·시간 진행과 teardown이 확인되기 전에는 Task를 `PASS`로 표시하거나 외부 배포하지 않는다.
+- 사용자 수락·게시:
+  - 사용자는 실제 browser gate 미검증을 명시한 최종 보고 뒤 development 병합과 다음 단계 진행을 지시했다. 이는 검증되지 않은 동작을 PASS로 바꾸는 것이 아니라 알려진 제한을 수용한 병합 결정으로 기록한다.
+  - PR에는 actual playback 미검증, ITS upstream timeout과 외부 공개 전 release condition을 그대로 명시한다.
+- Guardrail: `BLOCKED` — development 병합은 사용자가 제한을 인지하고 승인했다. 외부 공개 release condition은 실제 localhost에서 `playing`, `readyState >= 2`, `currentTime` 증가와 close·layer off teardown 확인이다. 현재 ITS timeout은 strict stream 경로가 한 번 성공한 뒤 발생한 live-smoke 제약으로 기록하고 재시도 시점에 다시 확인한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3066,3 +3121,4 @@ flowchart LR
 | 2026-07-29 | 사용자가 올바른 64자리 key로 다시 저장해 KOSPI·KOSDAQ 2-call 인증 PASS; 실응답의 `KOSPI시리즈/KOSDAQ시리즈` 분류를 기존 가정 실패로 재현하고 strict provider·fixture를 정렬한 뒤 강화된 production gateway live smoke PASS | T14 |
 | 2026-07-29 | 1280px 2→5열 가독성 finding과 live-smoke all-empty false-positive를 RED→GREEN으로 해소; 전체 1,178 tests·client/server build와 독립 재리뷰 PASS, browser backend 부재 제한을 기록하고 사용자 ACCEPTED 대기 | T14 |
 | 2026-07-29 | 사용자가 PASS 보고에 “진행”으로 응답해 T14 결과와 final commit을 ACCEPTED; 검증된 단일 목적 변경만 commit하고 push·merge는 별도 승인 전 수행하지 않음 | T14 |
+| 2026-07-31 | T21 CCTV HTTPS-HLS를 strict final-manifest·resource boundary, lazy `hls.js`, one-stream UI와 teardown으로 RED→GREEN; 전체 1,441 tests·두 build와 독립 리뷰 PASS. 연결 browser 부재와 ITS timeout을 external release gate로 유지한 채 사용자가 결과 수락과 feature commit·development PR·병합, T22 기획 진행을 승인 | T21→T22 |

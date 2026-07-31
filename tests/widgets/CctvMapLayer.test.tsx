@@ -1,9 +1,28 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/preact-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/preact';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { KoreaMapSession, KoreaMapViewport } from '../../src/entities/map';
 import { CctvMapLayer } from '../../src/widgets/korea-map/ui/CctvMapLayer';
+
+vi.mock('hls.js', () => {
+  class FakeFetchLoader {}
+  class FakeHls {
+    static Events = { ERROR: 'error', MANIFEST_PARSED: 'manifestParsed' };
+    static isSupported = () => true;
+    private readonly handlers = new Map<string, (event: string, data: { fatal: boolean }) => void>();
+
+    attachMedia() {}
+    destroy() {}
+    loadSource() {
+      this.handlers.get(FakeHls.Events.MANIFEST_PARSED)?.('manifestParsed', { fatal: false });
+    }
+    on(event: string, handler: (event: string, data: { fatal: boolean }) => void) {
+      this.handlers.set(event, handler);
+    }
+  }
+  return { default: FakeHls, FetchLoader: FakeFetchLoader };
+});
 
 const viewport: KoreaMapViewport = {
   maximumLatitude: 37.6,
@@ -69,6 +88,18 @@ function response(payload: unknown, status = 200) {
   });
 }
 
+const liveSourceEnvelope = (
+  url: string = 'https://cctvsec.ktict.co.kr:8082/live/master.m3u8?wmsAuthSign=opaque-default-signature',
+) => ({
+  data: { url },
+  meta: {
+    cache: 'MISS',
+    fetchedAt: 1_785_360_000_000,
+    requestId: 'request-cctv-live-source',
+    source: 'ITS 국가교통정보센터',
+  },
+});
+
 function sessionFixture(): KoreaMapSession {
   return {
     createPointLayer: vi.fn(() => ({ destroy: vi.fn(), replace: vi.fn(), select: vi.fn() })),
@@ -99,6 +130,14 @@ function renderLayer(session = sessionFixture()) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+beforeEach(() => {
+  vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('probably');
+  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
+  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+  vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
 });
 
 describe('CctvMapLayer', () => {
@@ -177,7 +216,7 @@ describe('CctvMapLayer', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('loads one bounded still image only after selection and revokes its object URL on close', async () => {
+  it('loads one fresh live source only after selection and tears down the video on close', async () => {
     const successEnvelope = {
       ...emptyEnvelope,
       data: {
@@ -186,23 +225,15 @@ describe('CctvMapLayer', () => {
       },
       meta: {
         ...emptyEnvelope.meta,
-        requestId: 'request-cctv-image-selection',
+        requestId: 'request-cctv-live-selection',
       },
     } as const;
-    const imageResponse = new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
-      headers: {
-        'content-length': '4',
-        'content-type': 'image/jpeg',
-      },
-    });
-    const fetcher = vi.fn().mockResolvedValueOnce(response(successEnvelope)).mockResolvedValueOnce(imageResponse);
+    const freshLiveUrl = 'https://cctvsec.ktict.co.kr:8082/live/master.m3u8?wmsAuthSign=opaque-fresh-signature';
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(response(successEnvelope))
+      .mockResolvedValueOnce(response(liveSourceEnvelope(freshLiveUrl)));
     vi.stubGlobal('fetch', fetcher);
-    const NativeUrl = URL;
-    const createObjectURL = vi.fn(() => 'blob:cctv-still-fixture');
-    const revokeObjectURL = vi.fn();
-    class FixtureUrl extends NativeUrl {}
-    Object.assign(FixtureUrl, { createObjectURL, revokeObjectURL });
-    vi.stubGlobal('URL', FixtureUrl);
     const replace = vi.fn();
     const select = vi.fn();
     const session = {
@@ -212,35 +243,42 @@ describe('CctvMapLayer', () => {
     renderLayer(session);
 
     const cameraButton = await screen.findByRole('button', {
-      name: '서울고속도로 CCTV 정지영상 보기',
+      name: '서울고속도로 CCTV 실시간 영상 보기',
     });
     await waitFor(() => expect(replace.mock.lastCall?.[0]).toHaveLength(1));
     const markerReplacementCount = replace.mock.calls.length;
     expect(fetcher).toHaveBeenCalledOnce();
     fireEvent.click(cameraButton);
 
-    expect(await screen.findByText('정지영상을 불러오는 중입니다.')).toBeTruthy();
+    expect(await screen.findByText('실시간 영상에 연결하는 중입니다.')).toBeTruthy();
     expect(replace).toHaveBeenCalledTimes(markerReplacementCount);
     expect(select).toHaveBeenLastCalledWith(cameraFixture.id);
-    const stillHeading = screen.getByRole('heading', { name: cameraFixture.name });
-    expect(stillHeading.className).toContain('break-words');
-    expect(stillHeading.parentElement?.className).toContain('min-w-0');
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: '서울고속도로 CCTV 정지영상 닫기' }));
+    const liveHeading = screen.getByRole('heading', { name: cameraFixture.name });
+    expect(liveHeading.className).toContain('break-words');
+    expect(liveHeading.parentElement?.className).toContain('min-w-0');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 닫기' }));
     expect(fetcher).toHaveBeenLastCalledWith(
-      '/api/cctv/image?cameraId=its-cctv%3AAbCdEfGhIjKlMnOp&bbox=126.9,37.4,127.1,37.6',
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      '/api/cctv/stream?cameraId=its-cctv%3AAbCdEfGhIjKlMnOp&bbox=126.9,37.4,127.1,37.6',
+      expect.objectContaining({
+        headers: { Accept: 'application/json' },
+        signal: expect.any(AbortSignal),
+      }),
     );
-    const image = await screen.findByRole('img', { name: '서울고속도로 CCTV 정지영상' });
-    expect(image.getAttribute('src')).toBe('blob:cctv-still-fixture');
-    expect(createObjectURL).toHaveBeenCalledOnce();
+    const video = screen.getByLabelText('서울고속도로 CCTV 실시간 영상') as HTMLVideoElement;
+    expect(await screen.findByText('실시간 영상이 준비되었습니다.')).toBeTruthy();
+    expect(video.hasAttribute('src')).toBe(false);
+    expect(video.controls).toBe(true);
+    expect(video.muted).toBe(true);
+    expect(video.playsInline).toBe(true);
+    expect(video.autoplay).toBe(false);
+    expect(fetcher.mock.calls.some(([input]) => String(input).startsWith('/api/cctv/image?'))).toBe(false);
 
-    fireEvent.click(screen.getByRole('button', { name: '서울고속도로 CCTV 정지영상 닫기' }));
-    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:cctv-still-fixture'));
-    expect(screen.queryByRole('img', { name: '서울고속도로 CCTV 정지영상' })).toBeNull();
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' }));
+    fireEvent.click(screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 닫기' }));
+    expect(screen.queryByLabelText('서울고속도로 CCTV 실시간 영상')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' }));
   });
 
-  it('replaces the list with a focused viewer, cleans its image, retries failure, and closes with Escape', async () => {
+  it('replaces the list with one live viewer, retries a fresh source failure, and closes with Escape', async () => {
     const nextCamera = {
       ...cameraFixture,
       id: 'its-cctv:ZyXwVuTsRqPoNmLk',
@@ -255,60 +293,48 @@ describe('CctvMapLayer', () => {
       },
       meta: {
         ...emptyEnvelope.meta,
-        requestId: 'request-cctv-image-switch',
+        requestId: 'request-cctv-live-switch',
       },
     } as const;
-    const jpegResponse = () =>
-      new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
-        headers: {
-          'content-length': '4',
-          'content-type': 'image/jpeg',
-        },
-      });
+    const firstLiveUrl = 'https://cctvsec.ktict.co.kr:8082/live/master.m3u8?wmsAuthSign=opaque-first-signature';
+    const secondLiveUrl = 'https://cctvsec.ktict.co.kr:8082/live/master.m3u8?wmsAuthSign=opaque-second-signature';
     const fetcher = vi
       .fn()
       .mockResolvedValueOnce(response(successEnvelope))
-      .mockResolvedValueOnce(jpegResponse())
+      .mockResolvedValueOnce(response(liveSourceEnvelope(firstLiveUrl)))
       .mockResolvedValueOnce(
         response(
           {
             error: {
               code: 'UPSTREAM_UNAVAILABLE',
-              requestId: 'request-cctv-image-failed',
+              requestId: 'request-cctv-live-failed',
             },
           },
           502,
         ),
       )
-      .mockResolvedValueOnce(jpegResponse());
+      .mockResolvedValueOnce(response(liveSourceEnvelope(secondLiveUrl)));
     vi.stubGlobal('fetch', fetcher);
-    const NativeUrl = URL;
-    const createObjectURL = vi.fn().mockReturnValueOnce('blob:cctv-a').mockReturnValueOnce('blob:cctv-b');
-    const revokeObjectURL = vi.fn();
-    class FixtureUrl extends NativeUrl {}
-    Object.assign(FixtureUrl, { createObjectURL, revokeObjectURL });
-    vi.stubGlobal('URL', FixtureUrl);
     renderLayer();
 
-    fireEvent.click(await screen.findByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' }));
-    expect(await screen.findByRole('img', { name: '서울고속도로 CCTV 정지영상' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '서울국도 CCTV 정지영상 보기' }).closest('aside')?.className).toContain(
-      'hidden',
-    );
-    fireEvent.click(screen.getByRole('button', { name: '서울고속도로 CCTV 정지영상 닫기' }));
-    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:cctv-a'));
-    fireEvent.click(screen.getByRole('button', { name: '서울국도 CCTV 정지영상 보기' }));
-    expect(await screen.findByText('정지영상을 불러오지 못했습니다.')).toBeTruthy();
-    expect(screen.queryByRole('img', { name: '서울국도 CCTV 정지영상' })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' }));
+    const firstVideo = screen.getByLabelText('서울고속도로 CCTV 실시간 영상') as HTMLVideoElement;
+    expect(await screen.findByText('실시간 영상이 준비되었습니다.')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: '서울국도 CCTV 실시간 영상 보기' }).closest('aside')?.className,
+    ).toContain('hidden');
+    fireEvent.click(screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 닫기' }));
+    expect(firstVideo.hasAttribute('src')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: '서울국도 CCTV 실시간 영상 보기' }));
+    expect(await screen.findByText('실시간 영상을 불러오지 못했습니다.')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: '정지영상 다시 시도' }));
-    expect((await screen.findByRole('img', { name: '서울국도 CCTV 정지영상' })).getAttribute('src')).toBe(
-      'blob:cctv-b',
-    );
+    fireEvent.click(screen.getByRole('button', { name: '실시간 영상 다시 시도' }));
+    const secondVideo = screen.getByLabelText('서울국도 CCTV 실시간 영상') as HTMLVideoElement;
+    expect(await screen.findByText('실시간 영상이 준비되었습니다.')).toBeTruthy();
     fireEvent.keyDown(document, { key: 'Escape' });
 
-    expect(screen.queryByRole('img', { name: '서울국도 CCTV 정지영상' })).toBeNull();
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:cctv-b');
+    expect(screen.queryByLabelText('서울국도 CCTV 실시간 영상')).toBeNull();
+    expect(secondVideo.hasAttribute('src')).toBe(false);
   });
 
   it('caps marker and list overlays at 100 cameras while reporting the full viewport count', async () => {
@@ -341,7 +367,7 @@ describe('CctvMapLayer', () => {
 
     expect(await screen.findByText('현재 화면 · 101대')).toBeTruthy();
     expect(screen.getByText('100대만 표시합니다. 지도를 더 확대하세요.')).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: /CCTV \d{3} 정지영상 보기/u })).toHaveLength(100);
+    expect(screen.getAllByRole('button', { name: /CCTV \d{3} 실시간 영상 보기/u })).toHaveLength(100);
     await waitFor(() => expect(replace.mock.lastCall?.[0]).toHaveLength(100));
   });
 
@@ -379,11 +405,11 @@ describe('CctvMapLayer', () => {
     await queryClient.invalidateQueries({ queryKey: ['cctv-list'] });
 
     expect(await screen.findByText('CCTV 위치 갱신에 실패해 마지막 결과를 표시합니다.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' })).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('aborts a pending still request and destroys marker resources when the layer is turned off', async () => {
+  it('aborts a pending live-source request and destroys marker resources when the layer is turned off', async () => {
     const successEnvelope = {
       ...emptyEnvelope,
       data: {
@@ -395,14 +421,14 @@ describe('CctvMapLayer', () => {
         requestId: 'request-cctv-before-off',
       },
     } as const;
-    const pendingImage = deferred<Response>();
-    let imageSignal: AbortSignal | undefined;
+    const pendingSource = deferred<Response>();
+    let sourceSignal: AbortSignal | undefined;
     const fetcher = vi
       .fn()
       .mockResolvedValueOnce(response(successEnvelope))
       .mockImplementationOnce((_input: RequestInfo | URL, init?: RequestInit) => {
-        imageSignal = init?.signal ?? undefined;
-        return pendingImage.promise;
+        sourceSignal = init?.signal ?? undefined;
+        return pendingSource.promise;
       });
     vi.stubGlobal('fetch', fetcher);
     const destroyPointLayer = vi.fn();
@@ -414,11 +440,11 @@ describe('CctvMapLayer', () => {
 
     fireEvent.click(
       await screen.findByRole('button', {
-        name: '서울고속도로 CCTV 정지영상 보기',
+        name: '서울고속도로 CCTV 실시간 영상 보기',
       }),
     );
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
-    expect(imageSignal?.aborted).toBe(false);
+    expect(sourceSignal?.aborted).toBe(false);
 
     view.rerender(
       <QueryClientProvider client={view.queryClient}>
@@ -426,9 +452,9 @@ describe('CctvMapLayer', () => {
       </QueryClientProvider>,
     );
 
-    expect(imageSignal?.aborted).toBe(true);
+    expect(sourceSignal?.aborted).toBe(true);
     expect(destroyPointLayer).toHaveBeenCalledOnce();
-    expect(screen.queryByText('정지영상을 불러오는 중입니다.')).toBeNull();
+    expect(screen.queryByText('실시간 영상에 연결하는 중입니다.')).toBeNull();
   });
 
   it('clears the selected camera when the viewport changes instead of reopening it from cache', async () => {
@@ -468,7 +494,7 @@ describe('CctvMapLayer', () => {
     } as const;
     const fetcher = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.startsWith('/api/cctv/image?')) {
+      if (url.startsWith('/api/cctv/stream?')) {
         return new Promise<Response>(() => undefined);
       }
       if (url.includes('bbox=127.1,37.6,127.3,37.8')) {
@@ -488,18 +514,18 @@ describe('CctvMapLayer', () => {
     } satisfies KoreaMapSession;
     renderLayer(session);
 
-    fireEvent.click(await screen.findByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' }));
+    fireEvent.click(await screen.findByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' }));
     await waitFor(() =>
-      expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/image?'))).toHaveLength(1),
+      expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/stream?'))).toHaveLength(1),
     );
 
     act(() => emitViewport?.(nextViewport));
     expect(await screen.findByText('현재 화면에 제공되는 CCTV가 없습니다.')).toBeTruthy();
     act(() => emitViewport?.(viewport));
-    expect(await screen.findByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' })).toBeTruthy();
 
-    expect(screen.queryByText('정지영상을 불러오는 중입니다.')).toBeNull();
-    expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/image?'))).toHaveLength(1);
+    expect(screen.queryByText('실시간 영상에 연결하는 중입니다.')).toBeNull();
+    expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/stream?'))).toHaveLength(1);
   });
 
   it('clears a selected camera removed by a same-viewport refresh instead of reopening it later', async () => {
@@ -515,16 +541,16 @@ describe('CctvMapLayer', () => {
       },
     } as const;
     const fetcher = vi.fn((input: RequestInfo | URL) =>
-      String(input).startsWith('/api/cctv/image?')
+      String(input).startsWith('/api/cctv/stream?')
         ? new Promise<Response>(() => undefined)
         : Promise.resolve(response(successEnvelope)),
     );
     vi.stubGlobal('fetch', fetcher);
     const { queryClient } = renderLayer();
 
-    fireEvent.click(await screen.findByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' }));
+    fireEvent.click(await screen.findByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' }));
     await waitFor(() =>
-      expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/image?'))).toHaveLength(1),
+      expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/stream?'))).toHaveLength(1),
     );
 
     act(() => {
@@ -534,9 +560,9 @@ describe('CctvMapLayer', () => {
     act(() => {
       queryClient.setQueryData(['cctv-list', 126.9, 37.4, 127.1, 37.6], successEnvelope);
     });
-    expect(await screen.findByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' })).toBeTruthy();
 
-    expect(screen.queryByText('정지영상을 불러오는 중입니다.')).toBeNull();
-    expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/image?'))).toHaveLength(1);
+    expect(screen.queryByText('실시간 영상에 연결하는 중입니다.')).toBeNull();
+    expect(fetcher.mock.calls.filter(([input]) => String(input).startsWith('/api/cctv/stream?'))).toHaveLength(1);
   });
 });

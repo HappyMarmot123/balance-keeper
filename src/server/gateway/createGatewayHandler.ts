@@ -30,10 +30,13 @@ import {
 } from '../resilience';
 import {
   GATEWAY_MEDIA_MAX_BODY_BYTES,
+  type GatewayJsonRoute,
   type GatewayMediaOutcome,
-  type GatewayMediaRoute,
+  type GatewayNoStoreRoute,
   type GatewayRoute,
+  type GatewayUncachedRoute,
   isGatewayMediaRoute,
+  isGatewayUncachedRoute,
   type ParsedGatewayRequest,
   type RegisteredGatewayRoute,
   type UpstreamOutcome,
@@ -183,7 +186,7 @@ const throwIfRequestAborted = (request: Request): void => {
 
 type StableJsonParse = Readonly<{ success: true; data: unknown }> | Readonly<{ success: false }>;
 
-const parseStableJsonData = (route: GatewayRoute, input: unknown): StableJsonParse => {
+const parseStableJsonData = (route: GatewayJsonRoute, input: unknown): StableJsonParse => {
   let inputCanonical: string;
 
   try {
@@ -270,7 +273,7 @@ const retainStaleCandidate = (
 const canUseStaleForAcquisitionError = (error: unknown): boolean =>
   isAppError(error) && (error.code === 'UPSTREAM_UNAVAILABLE' || error.code === 'SERVICE_UNAVAILABLE');
 
-const assertUpstreamOutcome = (route: GatewayRoute, input: UpstreamOutcome<unknown>): UpstreamOutcome<unknown> => {
+const assertUpstreamOutcome = (route: GatewayJsonRoute, input: UpstreamOutcome<unknown>): UpstreamOutcome<unknown> => {
   if (
     typeof input !== 'object' ||
     input === null ||
@@ -625,13 +628,20 @@ const assertMediaOutcome = (input: GatewayMediaOutcome): GatewayMediaOutcome => 
   });
 };
 
-const acquireMediaOutcome = async (
-  route: GatewayMediaRoute,
+type GatewayUncachedOutcome = GatewayMediaOutcome | UpstreamOutcome<unknown>;
+
+const assertUncachedOutcome = (route: GatewayUncachedRoute, input: GatewayUncachedOutcome): GatewayUncachedOutcome =>
+  isGatewayMediaRoute(route)
+    ? assertMediaOutcome(input as GatewayMediaOutcome)
+    : assertUpstreamOutcome(route, input as UpstreamOutcome<unknown>);
+
+const acquireUncachedOutcome = async (
+  route: GatewayUncachedRoute,
   parsedRequest: ParsedGatewayRequest<unknown>,
   dependencies: GatewayDependencies,
   logContext: AcquisitionLogContext,
   callerSignal: AbortSignal,
-): Promise<GatewayMediaOutcome> => {
+): Promise<GatewayUncachedOutcome> => {
   const breakerKey = createStateKey('breaker', route.profile.breaker.scope);
   const breakerPolicy = deriveBreakerPolicy(route.profile);
   let breakerPermit: AllowedBreakerPermit | undefined;
@@ -697,12 +707,16 @@ const acquireMediaOutcome = async (
       breakerPermit?.state === 'HALF_OPEN'
         ? Math.min(route.profile.upstreamTimeoutMs, route.profile.breaker.probeTimeoutMs)
         : route.profile.upstreamTimeoutMs;
-    const outcome = assertMediaOutcome(
-      await withTimeout((signal) => route.load(parsedRequest.input, signal), {
-        parentSignal: callerSignal,
-        ...(dependencies.scheduler === undefined ? {} : { scheduler: dependencies.scheduler }),
-        timeoutMs,
-      }),
+    const outcome = assertUncachedOutcome(
+      route,
+      await withTimeout<GatewayUncachedOutcome>(
+        (signal) => route.load(parsedRequest.input, signal) as Promise<GatewayUncachedOutcome>,
+        {
+          parentSignal: callerSignal,
+          ...(dependencies.scheduler === undefined ? {} : { scheduler: dependencies.scheduler }),
+          timeoutMs,
+        },
+      ),
     );
 
     if (breakerPermit !== undefined) {
@@ -742,6 +756,26 @@ const acquireMediaOutcome = async (
   }
 };
 
+const createNoStoreResponse = (
+  route: GatewayNoStoreRoute,
+  outcome: UpstreamOutcome<unknown>,
+  requestId: string,
+): Response => {
+  const envelope = toSuccessEnvelope(route.dataSchema, outcome.data, {
+    cache: 'MISS',
+    fetchedAt: outcome.fetchedAt,
+    requestId,
+    source: outcome.source,
+  });
+
+  return createApiResponse({
+    body: envelope as JsonValue,
+    cache: 'no-store',
+    requestId,
+    status: 200,
+  });
+};
+
 export function createGatewayHandler(registry: RouteRegistry): GatewayHandler {
   return async (request, dependencies) => {
     throwIfRequestAborted(request);
@@ -778,20 +812,27 @@ export function createGatewayHandler(registry: RouteRegistry): GatewayHandler {
       }
 
       throwIfRequestAborted(request);
-      if (isGatewayMediaRoute(route)) {
-        const mediaKey = createCacheKey(route.id, parsedRequest.publicCacheIdentity);
+      if (isGatewayUncachedRoute(route)) {
+        const uncachedKey = createCacheKey(route.id, parsedRequest.publicCacheIdentity);
         const outcome = await dependencies.localCoalescer.runAbortable(
-          mediaKey,
+          uncachedKey,
           (sharedSignal) =>
-            acquireMediaOutcome(route, parsedRequest, dependencies, { requestId, startedAt }, sharedSignal),
+            acquireUncachedOutcome(route, parsedRequest, dependencies, { requestId, startedAt }, sharedSignal),
           request.signal,
         );
         throwIfRequestAborted(request);
-        const response = createMediaResponse({
-          body: outcome.body,
-          contentType: outcome.contentType,
-          requestId,
-        });
+        const response =
+          isGatewayMediaRoute(route) && outcome.kind === 'media'
+            ? createMediaResponse({
+                body: outcome.body,
+                contentType: outcome.contentType,
+                requestId,
+              })
+            : !isGatewayMediaRoute(route) && outcome.kind !== 'media'
+              ? createNoStoreResponse(route, outcome, requestId)
+              : (() => {
+                  throw new AppError('INTERNAL');
+                })();
         safeLog(dependencies.logger, {
           event: 'gateway.request',
           route: route.id,

@@ -5,6 +5,12 @@ export {
   createCctvListPath,
 } from './api/cctvListQuery';
 export {
+  type CctvLiveStreamReference,
+  createCctvLiveStreamPath,
+  type FetchCctvLiveSourceOptions,
+  fetchCctvLiveSource,
+} from './api/cctvLiveStream';
+export {
   CCTV_STILL_IMAGE_MAX_BYTES,
   type CctvStillImageFetcher,
   type CctvStillImageReference,

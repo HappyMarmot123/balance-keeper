@@ -6,7 +6,7 @@ import { readItsCredential } from '../providers/its';
 import { readKmaEarthquakeCredential, readKmaWeatherCredential } from '../providers/kma';
 import { readSafetydataCredential } from '../providers/safetydata';
 import { createAirRoute } from '../routes/air';
-import { createCctvListRoute, createCctvStillImageRoute } from '../routes/cctv';
+import { createCctvListRoute, createCctvLiveStreamRoute, createCctvStillImageRoute } from '../routes/cctv';
 import { createDisasterRoute } from '../routes/disaster';
 import { createEarthquakeRoute } from '../routes/earthquake';
 import { createMacroRoute } from '../routes/macro';
@@ -94,6 +94,12 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     readAdmissionSubject: readTrustedAdmissionSubject,
     serviceKey: itsServiceKey,
   });
+  const cctvLiveStreamRoute = createCctvLiveStreamRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: itsServiceKey,
+  });
 
   return createGatewayRuntime({
     clock,
@@ -114,6 +120,7 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
       disasterRoute,
       cctvListRoute,
       cctvStillImageRoute,
+      cctvLiveStreamRoute,
     ],
   });
 }

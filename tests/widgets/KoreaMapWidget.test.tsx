@@ -265,18 +265,18 @@ describe('KoreaMapView', () => {
     );
 
     expect(await screen.findByText('현재 화면 · 2대')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '서울고속도로 CCTV 정지영상 보기' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '서울국도 CCTV 정지영상 보기' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '서울국도 CCTV 실시간 영상 보기' })).toBeTruthy();
     await waitFor(() =>
       expect(replace).toHaveBeenLastCalledWith([
         {
-          accessibleName: '서울고속도로 CCTV 정지영상 보기',
+          accessibleName: '서울고속도로 CCTV 실시간 영상 보기',
           id: 'its-cctv:AbCdEfGhIjKlMnOp',
           latitude: 37.5,
           longitude: 127,
         },
         {
-          accessibleName: '서울국도 CCTV 정지영상 보기',
+          accessibleName: '서울국도 CCTV 실시간 영상 보기',
           id: 'its-cctv:QrStUvWxYz012345',
           latitude: 37.55,
           longitude: 127.05,
