@@ -772,6 +772,34 @@ describe('createGatewayHandler', () => {
     expect(loadCalls).toBe(0);
   });
 
+  it('reserves the configured upstream call cost before invoking a cached route loader', async () => {
+    const clock = () => 1_000;
+    const store = new MemoryFleetStateStore(clock);
+    const weightedProfile = createRouteProfile({
+      ...profile,
+      upstreamBudget: { ...profile.upstreamBudget, limit: 10 },
+      upstreamBudgetCost: 3,
+    });
+    await store.consumeFixedWindow(
+      createStateKey('rate', weightedProfile.upstreamBudget.scope),
+      weightedProfile.upstreamBudget,
+      8,
+    );
+    const load = vi.fn(async () => ({
+      kind: 'value' as const,
+      data: { value: 24 },
+      source: 'fixture-provider',
+      fetchedAt: 990,
+    }));
+    const route = createFixtureRoute(load, weightedProfile);
+    const handler = createGatewayHandler(createRouteRegistry([route]));
+
+    const response = await handler(new Request('https://balance.test/api/fixture'), createDependencies(clock, store));
+
+    expect(response.status).toBe(503);
+    expect(load).not.toHaveBeenCalled();
+  });
+
   it.each(['writeCacheIfLeaseOwner', 'completeBreaker', 'releaseLease'] as const)(
     'keeps a valid upstream response when best-effort %s persistence fails',
     async (failingOperation) => {

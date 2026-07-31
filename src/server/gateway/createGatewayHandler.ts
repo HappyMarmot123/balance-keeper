@@ -475,6 +475,7 @@ const acquireRepresentation = async (
       upstreamBudget = await dependencies.fleetStateStore.consumeFixedWindow(
         upstreamBudgetKey,
         route.profile.upstreamBudget,
+        route.profile.upstreamBudgetCost ?? 1,
       );
     } catch {
       if (breakerPermit !== undefined) {
@@ -673,6 +674,7 @@ const acquireUncachedOutcome = async (
     upstreamBudget = await dependencies.fleetStateStore.consumeFixedWindow(
       upstreamBudgetKey,
       route.profile.upstreamBudget,
+      route.profile.upstreamBudgetCost ?? 1,
     );
   } catch {
     if (breakerPermit !== undefined) {

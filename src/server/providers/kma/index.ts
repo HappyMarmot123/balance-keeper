@@ -25,3 +25,9 @@ export {
   readKmaWeatherCredential,
   resolveKmaNowcastSlot,
 } from './ultraShortNowcast';
+export {
+  type FetchKmaWeatherAlertsOptions,
+  fetchKmaWeatherAlerts,
+  type KmaWeatherAlertResponses,
+  normalizeKmaWeatherAlerts,
+} from './weatherAlerts';

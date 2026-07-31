@@ -60,7 +60,7 @@ export interface FleetStateStore {
   releaseLease(key: string, token: string): Promise<boolean>;
   writeCacheIfLeaseOwner(write: LeaseGuardedCacheWrite): Promise<boolean>;
   deleteCacheIfLeaseOwner(deletion: LeaseGuardedCacheDelete): Promise<boolean>;
-  consumeFixedWindow(key: string, policy: FixedWindowPolicy): Promise<FixedWindowConsumption>;
+  consumeFixedWindow(key: string, policy: FixedWindowPolicy, cost?: number): Promise<FixedWindowConsumption>;
   acquireBreaker(key: string, candidateToken: string, policy: BreakerPolicy): Promise<BreakerPermit>;
   completeBreaker(
     key: string,
@@ -266,9 +266,10 @@ export class MemoryFleetStateStore implements FleetStateStore {
     return true;
   }
 
-  async consumeFixedWindow(key: string, policy: FixedWindowPolicy): Promise<FixedWindowConsumption> {
+  async consumeFixedWindow(key: string, policy: FixedWindowPolicy, cost = 1): Promise<FixedWindowConsumption> {
     assertPositiveDuration(policy.limit, 'Fixed-window limit');
     assertPositiveDuration(policy.windowMs, 'Fixed-window duration');
+    assertPositiveDuration(cost, 'Fixed-window cost');
 
     const currentTime = this.#currentTime();
     const existing = this.#fixedWindows.get(key);
@@ -276,12 +277,16 @@ export class MemoryFleetStateStore implements FleetStateStore {
 
     if (!existing || currentTime >= existing.resetAt) {
       counter = {
-        count: 1,
+        count: cost,
         resetAt: this.#expiryAfter(policy.windowMs, 'Fixed-window duration', currentTime),
       };
       this.#fixedWindows.set(key, counter);
     } else {
-      existing.count += 1;
+      const nextCount = existing.count + cost;
+      if (!Number.isSafeInteger(nextCount)) {
+        throw new RangeError('Fixed-window count must remain a positive safe integer');
+      }
+      existing.count = nextCount;
       counter = existing;
     }
 

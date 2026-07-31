@@ -219,6 +219,34 @@ describe('coarse gateway media route', () => {
     expect(load).toHaveBeenCalledOnce();
   });
 
+  it('reserves the configured upstream call cost before invoking an uncached media loader', async () => {
+    const weightedProfile = createRouteProfile({
+      ...profile,
+      admissionRate: { ...profile.admissionRate, limit: 3 },
+      upstreamBudget: { ...profile.upstreamBudget, limit: 5 },
+      upstreamBudgetCost: 3,
+    });
+    const store = new MemoryFleetStateStore(() => 1_000);
+    await store.consumeFixedWindow(
+      createStateKey('rate', weightedProfile.upstreamBudget.scope),
+      weightedProfile.upstreamBudget,
+      3,
+    );
+    const load = vi.fn(async () => ({
+      body: Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]),
+      contentType: 'image/jpeg' as const,
+      fetchedAt: 1_000,
+      kind: 'media' as const,
+      source: 'fixture-provider',
+    }));
+    const handler = createGatewayHandler(createRouteRegistry([createMediaRoute(load, weightedProfile)]));
+
+    const response = await handler(new Request('https://balance.test/api/media-fixture'), createDependencies(store));
+
+    expect(response.status).toBe(503);
+    expect(load).not.toHaveBeenCalled();
+  });
+
   it('opens the media breaker after transient failures and recovers through one half-open probe', async () => {
     const resilientProfile = createRouteProfile({
       ...profile,

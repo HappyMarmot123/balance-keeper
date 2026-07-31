@@ -142,6 +142,7 @@ describe('server build contract', () => {
       resolve(workspaceRoot, 'src/entities/earthquake/contract.ts'),
       resolve(workspaceRoot, 'src/entities/macro/contract.ts'),
       resolve(workspaceRoot, 'src/entities/weather/contract.ts'),
+      resolve(workspaceRoot, 'src/entities/weather-alert/contract.ts'),
     ];
     const browserBarrels = [
       resolve(workspaceRoot, 'src/entities/air-quality/index.ts'),
@@ -149,6 +150,7 @@ describe('server build contract', () => {
       resolve(workspaceRoot, 'src/entities/earthquake/index.ts'),
       resolve(workspaceRoot, 'src/entities/macro/index.ts'),
       resolve(workspaceRoot, 'src/entities/weather/index.ts'),
+      resolve(workspaceRoot, 'src/entities/weather-alert/index.ts'),
     ];
     const browserQueryDependencies = [...graph.entries()]
       .filter(([, source]) => source.includes('@tanstack') || source.includes('QueryClient'))
