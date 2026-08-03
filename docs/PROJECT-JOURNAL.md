@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T25 MTIS 격자형 해상교통 — ACCEPTED |
-| 다음 단계 | T25 final commit·development PR·merge → T26 상세 범위 확인 |
+| 현재 단계 | T26 ITS 9종 계약 검증 — ACCEPTED, 게시 진행 |
+| 다음 단계 | T26 final commit·development PR·병합 → T27 제안 |
 
 ---
 
@@ -277,6 +277,9 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-057 | AISstream 기반 공개 개별 군함 추적은 `NO_GO`를 유지한다. 별도 제품 후보는 군함 식별·개별 좌표·항로 추론이 없는 격자별 해상교통량·밀집도로 한정하며, KOMSA MTIS를 1순위·해양수산부 GICOMS를 2순위 `CONDITIONAL` 후보로 둔다. | ACCEPTED | AISstream의 공개 재배포·상업 이용·파생 데이터·retention 권리는 공식 공개 문서에서 확인되지 않았고 beta·no SLA다. IMO는 군함·정부선의 AIS 의무 예외와 송신 중단·불완전성을 명시하며 웹 공개의 안전·보안 위험을 경고한다. 두 한국 공식 후보는 이용허락 제한이 없지만 집계 데이터일 뿐이며 운영 승인·quota·HTTPS·실 schema contract gate가 남았다. 사용자가 2026-07-31 T24 판정과 T25의 격자형 해상교통 재정의 방향을 수락했으며, 상세 Task 승인 전 구현은 시작하지 않는다. |
 | D-058 | T25는 공공데이터포털 KOMSA MTIS의 최신 비식별 level-4 격자 snapshot을 `/api/maritime-traffic` 데이터 수직 슬라이스로 준비한다. canonical `DATA_GO_KR_SERVICE_KEY`를 재사용하고 public route에는 provider pagination을 노출하지 않는다. Entity Query는 기본 비활성화하며 지도 toggle·geometry·렌더링은 T30에 남긴다. | APPROVED | 공식 OpenAPI는 5분 생성 `grid_id`, `vmtc`, `dnsty`, `regDt`와 pagination만 제공하고 좌표·polygon, 선박용도·톤수·시각·grid level 선택 요청은 제공하지 않는다. 실제 HTTPS, item cardinality, page 수, quota와 공식 grid geometry가 확인되지 않아 값 미출력 keyed gate 전에는 fixture·cache cadence·production route를 확정할 수 없다. 사용자가 2026-07-31 “시작하세요.”로 이 범위와 선행 gate 착수를 승인했다. |
 | D-059 | MTIS 활용승인이 완료됐다고 가정하고 T25 offline 구현을 진행한다. fixture는 공식 Swagger의 `header/body/items.item`, `grid_id/vmtc/dnsty`, `regDt/pageNo/numOfRows/totalCount`만 사용한 synthetic 값으로 작성하며 production은 fixture fallback 없이 실제 provider만 호출한다. 현재 403 때문에 확인하지 못한 다건·empty cardinality, 최대 page size·실 page 수·quota·시간대는 보수적으로 검증하고 live smoke를 외부 공개 release gate로 남긴다. | APPROVED | 사용자가 2026-07-31 “T25 승인됬다 가정하고 작업 진행”으로 기존 keyed gate BLOCKED를 인지한 상태에서 mock-first 범위 변경을 명시적으로 승인했다. 이는 실제 활용승인·live schema 성공을 주장하거나 geometry를 추측하도록 허용하지 않는다. |
+| D-060 | T26은 ITS 전용 `ITS_API_KEY`로 9개 공식 HTTPS `:9443` 후보의 실제 JSON success·empty·error 계약과 계정 승인 범위만 검증한다. 서비스별 최소 1회·전체 최대 9회인 값 미출력 probe를 재실행 가능한 명시적 live-smoke gate로 만들고, quota를 소진해 한도를 시험하지 않는다. production Entity·route·Query·UI는 T27~T30까지 만들지 않는다. | APPROVED | 공식 상세 페이지와 현재 공식 JS 샘플에서 실제 resource path를 확인했지만 JSON cardinality·MIME·HTTP status·좌표축·단위·시간대·실 quota가 문서화되지 않았다. 특히 `dangerousCarInfo` 요청·응답 표와 샘플, VSL 좌표 설명, 예측 `routeNo`가 서로 충돌한다. 공공데이터포털 key와 통합하면 안 되며 서비스별 신청·3~5영업일 승인이 필요하다. 사용자가 2026-07-31 “되었다 가정하고 작업을 진행하세요”로 서비스 승인을 가정한 T26 착수를 승인했다. |
+| D-061 | T26은 서비스 승인이 완료됐다고 가정해 공식 문서 기반 synthetic response로 계약 프로브의 offline 보안·경계 테스트와 기본 skip live-smoke를 구현한다. 로컬 `ITS_API_KEY`와 명시적 gate가 있으면 실제 9종을 각 1회 검증하되, live 실패·미실행 결과를 synthetic fixture로 덮거나 실제 계약 PASS로 승격하지 않는다. | APPROVED | 사용자의 가정은 활용신청 상태 때문에 구현을 멈추지 말라는 범위 변경이며 실제 JSON cardinality·quota·좌표축을 확인했다는 증거는 아니다. 후속 T27~T29가 문서 모순을 production 사실로 복사하지 않도록 실키 결과는 별도 release condition으로 유지한다. |
+| D-062 | T26은 disaster의 HTTPS·JSON·provider code·cardinality·핵심 비위치 필드가 정상이고 geometry만 공식 계약과 불일치하면 이를 `observed`가 아닌 `deferred-geometry`로 분리해 완료할 수 있다. 이 상태는 T28의 공식 코드 정의·실응답 parser release gate이며 production Entity·route·지도에서 사용할 수 없다. geometry 외 필수 필드·timestamp·envelope 오류는 계속 `invalid`다. | APPROVED | strict live gate에서 나머지 8종은 PASS했지만 disaster 8건의 위치 유형·geometry 조합이 모두 문서상 Point/LineString/Polygon과 불일치했다. 사용자가 2026-07-31 “추천 방향으로 계속 진행해봐”로 거짓 geometry PASS 대신 T28 release gate 이관 방향을 승인했다. |
 
 ---
 
@@ -3062,7 +3065,81 @@ flowchart LR
 - 미검증·회귀 경계:
   - 실제 endpoint의 `numOfRows=5000`, 단일 page, object/array/empty, `regDt` 형식·시간대, JSON MIME, 값 범위·payload·quota는 live gate 전까지 provisional이다. 불일치 시 일부 결과를 조용히 자르지 않고 provider failure로 처리한다.
   - 공식 grid geometry가 없어 T30 지도 표시를 시작할 수 없다. T25는 데이터 vertical slice만 완료했으며 현재 화면 변화는 없다.
+- 병합:
+  - final commit `9f5dd1a`, PR `#23`의 `quality-gate` 성공 뒤 merge commit `441d4ce`로 `development`에 병합했고 local·origin 동기화를 확인했다.
 - Guardrail: `ACCEPTED` — 승인 범위의 정상·실패·경계·회귀 검증과 독립 review가 모두 통과했고 알려진 offline 회귀는 없다. 사용자가 잔여 live contract·geometry 제한을 인지한 상태에서 final commit·push·development PR·병합을 승인했다.
+
+### T26 — ITS 9종 계약 검증
+
+- 상태: `ACCEPTED` — disaster geometry 불일치는 `observed`가 아니라 T28 release gate인 `deferred-geometry`로 격리했고, geometry 외 계약과 전체 회귀가 통과했다. 사용자가 결과와 final commit·development PR·병합 후 다음 Task 진행을 승인했다.
+- 목적: T27~T29 구현 전에 ITS 9개 서비스의 실제 transport·JSON schema·empty/error·좌표·시간·단위·계정 승인 범위를 값 미출력 live contract matrix로 확정해 추측 기반 fixture와 production parser를 막는다.
+- dependency·기준선:
+  - T02·T06·T25는 `ACCEPTED`, 시작 기준선은 `development@441d4ce`다.
+  - 인증은 공공데이터포털 `DATA_GO_KR_SERVICE_KEY`가 아니라 ITS 국가교통정보센터의 server-only `ITS_API_KEY`를 사용한다.
+  - 공식 신청은 로그인 후 `https://www.its.go.kr/user/issueAuthKey?service=<service-id>`에서 서비스별로 진행하며 매뉴얼상 관리자 승인에 3~5영업일이 걸린다.
+- 공식 후보 matrix:
+
+| 후속 Task | 서비스·신청 ID | 공식 후보 endpoint | 문서상 최소 조건·핵심 불확실성 |
+| --- | --- | --- | --- |
+| T27 | traffic `OPD_00000001` | `GET https://openapi.its.go.kr:9443/trafficInfo` | `type`, 조건부 `routeNo/drcType`, 선택 bbox; 속도 단위·좌표·JSON cardinality |
+| T28 | event `OPD_00000002` | `GET https://openapi.its.go.kr:9443/eventInfo` | `type/eventType`, 선택 bbox; nullable 종료·세부 enum·빈 결과 |
+| T27 | fcTraffic `OPD_00000004` | `GET https://openapi.its.go.kr:9443/bypassFCastInfo` | `sectionId/routeNo/fCastDate/fCastHour`; 샘플은 `routeNo`를 주석 처리해 문서와 충돌 |
+| T27 | detectorInfo `OPD_00000005` | `GET https://openapi.its.go.kr:9443/vdsInfo` | 전국 무필터 응답; `linkIds`, 차로·교통량 집계, 점유율 단위와 payload 상한 |
+| T29 | vms `OPD_00000006` | `GET https://openapi.its.go.kr:9443/vmsInfo` | 전국 무필터 응답; 메시지 순서·구분자·제어문자, 위치·갱신주기 |
+| T29 | safeDriving `OPD_00000007` | `GET https://openapi.its.go.kr:9443/posIncidentInfo` | 필수 bbox; timestamp·종료 상태 부재, priority/type enum·좌표계 |
+| T29 | vsl `OPD_00000008` | `GET https://openapi.its.go.kr:9443/vslInfo` | 좌표 표와 샘플의 축이 반대이고 속도 단위·`cntcedDate` 형식이 불명 |
+| T28 | dangerousCarInfo `OPD_00000017` | `GET https://openapi.its.go.kr:9443/dangerousCarInfo` | 실행 샘플은 `apiKey/getType`만 사용하지만 요청·응답 표와 필드명이 충돌; 정밀 사고 위치·retention 제한 |
+| T28 | disaster `OPD_00000020` | `GET https://openapi.its.go.kr:9443/disasterInfo` | `category=D/eventType/startDate/endDate`, 선택 bbox; Point/Line/Polygon 구문·좌표축·날짜창 |
+
+- 포함:
+  1. `RUN_ITS_NINE_SERVICES_LIVE_SMOKE=1`과 유효한 `ITS_API_KEY`가 모두 있을 때만 실행되는 server-side gated probe를 추가한다. 기본 test·CI는 deterministic offline이고 secret 값·원문 item·provider message를 출력하거나 fixture로 저장하지 않는다.
+  2. 각 서비스는 공식 현재 endpoint에 `getType=json`과 최소·bounded query로 최대 1회만 요청한다. HTTPS final host·port·path, redirect 부재, status, JSON MIME, 선언·실수신 크기, provider code와 total count만 안전한 metadata로 판정한다.
+  3. success·정상 empty·provider error의 envelope와 item 단건 object/배열/누락 변동, 실제 scalar 타입·nullable·timestamp 형식·좌표축·값 범위를 서비스별 contract matrix로 기록한다.
+  4. 교통예측은 공식 `section_id_info.xlsx`의 현재 구간 ID와 허용 예측시각을 사용하고, bbox 서비스는 작은 한국 영역으로 제한한다. 무필터 서비스는 streaming response cap을 넘으면 즉시 abort하고 `BLOCKED`로 남긴다.
+  5. 현행 매뉴얼의 “현재 일일 제한 없음”과 과거 공식 Q&A의 “API당 1,000회/일” 충돌은 부하 시험하지 않는다. 계정 화면·운영기관 근거가 없으면 후속 Task budget은 서비스당 1,000회/일 미만으로 보수 설정한다.
+- 제외:
+  - T27~T29의 Entity·provider·gateway route·Query·cache 구현, synthetic production fixture
+  - T30 지도 layer·marker·geometry·toggle·Widget 변경
+  - 위험물 차량의 신원·차량번호·화물 추론, 정밀 위치 이력 저장, 원문 HTML 렌더링
+  - 서비스 활용신청·권한 변경, quota 소진 시험, key 출력·복사·커밋, raw 응답 저장
+- 실제 변경:
+  - `tests/server/its/its-nine-services-contract.ts`: 9종 manifest, canonical URL·query, bounded fetch, envelope·cardinality·field·semantic·좌표 계약과 값 미출력 관찰 보고
+  - `tests/server/its/its-nine-services-contract.node.test.ts`: synthetic RED→GREEN 정상·실패·경계·보안 계약
+  - `tests/server/its/its-nine-services-live-smoke.node.test.ts`: 기본 skip, `RUN_ITS_NINE_SERVICES_LIVE_SMOKE=1`과 server-only `ITS_API_KEY`가 모두 있을 때만 실행되는 9종 live gate
+  - `docs/PROJECT-JOURNAL.md`: 승인 범위, 실제 계약 증거와 검증 결과
+  - production `src`, `.env*`, dependency, 공개 route와 사용자 화면은 변경하지 않았다.
+- 완료 조건·검증:
+  - 정상: 승인된 각 서비스가 공식 HTTPS origin/path에서 JSON success 또는 문서상 정상 empty를 반환하고, 실제 envelope·cardinality·핵심 필드 계약이 값 없이 기록된다.
+  - 실패: missing key·미승인 서비스·인증/파라미터/provider 오류, redirect, 비 JSON MIME, oversized body와 malformed schema를 서비스별로 구분하며 다른 서비스 결과를 숨기지 않는다.
+  - 경계: 조건부 query, 최신 예측 날짜·시간, 0건, object/array, null/blank, 좌표축, 날짜 형식, 속도·점유율·geometry와 payload cap을 확인한다.
+  - 회귀: 기본 suite에서는 9개 외부 요청이 모두 skip되고 기존 CCTV·gateway·credential·build가 변하지 않으며 `npm run validate`가 통과한다.
+- `BLOCKED` 조건: `ITS_API_KEY` 부재·승인 대기, 한 서비스라도 exact entitlement·HTTPS JSON 계약을 확인할 수 없음, 문서 충돌을 안전하게 해소할 수 없음, raw body 없이는 판정할 수 없음, offline test·전체 validate 실패. 단 D-062가 승인한 disaster geometry-only 불일치는 `deferred-geometry`로 분리하고 T28 production release gate로 남긴다. 성공한 서비스 결과는 보존하되 실패 서비스를 추측으로 `observed` 처리하지 않는다.
+- RED→GREEN:
+  - exact 9-service manifest·query allowlist, gate/missing key, HTTPS canonical origin/path와 credential 첨부 전 URL 검증을 먼저 실패시킨 뒤 구현했다.
+  - HTTP·MIME·redirect·transport·UTF-8·JSON·provider code·schema·object/array/empty·count 불일치와 선언/streaming body cap을 각각 실패시킨 뒤 fail-closed로 구현했다.
+  - 전국 무필터 traffic·detector 응답이 최초 1 MiB cap을 초과해 `size`로 실패한 증거를 근거로 finite cap을 8 MiB로 조정했고, cap 초과는 계속 streaming 중단한다.
+  - 문서 핵심 필드의 전체 표본 존재·scalar kind·non-null coverage, 최대 50개 의미 표본, empty의 `unverified-empty`, mixed coordinate axis와 원문 미보존을 RED→GREEN했다.
+  - live 진단에서 확인한 event 선택 message 공백, detector의 `-1` 결측, dangerous-car의 `(0,0)` 좌표 결측을 서비스 한정 경계 테스트로 고정했다. disaster는 문서상 Point/LineString/Polygon WKT wrapper·finite 좌표쌍 최소 개수·Polygon 폐쇄를 검증하며 explicit unavailable도 core PASS로 승격하지 않는다. 실제 8건은 strict geometry core에서 모두 invalid였고 D-062 이후에도 `observed`가 아닌 `deferred-geometry`다. 임의 out-of-range 좌표, `-1` 미만 detector 값, mixed axis와 필수 timestamp 오류는 계속 실패한다.
+  - `deferred-geometry`는 disaster의 success field shape와 비위치 필드가 모두 정상이고 semantic failure가 `location:valid-geometry` 또는 `location:unavailable`로만 한정될 때 생성한다. empty, timestamp·필수 필드 오류, 다른 서비스와 geometry 외 오류는 `invalid` 또는 `unverified-empty`로 남으며 live acceptance에서 거부한다.
+- live contract 증거:
+  - 명시적 gate 실행에서 9개 공식 `https://openapi.its.go.kr:9443` endpoint 모두 HTTP JSON success와 cardinality 일치를 확인했다. traffic·event·forecast·detector·VMS·safe-driving·VSL·dangerous-car 8종은 핵심 schema `observed`, semantic failure 0으로 PASS했다.
+  - disaster는 historical bounded window에서 8개 배열 item과 lowercase `locationInfoType/locationInfo`, `locationGeometry` 필드 존재를 확인했지만 8건 모두 문서상 geometry 유형·비공백 위치 조합에 맞지 않는다. 초기의 문자열 존재만 확인한 9종 `observed` 판정은 독립 리뷰가 재현한 false-positive여서 폐기했고, D-062 이후 `deferred-geometry`로만 허용한다.
+  - traffic 약 6.28 MiB·31,907건, detector는 실행 시점에 따라 약 1.24~4.10 MiB·7,244~26,468건으로 8 MiB cap 안에 있었고 나머지 서비스도 cap 안에서 완료됐다. 이는 현재 관찰값이며 quota·장기 최대 payload를 보장하지 않는다.
+  - event·VMS·주의운전은 `x=경도/y=위도`, VSL은 문서 표와 반대로 `x=위도/y=경도`였다. dangerous-car 표본은 유효 `x=경도/y=위도` 47건과 정확한 `(0,0)` 결측 3건으로 분리됐으며 다른 서비스에는 이 sentinel을 적용하지 않는다.
+  - dangerous-car 실제 핵심 필드는 `sntcManageNo`, `acdntOccrrncDt`, numeric `xcrdnt/ycrdnt`; disaster는 lowercase `locationInfoType/locationInfo` 배열 응답이었다. 예측은 현재 KST section 1 조건에서 non-empty 배열을 반환했다.
+  - TDD 보정 과정에서 명시적 live gate를 반복 실행했으나 각 실행은 서비스별 정확히 1회만 호출했고, 부하·quota 한도 시험은 하지 않았다. quota 충돌은 계속 unresolved 운영 조건이다.
+- 검증:
+  - focused offline: `50/50 PASS`; 기본 live suite: gate 미설정 시 `1 SKIP`; D-062 적용 뒤 명시적 9-service live gate는 `1/1 PASS`다. 이 PASS는 disaster geometry를 `observed`로 승격한 결과가 아니라 disaster에만 허용된 `deferred-geometry` release gate를 포함한다.
+  - `npm run validate`: Biome `415 files`, Vitest `173 passed / 11 skipped files`, `1,649 passed / 13 skipped tests`, strict TypeScript, client·server build PASS다.
+  - client build는 main `238.23 kB / gzip 67.87 kB`, lazy HLS `509.73 kB / gzip 157.64 kB`; server build는 `822.44 kB / gzip 174.51 kB`다. 기존 HLS chunk 경고 외 새 오류는 없다.
+  - 독립 보안 리뷰는 reflected credential field-name 누출을 재현했고 success body가 key를 반사하면 구조 보고 전에 `schema`로 fail-closed하도록 수정한 뒤 차단 finding 0건이다. 실제 3xx의 `transport` 분류만 낮은 진단 제한으로 남았다.
+  - 독립 보안·계약 테스트 재리뷰는 `deferred-geometry`가 disaster의 geometry-only failure에만 닫혀 있고 core field PASS는 계속 false이며 credential·원문 값이 보고되지 않음을 확인해 차단 finding 0건이다. 리뷰가 제안한 empty·비위치 필드 누락·비-disaster semantic failure 직접 회귀도 보강했다.
+- 남은 경계:
+  - live 결과는 한 시점·최대 50개 의미 표본의 계약 증거이며 서비스 quota, 장기 payload 최대, enum 전체 집합과 시간대 의미는 T27~T29에서 보수적으로 다룬다.
+  - disaster `endDate`는 현재 형식을 T26에서 의미로 해석하지 않는다. 위치 유형·geometry는 문서와 실제 응답이 불일치해 `deferred-geometry`이며, 공식 코드 정의·만료·좌표 parsing·fallback 정책을 T28에서 검증하기 전 production Entity·route·지도에서 사용할 수 없다.
+  - native fetch의 `redirect:'error'`는 실제 3xx를 follow하지 않고 fail-closed하지만 런타임 reject가 `transport`로 분류될 수 있다. 합성 final-URL mismatch만 `redirect`로 구분되며 이 진단 한계를 후속 gateway 정책에서 보존한다.
+  - 이 Task는 test-only 계약 gate다. production provider·route·cache·Entity·UI는 아직 구현되지 않았다.
+- Guardrail: `ACCEPTED` — 정상·실패·경계·보안 회귀, ITS 8종 `observed` 계약과 disaster 비도형 계약이 통과했다. 미확정 geometry는 D-062에 따라 `deferred-geometry`로 명시적으로 분리되어 T28 release gate 전 production에 진입할 수 없다. 사용자가 잔여 release gate를 인지한 상태에서 결과와 게시를 승인했다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3352,3 +3429,10 @@ flowchart LR
 | 2026-07-31 | T25 비식별 Entity·기본 비활성 Query·strict KOMSA provider·coarse gateway를 synthetic fixture RED→GREEN; transport URL secret leak RED와 provider code·pagination·time 등 14개 strict RED를 수정 | T25 |
 | 2026-07-31 | 독립 리뷰가 public Entity의 5 MiB grid ID 허용을 재현해 128자·2 MiB payload cap 회귀를 RED→GREEN; 전체 `1,599 tests PASS`, 두 build와 3개 영역 재리뷰 PASS, live·geometry는 release gate로 유지 | T25 |
 | 2026-07-31 | 사용자가 “PR 머지까지 하고 다음 단계 진행”으로 T25 결과와 잔여 live·geometry release gate를 수락하고 final commit·push·development PR·quality-gate 후 병합을 승인 | T25→T26 |
+| 2026-07-31 | T25 final commit `9f5dd1a`, PR #23 quality-gate PASS 후 merge commit `441d4ce`로 development에 병합하고 local·origin 동기화; 최신 development에서 `feature/t26-its-contract-matrix` 생성 | T25→T26 |
+| 2026-07-31 | 공식 ITS 상세 페이지·매뉴얼·현재 JS 샘플로 9개 HTTPS `:9443` resource path와 서비스별 신청 ID를 확인; JSON/empty/error·좌표·단위·quota 문서 공백과 dangerous/VSL/fcTraffic 충돌을 T26 값 미출력 keyed gate 제안으로 분리, key 호출·production 변경 없음 | T26 |
+| 2026-07-31 | 사용자가 “되었다 가정하고 작업을 진행하세요”로 ITS 9종 서비스 승인을 가정한 T26 mock-first 착수를 승인; 실제 계약을 확인하지 않은 synthetic 결과는 live PASS로 승격하지 않고 명시적 gate에서만 키를 읽도록 D-060~D-061 동결 | T26 |
+| 2026-07-31 | T26 test-only contract gate를 synthetic RED→GREEN하고 초기 lax live 판정은 9종 PASS였으나 독립 리뷰가 disaster blank/malformed geometry false-positive와 reflected-key field-name 누출을 재현; reflection fail-closed·strict geometry·나머지 semantic/50-sample 회귀를 보강한 최종 live에서 8종 PASS, disaster 8건 schema-invalid로 T26 BLOCKED. production·env·dependency·UI 변경 없음 | T26 |
+| 2026-07-31 | T26 최종 offline 49 tests와 전체 1,648 tests·strict typecheck·client/server build PASS, 독립 보안·계약 리뷰 코드 차단 finding 0건. 실제 disaster geometry만 공식 계약 불일치로 BLOCKED이며 사용자 수락 전 commit·push·PR 없음 | T26 |
+| 2026-07-31 | 사용자가 추천 방향으로 D-062 범위 이관을 승인해 disaster geometry-only 불일치를 `observed`가 아닌 T28 `deferred-geometry` release gate로 격리; 비위치·다른 서비스·empty 오류의 fail-closed 회귀를 보강하고 명시적 live 1 test, focused 50 tests, 전체 1,649 tests·두 build와 독립 재리뷰 PASS. T26 PASS·사용자 ACCEPTED 대기, commit·push·PR 없음 | T26 |
+| 2026-08-03 | 사용자가 “진행하고 다음 작업 진행”으로 T26 결과를 ACCEPTED하고 final commit·development PR·quality-gate 후 병합과 T27 제안 진행을 승인 | T26→T27 |
