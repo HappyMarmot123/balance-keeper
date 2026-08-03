@@ -9,8 +9,8 @@
 | 기준일 | 2026-08-03 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T33 회귀/릴리스 증빙 — PASS 대기(사용자 ACCEPTED 후 다음 Task) |
-| 다음 단계 | T33 완료 후 다음 Task 재개: preview/rollback 증빙 정합성 조건 충족 |
+| 현재 단계 | T33 회귀/릴리스 증빙 — PASS 완료(운영 배포 증빙은 별도 범위) |
+| 다음 단계 | 배포 제외 조건으로 다음 목표: 배포 미실시 기반 오프라인 회귀 증빙 정합성 유지 |
 
 ---
 
@@ -3302,7 +3302,7 @@ flowchart LR
 
 ### T33 — 전체 회귀와 Vercel preview·rollback 증빙
 
-- 상태: `PASS` — 오프라인 회귀 기준은 완료. 외부 배포/롤백·region 비교 증빙은 미보유로 BLOCKED 분리.
+- 상태: `PASS` — 오프라인 회귀 기준은 완료. Vercel 배포 증빙(`preview`/`production`/`rollback`/`region compare`)은 이번 범위에서 의도적으로 제외.
 - 승인: `T09` 완료 및 `T32` 완료 상태에서 사용자가 `"시작"` 지시로 다음 단계 진행 승인.
 - 목적: feature 완료 상태의 전체 회귀를 마감하고, preview/rollback/운영 제한 근거를 T33으로 통합한다.
 - 포함:
@@ -3328,9 +3328,9 @@ flowchart LR
   - `npm run validate`를 재실행해 현재 기준(2026-08-03T15:52:55+09:00) 기준 정적 회귀를 재확인: Biome check, Vitest 1887/15, client/server build 모두 PASS.
   - `.github/workflows/ci.yml`의 push 기준 quality gate가 유지됨을 확인.
   - `.github/workflows/frontend-pr-review.yml`에서 `codex-review`/`post-feedback`가 `if: false`로 비활성화되고 `quality-gate`만 동작함을 확인.
-- 회귀·잔여 범위 (BLOCKED):
-  - `Vercel preview`/`production` 배포 링크, region 비교(`hnd1`/`icn1`), rollback drill은 저장소/권한 내에서 링크가 없어 미실행.
-  - 위 항목은 해결 조건만 기록한 뒤 T33 PASS 후 확장.
+- 회귀·잔여 범위:
+  - `Vercel preview`/`production` 배포 링크, region 비교(`hnd1`/`icn1`), rollback drill은 이번 스프린트 범위에서 미진행(배포 제외).
+  - 위 항목은 운영 배포 범위를 활성화하는 별도 Task 또는 사용자 승인 시점에서 별도 확장.
 - 진행 증거:
   - 브라우저 스모크로 기본 화면 로드를 확인했고, `npm run validate`도 PASS이므로 코드 회귀는 오프라인 기준으로 안정화됨.
   - 저장소 내 `.vercel` 메타(`project.json`)가 없어 Vercel preview 링크 자동 추적 증빙을 수집할 수 없음.
@@ -3338,7 +3338,7 @@ flowchart LR
 - 반복 실행 시점: `2026-08-03T15:52:55+09:00` (validate 재실행·브라우저 smoke·지도 루트 존재성 검사 각각 실행).
   - 회귀 지표: lint 477 files, test file 196개 / 1887 tests PASS (15 skipped), client/server build PASS.
 - Codex 리뷰 workflow는 `if: false`로 비활성 상태가 유지됨. 오토 리뷰 의존 회귀는 제외하고 quality-gate 기반 회귀만 정합성 판단.
-- 미완료 남은 항목: preview/rollback drill, region failover 비교(`hnd1`/`icn1`), 공개 배포 기반 실측 링크 미수집 상태.
+- 미완료 항목: 운영 배포 범위( preview/rollback/region 비교 )는 본 작업 범위 제외. 배포 연계가 필요할 때 별도 Task로 분리하여 진행.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3495,6 +3495,7 @@ flowchart LR
 
 | 날짜 | 변경 | Task |
 | --- | --- | --- |
+| 2026-08-03 | T33 오프라인 회귀(PASS) 상태에서 Vercel 배포 증빙은 이번 스프린트 범위에서 제외하고, `npm run validate`/E2E 기반 회귀 정합성 재확인 | T33 |
 | 2026-08-03 | T33 오프라인 회귀(PASS) 근거 정리 완료 후 Playwright 실행 산출물(`test-results/`, `playwright-report/`, `tmp-t33-*.png`)를 `.gitignore`로 고정해 CI 정합성/반복 작업 안정화 | T33 |
 | 2026-08-03 | T33에서 `playwright.e2e.config.ts` + `tests/t33-dashboard-e2e.spec.ts`로 상호작용 E2E를 실행해 PASS, `npm run validate` 재실행까지 통과. 남은 BLOCKED는 preview/rollback/region failover 링크·권한 근거 미확보 | T33 |
 | 2026-08-03 | T33에서 브라우저 smoke 스크립트(Playwright + chrome)로 localhost 화면 로드 증빙을 보강하고, preview/rollback은 부적합 조건 미충족으로 유지 | T33 |
