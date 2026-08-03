@@ -19,9 +19,10 @@ describe('dashboard earthquake composition boundary', () => {
 
   it('gives earthquake one explicit shell slot in the existing data grid', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
+    const panelGridSource = readSource('src/widgets/dashboard-shell/ui/PanelGrid.tsx');
     const renderedSlots = shellSource.match(/\{earthquakeSlot\}/g) ?? [];
 
-    expect(shellSource).toMatch(/earthquakeSlot:\s*ComponentChildren/);
+    expect(panelGridSource).toMatch(/earthquakeSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
   });
 });

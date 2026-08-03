@@ -19,11 +19,13 @@ describe('dashboard markets composition boundary', () => {
 
   it('gives markets one explicit shell slot without collapsing panel width at the xl boundary', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
+    const gridSource = readSource('src/widgets/dashboard-shell/ui/PanelGrid.tsx');
     const renderedSlots = shellSource.match(/\{marketsSlot\}/g) ?? [];
 
-    expect(shellSource).toMatch(/marketsSlot:\s*ComponentChildren/);
+    expect(gridSource).toMatch(/marketsSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
-    expect(shellSource).toContain('md:grid-cols-2 2xl:grid-cols-3');
+    expect(gridSource).toContain('className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3"');
+    expect(gridSource).toContain('marketsSlot');
     expect(shellSource).not.toContain('xl:grid-cols-5');
   });
 });

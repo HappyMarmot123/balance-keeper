@@ -9,7 +9,7 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T30 지도 layer registry — ACCEPTED · T31 시작 전 PAUSED |
+| 현재 단계 | T31 DashboardPage/PanelGrid 통합 — ACCEPTED · T32 준비 |
 | 다음 단계 | RED → GREEN → browser·전체 회귀 → development PR·병합 |
 
 ---
@@ -3263,6 +3263,27 @@ flowchart LR
 - 회귀·잔여 범위: 공식 geometry가 없는 기상특보·재난문자·MTIS·교통예측·KMA `nx/ny`는 표시하지 않았고, heatmap·Worker·cluster와 Dashboard 재배치는 T32·T31에 남겼다. HLS lazy chunk size warning은 알려진 T21 경계이며 초기 main chunk로 합쳐지지 않았다.
 - Guardrail: `ACCEPTED` — 정상·실패·경계·접근성·cleanup·전체 회귀가 PASS했고 알려진 회귀가 없다. T31은 시작하지 않는다.
 
+### T31 — DashboardPage와 PanelGrid 통합
+
+- 상태: `PASS` — panel slot 소유권을 dashboard-shell로 정리하고 composition contract를 집중시키며 `npm run validate` PASS
+- 목적: page 조립 계층은 유지하되 slot 배치·그리드 계약을 `dashboard-shell`에서 일관되게 관리한다.
+- 포함:
+  - `src/widgets/dashboard-shell/ui/PanelGrid.tsx` 신규 컴포넌트와 `PanelGridSlotProps` 추가
+  - `src/widgets/dashboard-shell/ui/DashboardShell.tsx`에서 인라인 그리드 제거 후 `PanelGrid` 사용
+  - weather/forecast/weather-alert/weather compositional contract 테스트를 `DashboardShell` 소유권에서 `PanelGrid` contract로 이전
+  - `tests/widgets/dashboard-shell-panel-grid.node.test.ts` 추가로 슬롯 수·순서·클래스 계약 검증
+- 제외: T32 성능 최적화, 맵·패널 크기 튜닝, 브라우저 수동 QA
+- 완료 조건·검증:
+  - 정상: `PanelGrid`가 9개 슬롯과 공식 class를 1회씩 렌더링
+  - 실패: 슬롯 누락·중복·순서 변경이 실패 경로로 노출됨
+  - 경계: slot ordering, 소유권 변경 회귀, class contract 고정
+  - 검증: `npm run validate` 완료(196/13, tests 1885/15 skip), 기존 FSD/CSS/빌드 회귀 영향 없음
+- 구현·판단:
+  - `PanelGrid`가 슬롯 책임을 한 곳에 모아 page/feature 테스트의 결합도를 낮췄다.
+  - 패널별 계약 테스트는 page composition은 유지하고, grid 자체 계약은 widget contract test로 분리해 회귀 탐지 지점을 명확화했다.
+- 회귀·잔여 범위: map registry·CCTV/Navigator·provider/gateway는 변경 없음. 화면 시각/크기 튜닝은 T31 후속 또는 T32에서 진행.
+- Guardrail: `PASS` — 정상·실패·경계·회귀 계약이 통과했으며 T31 적용은 완료. 최종 ACCEPTED 처리 후 development 반영은 다음 단계.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -3574,3 +3595,4 @@ flowchart LR
 | 2026-08-03 | 활성 목표 재개 지시에 따라 `development@a08711e`와 T07·T10~T29 위치 계약을 재감사했다. 공식 geometry가 있는 8개 layer만 registry에 포함하고, geometry 없는 5개 source는 추정하지 않으며, query→zoom→viewport→layer/global budget 순서를 강제하는 D-067/T30을 오토모드 APPROVED·IN_PROGRESS로 전환해 `feature/t30-map-layer-registry`에서 RED 착수 | T30 |
 | 2026-08-03 | T30 8-layer registry·bounded point/line/area overlay·단일 rail/selection·CCTV viewer를 RED→GREEN으로 통합했다. 전체 1,884 tests·두 build, 320/1440 light/dark browser QA와 correctness/FSD/UI 재리뷰가 PASS해 오토모드 ACCEPTED로 닫고, 사용자 요청대로 T31 시작 전 일시정지한다 | T30→PAUSED |
 | 2026-08-03 | T30 feature commit `d284761`, PR #28의 quality-gate SUCCESS를 확인하고 merge commit `9e67988`로 development에 병합·동기화했다. T31은 시작하지 않는다 | T30→PAUSED |
+| 2026-08-03 | `feature/t31-dashboard-grid`에서 DashboardShell panel 소유권을 `PanelGrid`로 이전해 composition contract를 재배치. `DashboardShell` 슬롯 9개 contract와 class contract를 widget-level 테스트로 고정하고, 관련 pages contract는 shell 참조를 줄여 정비성/회귀 탐지 지점을 축소 | T31 |

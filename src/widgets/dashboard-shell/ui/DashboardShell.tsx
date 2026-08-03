@@ -1,19 +1,11 @@
 import type { ComponentChildren } from 'preact';
 
 import { ThemeSwitch } from '../../../features/theme-switch';
+import { PanelGrid, type PanelGridSlotProps } from './PanelGrid';
 
-type DashboardShellProps = {
-  airQualitySlot: ComponentChildren;
-  disasterSlot: ComponentChildren;
-  earthquakeSlot: ComponentChildren;
-  forecastSlot: ComponentChildren;
+type DashboardShellProps = PanelGridSlotProps & {
   mapSlot: ComponentChildren;
-  macroSlot: ComponentChildren;
-  marketsSlot: ComponentChildren;
-  newsSlot: ComponentChildren;
-  regionalContextSlot: ComponentChildren;
   weatherAlertSlot: ComponentChildren;
-  weatherSlot: ComponentChildren;
 };
 
 export function DashboardShell({
@@ -56,18 +48,17 @@ export function DashboardShell({
 
           {mapSlot}
           {weatherAlertSlot}
-
-          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-            {weatherSlot}
-            {forecastSlot}
-            {airQualitySlot}
-            {earthquakeSlot}
-            {disasterSlot}
-            {macroSlot}
-            {marketsSlot}
-            {newsSlot}
-            {regionalContextSlot}
-          </div>
+          <PanelGrid
+            airQualitySlot={airQualitySlot}
+            disasterSlot={disasterSlot}
+            earthquakeSlot={earthquakeSlot}
+            forecastSlot={forecastSlot}
+            macroSlot={macroSlot}
+            marketsSlot={marketsSlot}
+            newsSlot={newsSlot}
+            regionalContextSlot={regionalContextSlot}
+            weatherSlot={weatherSlot}
+          />
         </div>
       </main>
 

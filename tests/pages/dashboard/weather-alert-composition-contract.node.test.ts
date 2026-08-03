@@ -12,6 +12,10 @@ const shellSource = readFileSync(
   resolve(import.meta.dirname, '../../../src/widgets/dashboard-shell/ui/DashboardShell.tsx'),
   'utf8',
 );
+const panelGridSource = readFileSync(
+  resolve(import.meta.dirname, '../../../src/widgets/dashboard-shell/ui/PanelGrid.tsx'),
+  'utf8',
+);
 
 describe('weather-alert dashboard composition boundary', () => {
   it('imports the weather-alert widget only through its public API', () => {
@@ -23,17 +27,17 @@ describe('weather-alert dashboard composition boundary', () => {
   it('places one full-width alert strip after the map and before the unchanged 3x3 panel grid', () => {
     const mapPosition = shellSource.indexOf('{mapSlot}');
     const alertPosition = shellSource.indexOf('{weatherAlertSlot}');
-    const gridPosition = shellSource.indexOf('md:grid-cols-2 2xl:grid-cols-3');
+    const panelGridPosition = shellSource.indexOf('<PanelGrid');
 
     expect(mapPosition).toBeGreaterThan(-1);
     expect(alertPosition).toBeGreaterThan(mapPosition);
-    expect(gridPosition).toBeGreaterThan(alertPosition);
+    expect(panelGridPosition).toBeGreaterThan(alertPosition);
     expect(shellSource.match(/\{weatherAlertSlot\}/gu)).toHaveLength(1);
     expect(shellSource).toContain('weatherAlertSlot: ComponentChildren');
   });
 
   it('keeps all nine established dashboard slots in the existing grid', () => {
-    const gridSource = shellSource.slice(shellSource.indexOf('md:grid-cols-2 2xl:grid-cols-3'));
+    const gridSource = panelGridSource;
     for (const slot of [
       'weatherSlot',
       'forecastSlot',
