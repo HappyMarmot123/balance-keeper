@@ -170,6 +170,33 @@ describe('MapLayerOverlay', () => {
     await waitFor(() => expect(onAccepted).toHaveBeenCalledOnce());
   });
 
+  it('does not call replace when point items are structurally equal after remap', async () => {
+    const items = [
+      {
+        accessibleName: '점 테스트',
+        id: 'point-a',
+        latitude: 37,
+        longitude: 127,
+      },
+    ] satisfies readonly KoreaMapPoint[];
+    const { pointLayer, session } = layerFixture();
+    const view = render(
+      <MapPointLayerOverlay items={items} keyboardAccessible={false} onSelect={vi.fn()} session={session} />,
+    );
+
+    await waitFor(() => expect(pointLayer.replace).toHaveBeenCalledOnce());
+    view.rerender(
+      <MapPointLayerOverlay
+        items={items.map((item) => ({ ...item, id: `${item.id}` }))}
+        keyboardAccessible={false}
+        onSelect={vi.fn()}
+        session={session}
+      />,
+    );
+
+    expect(pointLayer.replace).toHaveBeenCalledOnce();
+  });
+
   it('forwards mixed official geometry to one controlled geometry layer and destroys it on unmount', async () => {
     const items = [
       {
@@ -224,5 +251,37 @@ describe('MapLayerOverlay', () => {
 
     view.unmount();
     expect(geometryLayer.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('does not call replace when geometry items are structurally equal after remap', async () => {
+    const items = [
+      {
+        accessibleName: '도로 구간',
+        geometry: {
+          kind: 'line',
+          path: [[127, 37] as const, [127.1, 37.1] as const],
+        },
+        id: 'geometry-line',
+      },
+    ] satisfies readonly KoreaMapGeometryFeature[];
+    const { geometryLayer, session } = layerFixture();
+    const view = render(
+      <MapGeometryLayerOverlay items={items} keyboardAccessible onSelect={vi.fn()} session={session} />,
+    );
+    await waitFor(() => expect(geometryLayer.replace).toHaveBeenCalledOnce());
+    view.rerender(
+      <MapGeometryLayerOverlay
+        items={items.map((item) => ({
+          ...item,
+          geometry: { ...item.geometry, path: [...item.geometry.path] as const },
+        }))}
+        keyboardAccessible
+        onSelect={vi.fn()}
+        session={session}
+      />,
+    );
+
+    expect(geometryLayer.replace).toHaveBeenCalledOnce();
+    view.unmount();
   });
 });
