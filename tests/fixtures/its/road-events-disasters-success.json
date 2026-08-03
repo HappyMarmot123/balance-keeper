@@ -1,0 +1,78 @@
+{
+  "response": {
+    "header": {
+      "resultCode": 0,
+      "resultMsg": "SUCCESS"
+    },
+    "body": {
+      "totalCount": 3,
+      "items": {
+        "item": [
+          {
+            "category": "D",
+            "eventId": "DISASTER-POINT",
+            "eventType": "D03",
+            "eventDetailType": "1",
+            "status": "발표",
+            "startDate": "20260803110000",
+            "endDate": "202608041200",
+            "socName": "합성 지점",
+            "socExtent": "",
+            "locationInfoType": "1",
+            "locationInfo": "127.02 37.52",
+            "locationGeometry": "",
+            "linkId": "DISASTER-LINK-1",
+            "roadName": "합성로",
+            "roadNo": "",
+            "roadDrcType": "",
+            "lanesBlockType": "",
+            "lanesBlocked": "",
+            "message": "합성 침수 신호"
+          },
+          {
+            "category": "D",
+            "eventId": "DISASTER-LINE",
+            "eventType": "D04",
+            "eventDetailType": "1",
+            "status": "발표",
+            "startDate": "20260803130000",
+            "endDate": "20260804130000",
+            "socName": "합성 구간",
+            "socExtent": "",
+            "LocationInfoType": 2,
+            "LocationInfo": "127.01 37.51, 127.02 37.52",
+            "locationGeometry": null,
+            "linkId": "DISASTER-LINK-2",
+            "roadName": "합성로",
+            "roadNo": "",
+            "roadDrcType": "",
+            "lanesBlockType": "",
+            "lanesBlocked": "",
+            "message": "합성 홍수 구간"
+          },
+          {
+            "category": "D",
+            "eventId": "DISASTER-AREA",
+            "eventType": "D07",
+            "eventDetailType": "1",
+            "status": "발표",
+            "startDate": "20260803120000",
+            "endDate": "20260804140000",
+            "socName": "합성 영역",
+            "socExtent": "",
+            "locationInfoType": "3",
+            "locationInfo": "127.00 37.50, 127.10 37.50, 127.05 37.60",
+            "locationGeometry": "   ",
+            "linkId": "DISASTER-LINK-3",
+            "roadName": "합성로",
+            "roadNo": "",
+            "roadDrcType": "",
+            "lanesBlockType": "",
+            "lanesBlocked": "",
+            "message": "합성 산불 영역"
+          }
+        ]
+      }
+    }
+  }
+}

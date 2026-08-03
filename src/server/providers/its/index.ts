@@ -30,6 +30,13 @@ export {
   type ItsCctvStillMetadata,
 } from './cctvStillImage';
 export {
+  type FetchItsRoadEventsOptions,
+  fetchItsRoadDisasters,
+  fetchItsRoadIncidents,
+  ITS_ROAD_EVENTS_MAX_RESPONSE_BYTES,
+  ItsRoadEventsProviderError,
+} from './roadEvents';
+export {
   type FetchItsRoadTrafficForecastOptions,
   fetchItsRoadTrafficForecast,
   ITS_ROAD_TRAFFIC_FORECAST_MAX_RESPONSE_BYTES,
