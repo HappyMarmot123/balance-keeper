@@ -6,8 +6,6 @@ import {
 } from '../../../entities/cctv';
 import type { KoreaMapViewport } from '../../../entities/map';
 
-export const CCTV_POINT_BUDGET = 100;
-
 export function resolveCctvBounds(viewport: KoreaMapViewport): CctvBounds | undefined {
   const queryable =
     viewport.minimumLatitude >= CCTV_KOREA_BOUNDS.minimumLatitude &&

@@ -49,6 +49,26 @@ class FixtureMarker {
   }
 }
 
+class FixturePolyline {
+  static instances: FixturePolyline[] = [];
+
+  readonly setMap = vi.fn();
+
+  constructor(readonly options: naver.maps.PolylineOptions) {
+    FixturePolyline.instances.push(this);
+  }
+}
+
+class FixturePolygon {
+  static instances: FixturePolygon[] = [];
+
+  readonly setMap = vi.fn();
+
+  constructor(readonly options: naver.maps.PolygonOptions) {
+    FixturePolygon.instances.push(this);
+  }
+}
+
 class FixtureLatLng {
   constructor(
     readonly latitude: number,
@@ -117,6 +137,9 @@ function createSdk() {
     emitMarkerClick(marker: FixtureMarker) {
       emit('click', marker);
     },
+    emitOverlayClick(overlay: FixtureMarker | FixturePolygon | FixturePolyline) {
+      emit('click', overlay);
+    },
     emitTilesLoaded() {
       emit('tilesloaded');
     },
@@ -125,7 +148,9 @@ function createSdk() {
       LatLng: FixtureLatLng,
       Map: FixtureMap,
       Marker: FixtureMarker,
+      Polygon: FixturePolygon,
       Position: { RIGHT_CENTER: 8 },
+      Polyline: FixturePolyline,
     } as unknown as typeof naver.maps,
     once,
     removeListener,
@@ -142,11 +167,62 @@ function createSessionOptions(maps: typeof naver.maps, container = document.crea
   };
 }
 
+type FixtureGeometry =
+  | Readonly<{ kind: 'area'; ring: readonly (readonly [number, number])[] }>
+  | Readonly<{ kind: 'line'; path: readonly (readonly [number, number])[] }>
+  | Readonly<{ kind: 'point'; position: readonly [number, number] }>;
+
+type FixtureGeometryFeature = Readonly<{
+  accessibleName: string;
+  geometry: FixtureGeometry;
+  id: string;
+}>;
+
+type FixtureReplaceResult = Readonly<{
+  reason?: string;
+  status: string;
+}>;
+
+type FixtureGeometryLayer = Readonly<{
+  destroy(): void;
+  replace(features: readonly FixtureGeometryFeature[]): FixtureReplaceResult;
+}>;
+
+function readGeometryLayer(
+  session: ReturnType<typeof createKoreaMapSession>,
+  onSelect: (id: string) => void,
+): FixtureGeometryLayer | undefined {
+  const geometrySession = session as typeof session & {
+    createGeometryLayer?: (options: Readonly<{ onSelect: (id: string) => void }>) => FixtureGeometryLayer;
+  };
+
+  expect(geometrySession.createGeometryLayer).toBeTypeOf('function');
+  return geometrySession.createGeometryLayer?.({ onSelect });
+}
+
+function createPointFixtures(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    accessibleName: `관측 지점 ${index + 1}`,
+    id: `point-${index + 1}`,
+    latitude: 33 + (index % 100) * 0.001,
+    longitude: 124 + Math.floor(index / 100) * 0.001,
+  }));
+}
+
+function createGeometryPath(count: number, latitudeOffset = 0): readonly (readonly [number, number])[] {
+  return Array.from(
+    { length: count },
+    (_, index) => [124 + (index % 1_000) * 0.001, 33 + latitudeOffset + Math.floor(index / 1_000) * 0.001] as const,
+  );
+}
+
 afterEach(() => {
   vi.useRealTimers();
   FixtureMap.instances = [];
   FixtureMarker.instances = [];
   FixtureMarker.throwAtConstruction = undefined;
+  FixturePolygon.instances = [];
+  FixturePolyline.instances = [];
   FixtureResizeObserver.instances = [];
   vi.restoreAllMocks();
 });
@@ -412,8 +488,10 @@ describe('createKoreaMapSession', () => {
     }
     sdk.emitMarkerClick(firstMarker);
     firstMarker.element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+    firstMarker.element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: ' ' }));
     expect(onSelect).toHaveBeenNthCalledWith(1, 'camera-a');
     expect(onSelect).toHaveBeenNthCalledWith(2, 'camera-a');
+    expect(onSelect).toHaveBeenNthCalledWith(3, 'camera-a');
 
     layer.replace([
       {
@@ -426,7 +504,7 @@ describe('createKoreaMapSession', () => {
     expect(firstMarker.setMap).toHaveBeenCalledOnce();
     expect(firstMarker.setMap).toHaveBeenCalledWith(null);
     firstMarker.element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
-    expect(onSelect).toHaveBeenCalledTimes(2);
+    expect(onSelect).toHaveBeenCalledTimes(3);
 
     const replacement = FixtureMarker.instances[2];
     layer.destroy();
@@ -463,6 +541,337 @@ describe('createKoreaMapSession', () => {
     expect(FixtureMarker.instances[0]?.setMap).toHaveBeenCalledOnce();
     expect(FixtureMarker.instances[0]?.setMap).toHaveBeenCalledWith(null);
     session.destroy();
+  });
+
+  it('cleans the current point marker when provider click-listener registration fails', () => {
+    const sdk = createSdk();
+    const onSelect = vi.fn();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = session.createPointLayer({ onSelect });
+    sdk.addListener.mockImplementationOnce(() => {
+      throw new Error('fixture point listener failure');
+    });
+
+    const result = layer.replace(createPointFixtures(1));
+
+    expect.soft(result).toMatchObject({ reason: 'RENDER_FAILED', status: 'rejected' });
+    const marker = FixtureMarker.instances[0];
+    expect.soft(marker?.setMap).toHaveBeenCalledOnce();
+    expect.soft(marker?.setMap).toHaveBeenCalledWith(null);
+    marker?.element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+    expect.soft(onSelect).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it('cleans the current point marker when its accessible element cannot be read', () => {
+    const sdk = createSdk();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = session.createPointLayer({ onSelect: vi.fn() });
+    vi.spyOn(FixtureMarker.prototype, 'getElement').mockImplementationOnce(() => {
+      throw new Error('fixture marker element failure');
+    });
+
+    const result = layer.replace(createPointFixtures(1));
+
+    expect.soft(result).toMatchObject({ reason: 'RENDER_FAILED', status: 'rejected' });
+    expect.soft(FixtureMarker.instances[0]?.setMap).toHaveBeenCalledOnce();
+    expect.soft(FixtureMarker.instances[0]?.setMap).toHaveBeenCalledWith(null);
+    session.destroy();
+  });
+
+  it('accepts exactly 240 point markers in one bounded session layer', () => {
+    const sdk = createSdk();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = session.createPointLayer({ onSelect: vi.fn() });
+
+    const result = layer.replace(createPointFixtures(240));
+
+    expect.soft(result).toMatchObject({ status: 'replaced' });
+    expect(FixtureMarker.instances).toHaveLength(240);
+    session.destroy();
+  });
+
+  it('rejects 241 point markers before constructing any provider overlay', () => {
+    const sdk = createSdk();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = session.createPointLayer({ onSelect: vi.fn() });
+
+    const result = layer.replace(createPointFixtures(241));
+
+    expect.soft(result).toMatchObject({
+      reason: 'POINT_BUDGET_EXCEEDED',
+      status: 'rejected',
+    });
+    expect(FixtureMarker.instances).toHaveLength(0);
+    session.destroy();
+  });
+
+  it('treats an identical point signature as a no-op without rebuilding markers', () => {
+    const sdk = createSdk();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = session.createPointLayer({ onSelect: vi.fn() });
+    const points = createPointFixtures(1);
+
+    layer.replace(points);
+    const original = FixtureMarker.instances[0];
+    const result = layer.replace(points.map((point) => ({ ...point })));
+
+    expect.soft(result).toMatchObject({ status: 'unchanged' });
+    expect.soft(FixtureMarker.instances).toHaveLength(1);
+    expect(original?.setMap).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it('keeps prior point markers and listeners when a replacement transaction fails', () => {
+    const sdk = createSdk();
+    const onSelect = vi.fn();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = session.createPointLayer({ onSelect });
+    layer.replace(createPointFixtures(1));
+    const original = FixtureMarker.instances[0];
+    if (original === undefined) {
+      throw new TypeError('Expected an original fixture marker');
+    }
+    FixtureMarker.throwAtConstruction = 3;
+
+    const result = layer.replace(createPointFixtures(2));
+
+    expect.soft(result).toMatchObject({ reason: 'RENDER_FAILED', status: 'rejected' });
+    expect.soft(original.setMap).not.toHaveBeenCalled();
+    expect.soft(FixtureMarker.instances).toHaveLength(2);
+    expect.soft(FixtureMarker.instances[1]?.setMap).toHaveBeenCalledOnce();
+    expect.soft(FixtureMarker.instances[1]?.setMap).toHaveBeenCalledWith(null);
+    sdk.emitMarkerClick(original);
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(onSelect).toHaveBeenCalledWith('point-1');
+    session.destroy();
+  });
+
+  it('renders point, line and area geometries with their real paths and click selection', () => {
+    const sdk = createSdk();
+    const onSelect = vi.fn();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = readGeometryLayer(session, onSelect);
+    if (layer === undefined) {
+      session.destroy();
+      return;
+    }
+
+    const pointPosition = [127, 37.5] as const;
+    const linePath = [
+      [127.01, 37.51],
+      [127.02, 37.52],
+    ] as const;
+    const areaRing = [
+      [127.03, 37.53],
+      [127.04, 37.53],
+      [127.04, 37.54],
+    ] as const;
+    const result = layer.replace([
+      {
+        accessibleName: '지점형 도로재난',
+        geometry: { kind: 'point', position: pointPosition },
+        id: 'geometry-point',
+      },
+      {
+        accessibleName: '선형 도로재난',
+        geometry: { kind: 'line', path: linePath },
+        id: 'geometry-line',
+      },
+      {
+        accessibleName: '영역형 도로재난',
+        geometry: { kind: 'area', ring: areaRing },
+        id: 'geometry-area',
+      },
+    ]);
+
+    expect.soft(result).toMatchObject({ status: 'replaced' });
+    expect(FixtureMarker.instances).toHaveLength(1);
+    expect(FixturePolyline.instances).toHaveLength(1);
+    expect(FixturePolygon.instances).toHaveLength(1);
+    expect(FixtureMarker.instances[0]?.options).toMatchObject({
+      clickable: true,
+      map: FixtureMap.instances[0],
+      position: expect.objectContaining({ latitude: 37.5, longitude: 127 }),
+      title: '지점형 도로재난',
+    });
+    expect(FixturePolyline.instances[0]?.options).toMatchObject({
+      clickable: true,
+      map: FixtureMap.instances[0],
+      path: linePath.map(([longitude, latitude]) => expect.objectContaining({ latitude, longitude })),
+    });
+
+    const polygonPaths = FixturePolygon.instances[0]?.options.paths as
+      | readonly (readonly FixtureLatLng[])[]
+      | undefined;
+    const renderedRing = polygonPaths?.[0];
+    expect(FixturePolygon.instances[0]?.options).toMatchObject({
+      clickable: true,
+      map: FixtureMap.instances[0],
+    });
+    expect(renderedRing?.slice(0, areaRing.length)).toEqual(
+      areaRing.map(([longitude, latitude]) => expect.objectContaining({ latitude, longitude })),
+    );
+    expect([areaRing.length, areaRing.length + 1]).toContain(renderedRing?.length);
+    if (renderedRing?.length === areaRing.length + 1) {
+      expect(renderedRing.at(-1)).toEqual(renderedRing[0]);
+    }
+
+    const point = FixtureMarker.instances[0];
+    const line = FixturePolyline.instances[0];
+    const area = FixturePolygon.instances[0];
+    if (point === undefined || line === undefined || area === undefined) {
+      throw new TypeError('Expected all geometry overlays');
+    }
+    sdk.emitOverlayClick(point);
+    sdk.emitOverlayClick(line);
+    sdk.emitOverlayClick(area);
+    expect(onSelect).toHaveBeenNthCalledWith(1, 'geometry-point');
+    expect(onSelect).toHaveBeenNthCalledWith(2, 'geometry-line');
+    expect(onSelect).toHaveBeenNthCalledWith(3, 'geometry-area');
+
+    layer.destroy();
+    layer.destroy();
+    expect(point.setMap).toHaveBeenCalledOnce();
+    expect(line.setMap).toHaveBeenCalledOnce();
+    expect(area.setMap).toHaveBeenCalledOnce();
+    expect(point.setMap).toHaveBeenCalledWith(null);
+    expect(line.setMap).toHaveBeenCalledWith(null);
+    expect(area.setMap).toHaveBeenCalledWith(null);
+    session.destroy();
+  });
+
+  it('cleans the current geometry overlay when provider click-listener registration fails', () => {
+    const sdk = createSdk();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = readGeometryLayer(session, vi.fn());
+    if (layer === undefined) {
+      session.destroy();
+      return;
+    }
+    sdk.addListener.mockImplementationOnce(() => {
+      throw new Error('fixture geometry listener failure');
+    });
+
+    const result = layer.replace([
+      {
+        accessibleName: '리스너 실패 선형 도로재난',
+        geometry: { kind: 'line', path: createGeometryPath(2) },
+        id: 'listener-failure-line',
+      },
+    ]);
+
+    expect.soft(result).toMatchObject({ reason: 'RENDER_FAILED', status: 'rejected' });
+    const line = FixturePolyline.instances[0];
+    expect.soft(line?.setMap).toHaveBeenCalledOnce();
+    expect.soft(line?.setMap).toHaveBeenCalledWith(null);
+    session.destroy();
+  });
+
+  it('accepts exactly 4,000 geometry vertices and rejects 4,001 transactionally', () => {
+    const sdk = createSdk();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const layer = readGeometryLayer(session, vi.fn());
+    if (layer === undefined) {
+      session.destroy();
+      return;
+    }
+    const exactBudget: readonly FixtureGeometryFeature[] = [
+      {
+        accessibleName: '첫 번째 2,000개 정점 선',
+        geometry: { kind: 'line', path: createGeometryPath(2_000) },
+        id: 'line-a',
+      },
+      {
+        accessibleName: '두 번째 2,000개 정점 선',
+        geometry: { kind: 'line', path: createGeometryPath(2_000, 0.01) },
+        id: 'line-b',
+      },
+    ];
+
+    const accepted = layer.replace(exactBudget);
+
+    expect.soft(accepted).toMatchObject({ status: 'replaced' });
+    expect(FixturePolyline.instances).toHaveLength(2);
+    const priorLines = [...FixturePolyline.instances];
+
+    const rejected = layer.replace([
+      ...exactBudget,
+      {
+        accessibleName: '4,001번째 정점',
+        geometry: { kind: 'point', position: [127, 37] },
+        id: 'point-over-budget',
+      },
+    ]);
+
+    expect.soft(rejected).toMatchObject({
+      reason: 'GEOMETRY_VERTEX_BUDGET_EXCEEDED',
+      status: 'rejected',
+    });
+    expect.soft(FixturePolyline.instances).toHaveLength(2);
+    expect.soft(FixtureMarker.instances).toHaveLength(0);
+    for (const line of priorLines) {
+      expect.soft(line.setMap).not.toHaveBeenCalled();
+    }
+    session.destroy();
+  });
+
+  it('cleans multiple point and geometry layers independently', () => {
+    const sdk = createSdk();
+    const pointSelect = vi.fn();
+    const lineSelect = vi.fn();
+    const areaSelect = vi.fn();
+    const session = createKoreaMapSession(createSessionOptions(sdk.maps));
+    const pointLayer = session.createPointLayer({ onSelect: pointSelect });
+    const lineLayer = readGeometryLayer(session, lineSelect);
+    const areaLayer = readGeometryLayer(session, areaSelect);
+    if (lineLayer === undefined || areaLayer === undefined) {
+      session.destroy();
+      return;
+    }
+
+    pointLayer.replace(createPointFixtures(1));
+    lineLayer.replace([
+      {
+        accessibleName: '독립 선 레이어',
+        geometry: { kind: 'line', path: createGeometryPath(2) },
+        id: 'line-independent',
+      },
+    ]);
+    areaLayer.replace([
+      {
+        accessibleName: '독립 영역 레이어',
+        geometry: {
+          kind: 'area',
+          ring: [
+            [127, 37],
+            [127.1, 37],
+            [127.1, 37.1],
+          ],
+        },
+        id: 'area-independent',
+      },
+    ]);
+    const point = FixtureMarker.instances[0];
+    const line = FixturePolyline.instances[0];
+    const area = FixturePolygon.instances[0];
+    if (point === undefined || line === undefined || area === undefined) {
+      throw new TypeError('Expected independently owned fixture overlays');
+    }
+
+    lineLayer.destroy();
+    expect.soft(line.setMap).toHaveBeenCalledOnce();
+    expect.soft(point.setMap).not.toHaveBeenCalled();
+    expect.soft(area.setMap).not.toHaveBeenCalled();
+    sdk.emitOverlayClick(area);
+    expect(areaSelect).toHaveBeenCalledWith('area-independent');
+    expect(pointSelect).not.toHaveBeenCalled();
+    expect(lineSelect).not.toHaveBeenCalled();
+
+    session.destroy();
+    expect(point.setMap).toHaveBeenCalledOnce();
+    expect(area.setMap).toHaveBeenCalledOnce();
+    expect(line.setMap).toHaveBeenCalledOnce();
   });
 
   it('rejects and destroys at the exact first-render deadline', async () => {
