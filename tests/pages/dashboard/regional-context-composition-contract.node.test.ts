@@ -20,9 +20,10 @@ describe('dashboard regional context composition boundary', () => {
 
   it('gives regional context one explicit shell slot in the data grid', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
+    const panelGridSource = readSource('src/widgets/dashboard-shell/ui/PanelGrid.tsx');
     const renderedSlots = shellSource.match(/\{regionalContextSlot\}/g) ?? [];
 
-    expect(shellSource).toMatch(/regionalContextSlot:\s*ComponentChildren/);
+    expect(panelGridSource).toMatch(/regionalContextSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
   });
 });

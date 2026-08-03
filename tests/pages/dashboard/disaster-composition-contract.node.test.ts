@@ -20,9 +20,10 @@ describe('dashboard disaster composition boundary', () => {
 
   it('gives disaster one explicit shell slot in the existing data grid', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
+    const panelGridSource = readSource('src/widgets/dashboard-shell/ui/PanelGrid.tsx');
     const renderedSlots = shellSource.match(/\{disasterSlot\}/g) ?? [];
 
-    expect(shellSource).toMatch(/disasterSlot:\s*ComponentChildren/);
+    expect(panelGridSource).toMatch(/disasterSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
   });
 });

@@ -20,14 +20,17 @@ describe('dashboard weather composition boundary', () => {
 
   it('renders the forecast slot once immediately after the weather nowcast', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
+    const panelGridSource = readSource('src/widgets/dashboard-shell/ui/PanelGrid.tsx');
     const renderedSlots = shellSource.match(/\{weatherSlot\}/g) ?? [];
     const renderedForecastSlots = shellSource.match(/\{forecastSlot\}/g) ?? [];
 
-    expect(shellSource).toMatch(/weatherSlot:\s*ComponentChildren/);
-    expect(shellSource).toMatch(/forecastSlot:\s*ComponentChildren/);
+    expect(panelGridSource).toMatch(/weatherSlot:\s*ComponentChildren/);
+    expect(panelGridSource).toMatch(/forecastSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
     expect(renderedForecastSlots).toHaveLength(1);
-    expect(shellSource).toMatch(/\{weatherSlot\}\s*\{forecastSlot\}/);
-    expect(shellSource).toContain('md:grid-cols-2 2xl:grid-cols-3');
+    expect(shellSource).toContain('<PanelGrid');
+    expect(panelGridSource).toMatch(/weatherSlot,\s*[\s\S]*forecastSlot/);
+    expect(panelGridSource).toContain('className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3"');
+    expect(panelGridSource).toMatch(/weatherSlot[\s\S]*forecastSlot/);
   });
 });

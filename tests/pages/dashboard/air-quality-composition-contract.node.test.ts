@@ -19,9 +19,10 @@ describe('dashboard air-quality composition boundary', () => {
 
   it('gives air quality an explicit shell slot and renders it once', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
+    const panelGridSource = readSource('src/widgets/dashboard-shell/ui/PanelGrid.tsx');
     const renderedSlots = shellSource.match(/\{airQualitySlot\}/g) ?? [];
 
-    expect(shellSource).toMatch(/airQualitySlot:\s*ComponentChildren/);
+    expect(panelGridSource).toMatch(/airQualitySlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
   });
 });

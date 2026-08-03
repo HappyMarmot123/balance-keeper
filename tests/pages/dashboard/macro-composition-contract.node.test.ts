@@ -19,9 +19,10 @@ describe('dashboard macro composition boundary', () => {
 
   it('gives macro one explicit shell slot in the desktop data grid', () => {
     const shellSource = readSource('src/widgets/dashboard-shell/ui/DashboardShell.tsx');
+    const panelGridSource = readSource('src/widgets/dashboard-shell/ui/PanelGrid.tsx');
     const renderedSlots = shellSource.match(/\{macroSlot\}/g) ?? [];
 
-    expect(shellSource).toMatch(/macroSlot:\s*ComponentChildren/);
+    expect(panelGridSource).toMatch(/macroSlot:\s*ComponentChildren/);
     expect(renderedSlots).toHaveLength(1);
   });
 });
