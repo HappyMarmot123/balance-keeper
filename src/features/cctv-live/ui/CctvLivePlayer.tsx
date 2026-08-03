@@ -195,6 +195,7 @@ export function CctvLivePlayer({
         playsInline
         preload="metadata"
         ref={videoRef}
+        tabIndex={0}
       />
 
       {state === 'connecting' && (

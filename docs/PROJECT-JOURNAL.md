@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T29 ITS 안내군 — ACCEPTED |
-| 다음 단계 | T29 development PR·병합 후 PAUSED — T30 미착수 |
+| 현재 단계 | T30 지도 layer registry — ACCEPTED · T31 시작 전 PAUSED |
+| 다음 단계 | RED → GREEN → browser·전체 회귀 → development PR·병합 |
 
 ---
 
@@ -284,6 +284,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-064 | T27을 작은 forecast route부터 구현하고 current·detector public route는 별도 bounded scope가 승인될 때까지 연기한다. forecast 숫자 필드는 공식 표기의 모순을 숨기지 않도록 `speed`와 `speedUnit: 'provider-unspecified'`로 제공하며 UI에는 표시하지 않는다. | APPROVED | exact preflight에서 current raw 6,285,037 bytes, detector raw 4,100,083 bytes로 확인되어 4.5 MB 응답 경계를 안전하게 증명하지 못했다. 공식 ITS 문서는 세 speed 단위를 `시/km`로 표기하고 detector `volume`의 집계기간과 `occupancy` scale을 정의하지 않는다. 임의 truncation·단위 추측 없이 진행 가능한 독립 범위는 작은 forecast 응답뿐이다. 사용자가 2026-08-03 “다음작업진행”으로 추천 범위 변경과 forecast 구현 재개를 승인했다. |
 | D-065 | T28은 `road-event` Entity와 독립 `/api/road-events/incidents`, `/api/road-events/disasters` route로 구현하고 Query는 T30 전 기본 비활성화한다. severity는 provider 근거가 없으므로 `provider-unspecified`, blank 종료는 `unknown`, 명시적으로 종료된 항목은 공개 snapshot에서 제외한다. disaster geometry는 공식 최신 계약인 숫자 `1\|2\|3` + WKT 없는 `X Y,...`로 바로잡는다. `dangerousCarInfo`는 기간·bbox 필터 없이 과거 정밀 좌표까지 반환하고 lifecycle·보존·재배포 계약이 불충분하므로 공개 route 없이 `FEATURE_OFF`로 유지한다. | ACCEPTED | 2026-08-03 값 미출력 live gate에서 전국 event 272건·약 108 KiB, dangerous-car 143건·약 26 KiB, 최근 7일 disaster 4건·약 2 KiB를 확인했다. disaster는 `locationInfoType=1`, bare 단일 좌표, `startDate` 14자리와 문서와 다른 `endDate` 12자리를 반환해 T26 WKT validator 오해를 해소했다. dangerous-car에는 오래된 기록과 current/ended flag가 함께 있어 정밀 위치를 public relay할 안전한 근거가 없다. 사용자의 오토모드 지시를 이 명확한 최소 안전 범위의 연속 승인으로 기록한다. |
 | D-066 | T29는 새 `road-guidance` Entity에 VMS·주의운전·VSL의 서로 다른 strict snapshot을 두고, `/api/road-guidance/vms`, `/api/road-guidance/safety-notices`, `/api/road-guidance/variable-speed-limits`를 독립 cache·budget·breaker로 제공한다. VMS는 sign별 `messageNo` page를 `|` line으로 정규화하고 blank page는 빈 표출로 보존한다. 주의운전은 recipient `rev*`를 폐기하고, blank `occrrncId`를 거부하지 않는 provider/composite notice identity를 쓰며 timestamp·lifecycle·severity를 발명하지 않는다. VMS·VSL의 실응답 mixed axis는 각 row가 한국 경계에서 단 한 방향으로만 해석될 때 `[longitude, latitude]`로 정규화한다. VSL 속도는 `provider-unspecified` 단위로 보존하고 active/reduced 상태를 추론하지 않으며 source 14자리 시각은 timezone 없는 문자열로만 보존한다. 세 provider는 raw 2 MiB·5,000 rows, public 2 MiB 상한에서 잘라내지 않고 실패하며 Query는 T30 전 기본 비활성이다. | ACCEPTED | 공식 HTML·JS와 2026-08-03 값 미출력 preflight에서 VMS 약 821 KiB/3,232 rows/1,409 signs, 주의운전 약 626 KiB/1,546 rows, VSL 약 839 KiB/3,903 rows를 확인했다. VMS·VSL은 한 response 안에 두 좌표축이 섞였고, 주의운전은 80% 이상의 ID가 blank이며 recipient 확장으로 row가 증폭됐다. VSL 공식 단위 `시/km`는 불명확하고 status/end가 없으므로 숫자 비교로 상태를 만들 수 없다. 사용자의 오토모드 지시에 따라 이 최소 안전 범위를 연속 승인한다. |
+| D-067 | T30은 공식 WGS84 좌표·geometry가 있는 CCTV, AirKorea 측정소, KMA+USGS 지진, ITS 돌발·도로재난, VMS·주의운전·VSL의 8개 layer만 `widgets/korea-map` registry로 통합한다. 활성화 뒤 zoom gate와 viewport 필터를 먼저 적용하고 layer당 100 overlay·전역 240 overlay·geometry vertex 4,000 상한을 넘으면 임의 `slice` 없이 해당 layer를 숨겨 확대 또는 다른 layer 해제를 안내한다. point는 marker title/click과 단일 접근 가능 rail, line/area는 실제 polyline/polygon과 동일 rail을 사용한다. 좌표가 없는 기상특보·재난문자·MTIS grid·ITS 교통예측과 KMA `nx/ny`에는 centroid나 geometry를 발명하지 않는다. | ACCEPTED | T07·T10~T29의 public 계약과 실제 cardinality를 재감사했다. 약 6,800개 road-guidance point와 event당 최대 2,000개 vertex를 전국 DOM marker로 렌더링할 수 없고, 기존 CCTV의 `slice(0,100)`을 다중 layer에 반복하면 일부 표시가 전체처럼 오해될 수 있다. RED→GREEN, 전체 회귀, 좁은 화면·데스크톱 브라우저 검증과 correctness·FSD·UI 독립 리뷰가 PASS했다. 사용자의 오토모드 지시와 다음 Task 전 일시정지 요청에 따라 T30을 ACCEPTED로 닫는다. |
 
 ---
 
@@ -3228,6 +3229,40 @@ flowchart LR
 - 제외·잔여 release condition: 지도·UI·viewport·marker는 T30 범위다. 약 6,800개 전국 point를 DOM marker로 전량 렌더링하지 않고 viewport·zoom·layer point budget을 먼저 고정해야 한다. VSL 단위·active/reduced와 주의운전 lifecycle·severity는 공식 근거 전 표시하지 않는다.
 - Guardrail: `ACCEPTED` — 정상·실패·경계·실계약·전체 회귀·독립 리뷰가 모두 PASS했고 알려진 회귀가 없다. final commit·development PR·병합 후 사용자 요청대로 T30 전에서 멈춘다.
 
+### T30 — 지도 layer registry 통합
+
+- 상태: `ACCEPTED` — D-067 범위의 RED→GREEN, 전체 회귀, 브라우저 QA와 독립 리뷰가 PASS했으며 사용자 요청에 따라 T31 시작 전 일시정지한다.
+- 게시: feature commit `d284761`, development 대상 PR #28. quality-gate 통과 후 병합한다.
+- 목적: 공식 위치 계약이 있는 공공 신호를 하나의 NAVER GL 지도에서 안전하게 켜고 끄며, 밀집 데이터가 브라우저 렌더링과 키보드 탐색을 압도하지 않게 한다.
+- 할 일·이유·변경 범위:
+  - `widgets/korea-map`이 고정 registry, 활성 layer 집합, 단일 viewport snapshot, 단일 탐색 rail과 전역 selection을 소유한다.
+  - CCTV·대기질·지진·ITS 돌발·도로재난·VMS·주의운전·VSL Query를 toggle·zoom gate 뒤에만 활성화하고 공식 point/line/area를 viewport로 제한한다.
+  - `entities/map`은 domain을 모르는 bounded point layer와 실제 polyline/polygon layer, transaction-safe replace·cleanup만 제공한다.
+  - point title·marker/list click, geometry 대응 목록과 안전한 상세, CCTV 실시간 viewer를 같은 selection 흐름에 결합한다.
+  - layer당 최대 100 overlay, 전역 최대 240 overlay와 geometry vertex 4,000 상한을 순수 정책으로 강제한다. 초과 시 일부를 임의 절단하지 않고 overlay를 만들지 않으며 전체 수와 확대/해제 안내를 제공한다.
+- 제외:
+  - 공식 좌표·polygon이 없는 기상특보, 행안부 재난문자, MTIS grid, ITS 교통예측/link와 KMA `nx/ny`의 지도 표시
+  - heatmap·Canvas/WebGL custom overlay·Worker·cluster library와 측정 전 성능 최적화(T32)
+  - VSL 단위·active/reduced, 주의운전·돌발 severity/lifecycle 등 provider가 주지 않은 의미
+  - Dashboard 전체 재배치·패널 통합(T31), 신규 dependency·alternate map engine
+- 완료 조건·검증:
+  - 정상: 8개 toggle, viewport filtering, point/line/area click·목록 selection, CCTV viewer, stale/partial freshness와 독립 layer 성공을 검증한다.
+  - 실패: missing credential·network/provider error·invalid response에서 안전한 메시지와 layer별 재시도를 제공하고 다른 성공 layer를 보존한다.
+  - 경계: minZoom exact/미만, viewport 경계 안/밖, layer 100·101, global 240·241, geometry vertex exact/초과, empty, rapid toggle/viewport/data 교체를 검증한다.
+  - 접근성·회귀: 메뉴의 `aria-expanded`·`aria-pressed`·Escape focus 복귀, 단일 rail keyboard 탐색, marker Enter/Space, detail/viewer focus 복귀, unmount cleanup을 확인한다.
+  - 품질: focused Vitest RED→GREEN, `npm run validate`, 1440px·좁은 화면과 light/dark browser smoke, overlay DOM 수·request 수·cleanup 측정, 독립 FSD/UI/correctness review를 통과한다.
+- BLOCKED 조건: 공식 geometry 없는 source를 표시해야만 완료할 수 있거나, budget을 지키면서 실제 위치를 정직하게 표현할 수 없거나, 정상·실패·경계·회귀 또는 browser 핵심 여정이 검증되지 않으면 중단한다.
+- RED→GREEN·구현:
+  - 8개 layer registry와 toggle→zoom→viewport→layer/global budget 순서를 순수 정책으로 고정하고 point·line·area overlay의 transaction-safe replace·cleanup을 구현했다.
+  - 단일 탐색 rail·selection·상세와 CCTV HLS viewer를 결합하고 marker Enter/Space, 메뉴·상세·viewer Escape focus 복귀, stale·partial·error·setup 상태를 검증했다.
+  - 마지막으로 승인된 presentation을 atomic snapshot으로 보존해 교체 render 실패 시 지도·목록·freshness·CCTV camera metadata가 서로 어긋나지 않게 했다.
+- 검증:
+  - `npm run validate`: Biome, strict TypeScript, client/server build, Vitest 195 files PASS·13 skipped, 1,884 tests PASS·15 skipped.
+  - 320×640·1440×900, light/dark에서 가로 overflow·control 겹침·rail/detail 경계·키보드 focus 복귀와 콘솔 warning/error 0을 확인했다. 실제 공급자 CCTV 영상 재생은 브라우저가 최소 줌 안내 상태를 유지해 live-smoke하지 않았고, viewer dialog·focus trap·accepted-camera snapshot은 deterministic component test로 검증했다.
+  - correctness·Full FSD·UI/accessibility 독립 리뷰의 render snapshot, viewport SSOT, modal stacking·background inert findings를 수정한 뒤 세 리뷰 모두 잔여 finding 없이 PASS했다.
+- 회귀·잔여 범위: 공식 geometry가 없는 기상특보·재난문자·MTIS·교통예측·KMA `nx/ny`는 표시하지 않았고, heatmap·Worker·cluster와 Dashboard 재배치는 T32·T31에 남겼다. HLS lazy chunk size warning은 알려진 T21 경계이며 초기 main chunk로 합쳐지지 않았다.
+- Guardrail: `ACCEPTED` — 정상·실패·경계·접근성·cleanup·전체 회귀가 PASS했고 알려진 회귀가 없다. T31은 시작하지 않는다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -3536,3 +3571,6 @@ flowchart LR
 | 2026-08-03 | T29 공식 HTML·JS·T26 계약과 3-call 값 미출력 preflight를 교차 검증해 VMS/VSL 혼합 좌표축, 주의운전 blank ID·recipient 증폭, VSL 단위/status 미정을 확인; 추론 없는 `road-guidance` 3-channel D-066을 동결하고 RED 착수 | T29 |
 | 2026-08-03 | T29 `road-guidance` Entity·기본 비활성 Query·3 strict ITS provider·독립 gateway/runtime을 RED→GREEN; live에서 page별 VMS timestamp 변형을 최신값 집계로 고정하고 특수문자 JSON-escaped credential reflection을 차단했다. focused 88 tests, 3-channel live 1 test, 전체 1,837 tests·두 build·FSD/security/gateway 재리뷰 PASS로 오토모드 ACCEPTED | T29 |
 | 2026-08-03 | 사용자가 다음 Task 진행 전 일시정지를 요청; T29 final commit·development PR·병합까지만 완료하고 T30은 착수하지 않는다 | T29→PAUSED |
+| 2026-08-03 | 활성 목표 재개 지시에 따라 `development@a08711e`와 T07·T10~T29 위치 계약을 재감사했다. 공식 geometry가 있는 8개 layer만 registry에 포함하고, geometry 없는 5개 source는 추정하지 않으며, query→zoom→viewport→layer/global budget 순서를 강제하는 D-067/T30을 오토모드 APPROVED·IN_PROGRESS로 전환해 `feature/t30-map-layer-registry`에서 RED 착수 | T30 |
+| 2026-08-03 | T30 8-layer registry·bounded point/line/area overlay·단일 rail/selection·CCTV viewer를 RED→GREEN으로 통합했다. 전체 1,884 tests·두 build, 320/1440 light/dark browser QA와 correctness/FSD/UI 재리뷰가 PASS해 오토모드 ACCEPTED로 닫고, 사용자 요청대로 T31 시작 전 일시정지한다 | T30→PAUSED |
+| 2026-08-03 | T30 feature commit `d284761`을 development 대상 PR #28로 게시하고 필수 quality-gate 결과를 대기한다 | T30 |

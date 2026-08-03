@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/preact-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/preact';
+import type { ComponentChildren } from 'preact';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { KoreaMapSession, NaverMapsNamespace } from '../../src/entities/map';
@@ -25,11 +26,24 @@ function fixtureMaps(): NaverMapsNamespace {
 
 function sessionFixture(ready: Promise<void> = Promise.resolve()): KoreaMapSession {
   return {
+    createGeometryLayer: vi.fn(() => ({ destroy: vi.fn(), replace: vi.fn(), select: vi.fn() })),
     createPointLayer: vi.fn(() => ({ destroy: vi.fn(), replace: vi.fn(), select: vi.fn() })),
     destroy: vi.fn(),
     ready,
     resetView: vi.fn(),
     subscribeViewport: vi.fn(() => vi.fn()),
+  };
+}
+
+function renderMapView(children: ComponentChildren) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY, retry: false } },
+  });
+  const view = render(<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>);
+  return {
+    ...view,
+    rerender: (nextChildren: ComponentChildren) =>
+      view.rerender(<QueryClientProvider client={queryClient}>{nextChildren}</QueryClientProvider>),
   };
 }
 
@@ -49,7 +63,7 @@ afterEach(() => {
 describe('KoreaMapView', () => {
   it('keeps a named full-height region without requesting the SDK when the canonical key is missing', () => {
     const services = servicesFixture();
-    const { container } = render(<KoreaMapView config={{ kind: 'missing-key' }} services={services} />);
+    const { container } = renderMapView(<KoreaMapView config={{ kind: 'missing-key' }} services={services} />);
 
     const region = screen.getByRole('region', { name: '대한민국 상황 지도' });
     expect(region.getAttribute('aria-busy')).toBeNull();
@@ -71,7 +85,7 @@ describe('KoreaMapView', () => {
   it('announces SDK and init loading while keeping the provider mount element empty', () => {
     const loading = deferred<NaverMapsNamespace>();
     const services = servicesFixture({ loadMaps: vi.fn(() => loading.promise) });
-    const { container } = render(
+    const { container } = renderMapView(
       <KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />,
     );
 
@@ -87,7 +101,7 @@ describe('KoreaMapView', () => {
     const ready = deferred<void>();
     const session = sessionFixture(ready.promise);
     const services = servicesFixture({ createSession: vi.fn(() => session) });
-    render(
+    renderMapView(
       <KoreaMapView
         config={{ apiKeyId: 'fixture-key', kind: 'ready', styleId: 'fixture-style' }}
         services={services}
@@ -104,6 +118,7 @@ describe('KoreaMapView', () => {
 
     ready.resolve();
     await screen.findByText('NAVER GL · 다크 맞춤 스타일');
+    fireEvent.click(screen.getByRole('button', { name: /지도 레이어/u }));
     const reset = screen.getByRole('button', { name: '대한민국 전체 보기' });
     fireEvent.click(reset);
 
@@ -116,12 +131,13 @@ describe('KoreaMapView', () => {
     const ready = deferred<void>();
     const session = sessionFixture(ready.promise);
     const services = servicesFixture({ createSession: vi.fn(() => session) });
-    render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+    renderMapView(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
 
     await waitFor(() => expect(services.createSession).toHaveBeenCalledOnce());
     expect(screen.queryByRole('button', { name: 'CCTV' })).toBeNull();
 
     ready.resolve();
+    fireEvent.click(await screen.findByRole('button', { name: /지도 레이어/u }));
     const toggle = await screen.findByRole('button', { name: 'CCTV' });
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
 
@@ -131,7 +147,7 @@ describe('KoreaMapView', () => {
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('subscribes only while CCTV is active and asks for a smaller viewport before querying', async () => {
+  it('shares one viewport subscription and gates CCTV until the map is sufficiently close', async () => {
     let publishViewport: Parameters<KoreaMapSession['subscribeViewport']>[0] = () => undefined;
     const unsubscribeViewport = vi.fn();
     const session = {
@@ -142,12 +158,12 @@ describe('KoreaMapView', () => {
       }),
     } satisfies KoreaMapSession;
     const services = servicesFixture({ createSession: vi.fn(() => session) });
-    render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+    renderMapView(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
 
-    const toggle = await screen.findByRole('button', { name: 'CCTV' });
-    expect(session.subscribeViewport).not.toHaveBeenCalled();
-    fireEvent.click(toggle);
+    fireEvent.click(await screen.findByRole('button', { name: /지도 레이어/u }));
+    const toggle = screen.getByRole('button', { name: 'CCTV' });
     expect(session.subscribeViewport).toHaveBeenCalledOnce();
+    fireEvent.click(toggle);
 
     publishViewport({
       maximumLatitude: 39,
@@ -156,12 +172,12 @@ describe('KoreaMapView', () => {
       minimumLongitude: 124,
       zoom: 7,
     });
-    expect(await screen.findByText('지도를 확대하면 CCTV 위치를 표시합니다.')).toBeTruthy();
+    expect(await screen.findByText('지도를 확대하면 CCTV 정보를 표시합니다.')).toBeTruthy();
     expect(session.createPointLayer).not.toHaveBeenCalled();
 
     fireEvent.click(toggle);
-    expect(unsubscribeViewport).toHaveBeenCalledOnce();
-    expect(screen.queryByText('지도를 확대하면 CCTV 위치를 표시합니다.')).toBeNull();
+    expect(unsubscribeViewport).not.toHaveBeenCalled();
+    expect(screen.queryByText('지도를 확대하면 CCTV 정보를 표시합니다.')).toBeNull();
   });
 
   it('queries one valid viewport and mirrors the bounded cameras in markers and an accessible list', async () => {
@@ -195,9 +211,10 @@ describe('KoreaMapView', () => {
       </QueryClientProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'CCTV' }));
+    fireEvent.click(await screen.findByRole('button', { name: /지도 레이어/u }));
+    fireEvent.click(screen.getByRole('button', { name: 'CCTV' }));
     publishViewport({ ...bounds, zoom: 12 });
-    expect(await screen.findByText('CCTV 위치를 불러오는 중입니다.')).toBeTruthy();
+    expect(await screen.findByText('CCTV 정보를 불러오는 중입니다.')).toBeTruthy();
     await waitFor(() =>
       expect(fetcher).toHaveBeenCalledWith(
         '/api/cctv/list?bbox=126.9,37.4,127.1,37.6',
@@ -264,7 +281,7 @@ describe('KoreaMapView', () => {
       ),
     );
 
-    expect(await screen.findByText('현재 화면 · 2대')).toBeTruthy();
+    expect(await screen.findByText('현재 화면 · 2건')).toBeTruthy();
     expect(screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 보기' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '서울국도 CCTV 실시간 영상 보기' })).toBeTruthy();
     await waitFor(() =>
@@ -272,12 +289,14 @@ describe('KoreaMapView', () => {
         {
           accessibleName: '서울고속도로 CCTV 실시간 영상 보기',
           id: 'its-cctv:AbCdEfGhIjKlMnOp',
+          keyboardAccessible: true,
           latitude: 37.5,
           longitude: 127,
         },
         {
           accessibleName: '서울국도 CCTV 실시간 영상 보기',
           id: 'its-cctv:QrStUvWxYz012345',
+          keyboardAccessible: true,
           latitude: 37.55,
           longitude: 127.05,
         },
@@ -287,7 +306,7 @@ describe('KoreaMapView', () => {
 
   it('makes the default-GL degraded state explicit when no custom style is configured', async () => {
     const services = servicesFixture();
-    render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+    renderMapView(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
 
     await screen.findByText('NAVER GL · 기본 스타일');
     expect(screen.getByText('맞춤 지도 스타일이 설정되지 않아 기본 지도를 표시합니다.')).toBeTruthy();
@@ -306,7 +325,7 @@ describe('KoreaMapView', () => {
       .mockReturnValueOnce(customSession)
       .mockReturnValueOnce(defaultSession);
     const services = servicesFixture({ createSession });
-    render(
+    renderMapView(
       <KoreaMapView
         config={{ apiKeyId: 'fixture-key', kind: 'ready', styleId: 'fixture-style' }}
         services={services}
@@ -332,7 +351,7 @@ describe('KoreaMapView', () => {
     });
     const loadMaps = vi.fn().mockRejectedValueOnce(rawFailure).mockResolvedValueOnce(fixtureMaps());
     const services = servicesFixture({ loadMaps });
-    render(<KoreaMapView config={{ apiKeyId: 'fixture-secret-key', kind: 'ready' }} services={services} />);
+    renderMapView(<KoreaMapView config={{ apiKeyId: 'fixture-secret-key', kind: 'ready' }} services={services} />);
 
     await screen.findByRole('alert');
     expect(
@@ -360,7 +379,7 @@ describe('KoreaMapView', () => {
       ...servicesFixture({ createSession: vi.fn(() => session) }),
       subscribeAuthenticationFailure,
     } as KoreaMapServices;
-    render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+    renderMapView(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
 
     await waitFor(() => expect(services.createSession).toHaveBeenCalledOnce());
     expect(subscribeAuthenticationFailure).toHaveBeenCalledOnce();
@@ -380,7 +399,7 @@ describe('KoreaMapView', () => {
         throw Object.assign(new Error('global owner detail'), { code: 'CALLBACK_CONFLICT' });
       }),
     });
-    render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+    renderMapView(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
 
     expect(await screen.findByText('지도를 준비하지 못했습니다. 잠시 후 다시 시도하세요.')).toBeTruthy();
     expect(services.createSession).not.toHaveBeenCalled();
@@ -390,7 +409,9 @@ describe('KoreaMapView', () => {
   it('does not create a session when the shared SDK resolves after unmount', async () => {
     const loading = deferred<NaverMapsNamespace>();
     const services = servicesFixture({ loadMaps: vi.fn(() => loading.promise) });
-    const view = render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+    const view = renderMapView(
+      <KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />,
+    );
 
     view.unmount();
     loading.resolve(fixtureMaps());
@@ -404,7 +425,9 @@ describe('KoreaMapView', () => {
     const ready = deferred<void>();
     const session = sessionFixture(ready.promise);
     const services = servicesFixture({ createSession: vi.fn(() => session) });
-    const view = render(<KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />);
+    const view = renderMapView(
+      <KoreaMapView config={{ apiKeyId: 'fixture-key', kind: 'ready' }} services={services} />,
+    );
     await waitFor(() => expect(services.createSession).toHaveBeenCalledOnce());
 
     view.unmount();
@@ -414,7 +437,7 @@ describe('KoreaMapView', () => {
   it('does not reload or reconstruct the map for a shell theme change and equivalent rerender', async () => {
     const services = servicesFixture();
     const config = { apiKeyId: 'fixture-key', kind: 'ready' } as const;
-    const view = render(<KoreaMapView config={config} services={services} />);
+    const view = renderMapView(<KoreaMapView config={config} services={services} />);
     await screen.findByText('NAVER GL · 기본 스타일');
 
     document.documentElement.classList.add('dark');
