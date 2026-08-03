@@ -1,0 +1,110 @@
+{
+  "response": {
+    "header": {
+      "resultCode": 0,
+      "resultMsg": "SUCCESS"
+    },
+    "body": {
+      "totalCount": 5,
+      "items": {
+        "item": [
+          {
+            "message": "전방   합성 차로 차단",
+            "stepType": " 1",
+            "outbrkType": "차로차단",
+            "priority": "2 ",
+            "routeName": "합성선",
+            "routeNo": "1",
+            "roadDrcType": "기점",
+            "startStdLinkId": "SYNTHETIC-LINK-A",
+            "startX": "127.01",
+            "startY": "37.51",
+            "revRouteName": "수신선A",
+            "revRouteNo": "11",
+            "revRoadDrcType": "종점",
+            "revStdLinkId": "RECEIVER-A",
+            "revX": "127.11",
+            "revY": "37.61",
+            "occrrncId": "SYNTHETIC-OCCURRENCE-A"
+          },
+          {
+            "message": "전방   합성 차로 차단",
+            "stepType": " 1",
+            "outbrkType": "차로차단",
+            "priority": "2 ",
+            "routeName": "합성선",
+            "routeNo": "1",
+            "roadDrcType": "기점",
+            "startStdLinkId": "SYNTHETIC-LINK-A",
+            "startX": "127.01",
+            "startY": "37.51",
+            "revRouteName": "수신선B",
+            "revRouteNo": "12",
+            "revRoadDrcType": "기점",
+            "revStdLinkId": "RECEIVER-B",
+            "revX": "127.12",
+            "revY": "37.62",
+            "occrrncId": "SYNTHETIC-OCCURRENCE-A"
+          },
+          {
+            "message": "속도를 줄이세요",
+            "stepType": "2 ",
+            "outbrkType": "차로차단",
+            "priority": " 1",
+            "routeName": "합성선",
+            "routeNo": "1",
+            "roadDrcType": "기점",
+            "startStdLinkId": "SYNTHETIC-LINK-A",
+            "startX": "127.01",
+            "startY": "37.51",
+            "revRouteName": "수신선C",
+            "revRouteNo": "13",
+            "revRoadDrcType": "종점",
+            "revStdLinkId": "RECEIVER-C",
+            "revX": "127.13",
+            "revY": "37.63",
+            "occrrncId": "SYNTHETIC-OCCURRENCE-A"
+          },
+          {
+            "message": "합성 위험 구간",
+            "stepType": " 0",
+            "outbrkType": "주의운전",
+            "priority": " 3",
+            "routeName": "합성선",
+            "routeNo": "2",
+            "roadDrcType": "종점",
+            "startStdLinkId": "SYNTHETIC-LINK-B",
+            "startX": "126.99",
+            "startY": "37.49",
+            "revRouteName": "수신선D",
+            "revRouteNo": "14",
+            "revRoadDrcType": "기점",
+            "revStdLinkId": "RECEIVER-D",
+            "revX": "126.89",
+            "revY": "37.39",
+            "occrrncId": "   "
+          },
+          {
+            "message": "합성 위험 구간",
+            "stepType": " 0",
+            "outbrkType": "주의운전",
+            "priority": " 3",
+            "routeName": "다른 표기",
+            "routeNo": "9",
+            "roadDrcType": "기점",
+            "startStdLinkId": "SYNTHETIC-LINK-B",
+            "startX": "126.99",
+            "startY": "37.49",
+            "revRouteName": "수신선E",
+            "revRouteNo": "15",
+            "revRoadDrcType": "종점",
+            "revStdLinkId": "RECEIVER-E",
+            "revX": "126.88",
+            "revY": "37.38",
+            "occrrncId": ""
+          }
+        ]
+      }
+    }
+  }
+}
