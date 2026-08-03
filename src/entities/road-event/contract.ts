@@ -1,0 +1,25 @@
+export type {
+  RoadEvent,
+  RoadEventCategory,
+  RoadEventChannel,
+  RoadEventGeometry,
+  RoadEventLifecycle,
+  RoadEventPosition,
+  RoadEventSnapshot,
+} from './model/roadEvent';
+export {
+  compareRoadEvents,
+  ROAD_EVENT_MAX_EVENTS,
+  ROAD_EVENT_MAX_GEOMETRY_POSITIONS,
+  ROAD_EVENT_MAX_ID_LENGTH,
+  ROAD_EVENT_MAX_MESSAGE_LENGTH,
+  ROAD_EVENT_MAX_SERIALIZED_BYTES,
+  ROAD_EVENT_SEVERITY,
+  roadEventCategorySchema,
+  roadEventChannelSchema,
+  roadEventDataSchema,
+  roadEventGeometrySchema,
+  roadEventLifecycleSchema,
+  roadEventSchema,
+  roadEventSnapshotSchema,
+} from './model/roadEvent';

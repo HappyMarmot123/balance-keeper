@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T27 ITS 예측 흐름 — ACCEPTED, 게시 진행 |
-| 다음 단계 | final commit·development PR·병합 → T28 |
+| 현재 단계 | T28 ITS 사건군 — ACCEPTED·게시 중 |
+| 다음 단계 | final commit → development PR·병합 → T29 |
 
 ---
 
@@ -282,6 +282,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-062 | T26은 disaster의 HTTPS·JSON·provider code·cardinality·핵심 비위치 필드가 정상이고 geometry만 공식 계약과 불일치하면 이를 `observed`가 아닌 `deferred-geometry`로 분리해 완료할 수 있다. 이 상태는 T28의 공식 코드 정의·실응답 parser release gate이며 production Entity·route·지도에서 사용할 수 없다. geometry 외 필수 필드·timestamp·envelope 오류는 계속 `invalid`다. | APPROVED | strict live gate에서 나머지 8종은 PASS했지만 disaster 8건의 위치 유형·geometry 조합이 모두 문서상 Point/LineString/Polygon과 불일치했다. 사용자가 2026-07-31 “추천 방향으로 계속 진행해봐”로 거짓 geometry PASS 대신 T28 release gate 이관 방향을 승인했다. |
 | D-063 | T27은 `road-traffic` Entity 하나와 동일 gateway registry 안의 `/api/road-traffic/current`, `/api/road-traffic/forecast`, `/api/road-traffic/detectors` 세 route로 분리한다. current·detector는 최소 2분, forecast는 30분 이상으로 독립 cache/query cadence를 유지하고 각 provider budget은 보수적으로 1,000회/일 미만에 둔다. Query는 T30 activation 전 기본 비활성화하며 Widget·지도는 만들지 않는다. | APPROVED | 세 source를 한 응답·TTL로 묶으면 매시간 성격의 forecast를 current와 함께 과호출하고 한 source 장애가 전체 stale을 유발한다. 반대로 registry route를 분리하면 하나의 Vercel gateway Function·공통 보안 정책은 유지하면서 partial failure와 source별 freshness를 독립 처리할 수 있다. T26 live에서 traffic 약 6.28 MiB·31,907건, detector 최대 약 4.10 MiB·26,468건이 관찰되어 production query의 실제 bounded cardinality와 정규화 후 payload를 먼저 재야 하며 임의 truncation은 허용하지 않는다. 사용자가 2026-08-03 “시작하세요”로 범위와 선행 gate 착수를 승인했다. |
 | D-064 | T27을 작은 forecast route부터 구현하고 current·detector public route는 별도 bounded scope가 승인될 때까지 연기한다. forecast 숫자 필드는 공식 표기의 모순을 숨기지 않도록 `speed`와 `speedUnit: 'provider-unspecified'`로 제공하며 UI에는 표시하지 않는다. | APPROVED | exact preflight에서 current raw 6,285,037 bytes, detector raw 4,100,083 bytes로 확인되어 4.5 MB 응답 경계를 안전하게 증명하지 못했다. 공식 ITS 문서는 세 speed 단위를 `시/km`로 표기하고 detector `volume`의 집계기간과 `occupancy` scale을 정의하지 않는다. 임의 truncation·단위 추측 없이 진행 가능한 독립 범위는 작은 forecast 응답뿐이다. 사용자가 2026-08-03 “다음작업진행”으로 추천 범위 변경과 forecast 구현 재개를 승인했다. |
+| D-065 | T28은 `road-event` Entity와 독립 `/api/road-events/incidents`, `/api/road-events/disasters` route로 구현하고 Query는 T30 전 기본 비활성화한다. severity는 provider 근거가 없으므로 `provider-unspecified`, blank 종료는 `unknown`, 명시적으로 종료된 항목은 공개 snapshot에서 제외한다. disaster geometry는 공식 최신 계약인 숫자 `1\|2\|3` + WKT 없는 `X Y,...`로 바로잡는다. `dangerousCarInfo`는 기간·bbox 필터 없이 과거 정밀 좌표까지 반환하고 lifecycle·보존·재배포 계약이 불충분하므로 공개 route 없이 `FEATURE_OFF`로 유지한다. | ACCEPTED | 2026-08-03 값 미출력 live gate에서 전국 event 272건·약 108 KiB, dangerous-car 143건·약 26 KiB, 최근 7일 disaster 4건·약 2 KiB를 확인했다. disaster는 `locationInfoType=1`, bare 단일 좌표, `startDate` 14자리와 문서와 다른 `endDate` 12자리를 반환해 T26 WKT validator 오해를 해소했다. dangerous-car에는 오래된 기록과 current/ended flag가 함께 있어 정밀 위치를 public relay할 안전한 근거가 없다. 사용자의 오토모드 지시를 이 명확한 최소 안전 범위의 연속 승인으로 기록한다. |
 
 ---
 
@@ -3172,6 +3173,33 @@ flowchart LR
   - T30에서 Query를 활성화하기 전에 실제 forecast strict-parser gated smoke와 화면 소비 계약을 확인한다.
 - Guardrail: `ACCEPTED` — 승인 범위·근거·FSD/gateway 정합성, 정상·실패·경계·회귀가 검증됐고 알려진 회귀가 없다. 사용자의 오토모드 지시에 따라 final commit·development PR·병합을 연속 진행한다.
 
+### T28 — ITS 사건군
+
+- 상태: `ACCEPTED` — D-065의 incidents+disasters 수직 슬라이스를 오토모드로 검증·수락했고 dangerous-car는 안전 계약 해제 전 `FEATURE_OFF`다.
+- 목적: 현재 교통 돌발과 재난 위치를 T30에서 활성화할 수 있는 엄격한 `road-event` 데이터 수직 슬라이스로 준비한다.
+- 포함:
+  - 전국 고정 bbox의 `/api/road-events/incidents`, 최근 7일 전국 고정 범위의 `/api/road-events/disasters`
+  - 공통 event identity·category·lifecycle·`provider-unspecified` severity와 point/line/area 좌표 계약
+  - source별 strict provider, 독립 cache·budget·breaker, 기본 비활성 Query
+  - T26 disaster validator를 숫자 geometry type과 bare coordinate sequence로 교정
+- 제외: Widget·지도·사용자 bbox, 종료 이력 공개, raw provider ID, 위험물 차량/사고 정밀 위치 route, 임의 truncation, 신규 dependency.
+- 완료 조건·검증:
+  - 정상: array/object/공식 empty 변형, KST 날짜와 12·14자리 종료, event point와 disaster type `1|2|3` geometry, deterministic dedup·정렬을 검증한다.
+  - 실패: non-200·redirect·MIME·UTF-8·JSON·provider code·count·scope·bbox·geometry·credential reflection·payload 상한을 fail-closed한다.
+  - 경계: blank message/end, calendar·KST 자정, expired 제거, unknown enum, duplicate conflict, lowercase/uppercase disaster field와 공식에 없는 WKT를 검증한다.
+  - 회귀: focused tests와 `npm run validate`, FSD·gateway·security 독립 리뷰를 통과하고 기존 route/cache/build를 보존한다.
+- 구현·판단:
+  - provider-neutral `road-event` Entity, incidents 2분·disasters 5분 기본 비활성 Query, 독립 cache·budget·breaker를 가진 두 gateway route를 production runtime에 등록했다.
+  - T26 disaster geometry를 숫자/문자 `1|2|3`과 bare `X Y,...` 계약으로 교정하고 문서에 없는 WKT·충돌 casing·유효하지 않은 점 개수를 fail-closed했다.
+  - 공식 종료 status(D03 해제군, D06 `3`, D07 `2|3`)는 endDate가 비어도 제외한다. 고유 ID가 없는 incident는 위치·시작·유형·link 기반 occurrence key를 쓰고 가변 message·end·lane revision에 ID를 유지하며 동시 충돌 revision은 거부한다.
+  - disaster 공식 nullable/생략 필드와 12·14자리 endDate를 허용하되 스키마·cardinality·scope·크기·credential reflection은 엄격히 거부한다.
+- 검증:
+  - 마지막 리뷰 finding 2건에 대한 RED `8 FAIL` 후 provider focused `27/27 PASS`; Entity·provider·route·runtime·T26 회귀 `112 PASS`, live gate 2개 channel `PASS`, gated live 2건 `SKIP`.
+  - `npm run validate`: 185 files PASS·12 gated SKIP, 1,749 tests PASS·14 gated SKIP, strict typecheck·client/server build PASS. 기존 lazy HLS 500 KiB warning은 변경 없다.
+  - 서버가 Entity Query barrel을 경유하던 FSD 경계 finding을 contract direct import로 해소했다. 독립 correctness·security·gateway·FSD 재리뷰는 재현 가능한 잔여 finding 0건으로 PASS했다.
+- 제외·잔여 release condition: Widget·지도·사용자 bbox와 dangerous-car는 제외한다. T30 activation 전 Query는 기본 비활성을 유지하고 실제 표시 문구·레이어 소비 계약을 별도 검증한다.
+- Guardrail: `ACCEPTED` — 정상·실패·경계·회귀·독립 리뷰가 모두 PASS했고 알려진 회귀가 없다. 사용자의 오토모드 지시에 따라 final commit·development PR·병합을 연속 진행한다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -3473,3 +3501,6 @@ flowchart LR
 | 2026-08-03 | 사용자가 “다음작업진행”으로 D-064 forecast-only 범위 변경을 승인; current·detector route는 연기하고 unit-neutral forecast Entity·provider·gateway·기본 비활성 Query의 RED부터 T27 IN_PROGRESS 재개 | T27 |
 | 2026-08-03 | T27 forecast-only Entity·기본 비활성 Query·strict ITS provider·독립 gateway route/runtime을 RED→GREEN; 리뷰 finding 4군을 보강하고 전체 1,687 tests·두 build·FSD/security/gateway 재리뷰 PASS, current·detector와 T30 live activation gate는 제외한 채 사용자 ACCEPTED 대기 | T27 |
 | 2026-08-03 | 사용자가 “이제 나한테 승인받지 않고 오토모드로 끝까지 모든 작업”을 지시해 실행 모드를 오토모드로 전환하고 T27 PASS를 ACCEPTED; 이후 명확한 저널 Task는 dependency 순서대로 게시·진행하며 실제 BLOCKED 조건에서만 중단 | Governance→T27 |
+| 2026-08-03 | T27 final commit `1289c3f`, PR #25 quality-gate PASS와 Codex Job SKIP 후 merge commit `c2fd9d1`로 development에 병합·동기화하고 `feature/t28-its-events`를 생성 | T27→T28 |
+| 2026-08-03 | T28 공식 페이지·T26 계약과 값 미출력 live gate를 교차 검증해 WKT validator 오해를 확인하고 D-065를 동결; incidents+disasters는 RED 착수, unbounded historical dangerous-car 정밀 위치는 `FEATURE_OFF` 유지 | T28 |
+| 2026-08-03 | T28 `road-event` Entity·기본 비활성 Query·incidents/disasters strict provider·독립 gateway/runtime을 RED→GREEN; T26 disaster geometry 계약 교정, 종료 status 제거와 incident ID 안정성 finding을 회귀로 고정했다. focused 112 tests·live 두 channel·전체 1,749 tests·두 build·독립 FSD/security/gateway 재리뷰 PASS로 오토모드 ACCEPTED, dangerous-car는 `FEATURE_OFF` 유지 | T28 |

@@ -83,7 +83,7 @@ describe('ITS nine-service contract matrix', () => {
         ['eventType'],
         ['startDate'],
         ['LocationInfoType', 'locationInfoType'],
-        ['LocationInfo', 'locationInfo', 'locationGeometry'],
+        ['LocationInfo', 'locationInfo'],
         ['message'],
       ],
       event: [['eventType'], ['startDate'], ['coordX'], ['coordY'], ['message']],
@@ -617,8 +617,8 @@ describe('ITS nine-service contract matrix', () => {
     expect(JSON.stringify(invalid)).not.toContain('sensitive-link-id');
   });
 
-  it('does not interpret optional disaster end-date and location text during the core contract probe', async () => {
-    const summary = await probeItsServiceContract({
+  const probeDisasterItem = async (item: Readonly<Record<string, unknown>>) =>
+    probeItsServiceContract({
       contract: disasterContract,
       fetcher: async () =>
         jsonResponse({
@@ -626,13 +626,10 @@ describe('ITS nine-service contract matrix', () => {
             body: {
               items: {
                 item: {
-                  endDate: 'provider-specific-end-date',
                   eventType: 'disaster',
-                  locationInfo: '   ',
-                  locationGeometry: 'POINT (127.01 37.51)',
-                  locationInfoType: 'Point',
-                  message: 'sensitive-message',
+                  message: 'synthetic-message',
                   startDate: '20260731120000',
+                  ...item,
                 },
               },
               totalCount: 1,
@@ -645,17 +642,92 @@ describe('ITS nine-service contract matrix', () => {
       signal: AbortSignal.timeout(1_000),
     });
 
+  it.each([
+    {
+      expectedGeometry: 'point',
+      item: { LocationInfo: '127.01 37.51', LocationInfoType: 1 },
+      label: 'numeric Point with official casing',
+    },
+    {
+      expectedGeometry: 'point',
+      item: { locationInfo: '127.01 37.51', locationInfoType: '1' },
+      label: 'string Point with lowercase casing',
+    },
+    {
+      expectedGeometry: 'lineString',
+      item: { LocationInfo: '127.01 37.51,127.02 37.52', LocationInfoType: 2 },
+      label: 'numeric LineString with official casing',
+    },
+    {
+      expectedGeometry: 'lineString',
+      item: { locationInfo: '127.01 37.51,127.02 37.52', locationInfoType: '2' },
+      label: 'string LineString with lowercase casing',
+    },
+    {
+      expectedGeometry: 'polygon',
+      item: {
+        LocationInfo: '127.01 37.51,127.02 37.51,127.02 37.52',
+        LocationInfoType: 3,
+      },
+      label: 'numeric unclosed Polygon with official casing',
+    },
+    {
+      expectedGeometry: 'polygon',
+      item: {
+        locationInfo: '127.01 37.51,127.02 37.51,127.02 37.52',
+        locationInfoType: '3',
+      },
+      label: 'string unclosed Polygon with lowercase casing',
+    },
+  ])('accepts $label without a WKT wrapper', async ({ expectedGeometry, item }) => {
+    const summary = await probeDisasterItem(item);
+
     expect(summary.semanticValuesValid).toBe(true);
     expect(summary.semanticFailures).toEqual([]);
-    expect(summary.geometrySampleCounts).toEqual({
+    expect(summary.geometrySampleCounts).toMatchObject({
+      [expectedGeometry]: 1,
       invalid: 0,
-      lineString: 0,
-      point: 1,
-      polygon: 0,
       unavailable: 0,
     });
     expect(hasDocumentedCoreFields(disasterContract, summary)).toBe(true);
-    expect(JSON.stringify(summary)).not.toContain('sensitive');
+  });
+
+  it('ignores a blank nonstandard locationGeometry field when official lowercase geometry is valid', async () => {
+    const summary = await probeDisasterItem({
+      endDate: 'provider-specific-end-date',
+      locationGeometry: '   ',
+      locationInfo: '127.01 37.51',
+      locationInfoType: '1',
+    });
+
+    expect(summary.semanticValuesValid).toBe(true);
+    expect(summary.geometrySampleCounts.point).toBe(1);
+    expect(hasDocumentedCoreFields(disasterContract, summary)).toBe(true);
+  });
+
+  it('does not use a nonblank nonstandard locationGeometry as the official geometry source', async () => {
+    const summary = await probeDisasterItem({
+      locationGeometry: '127.01 37.51',
+      locationInfoType: '1',
+    });
+
+    expect(summary.semanticValuesValid).toBe(false);
+    expect(summary.semanticFailures).toContain('location:valid-geometry');
+    expect(summary.geometrySampleCounts.invalid).toBe(1);
+    expect(hasDocumentedCoreFields(disasterContract, summary)).toBe(false);
+  });
+
+  it('fails closed when official and lowercase disaster geometry fields conflict', async () => {
+    const summary = await probeDisasterItem({
+      LocationInfo: '127.01 37.51',
+      LocationInfoType: '1',
+      locationInfo: '127.01 37.51,127.02 37.52',
+      locationInfoType: '2',
+    });
+
+    expect(summary.semanticValuesValid).toBe(false);
+    expect(summary.geometrySampleCounts.invalid).toBe(1);
+    expect(hasDocumentedCoreFields(disasterContract, summary)).toBe(false);
   });
 
   it('rejects a disaster item when its declared geometry has no valid coordinate structure', async () => {
@@ -668,9 +740,8 @@ describe('ITS nine-service contract matrix', () => {
               items: {
                 item: {
                   eventType: 'disaster',
-                  locationGeometry: 'garbage',
-                  locationInfo: '',
-                  locationInfoType: 'Point',
+                  locationInfo: 'garbage',
+                  locationInfoType: '1',
                   message: 'synthetic-message',
                   startDate: '20260731120000',
                 },
@@ -705,7 +776,6 @@ describe('ITS nine-service contract matrix', () => {
               items: {
                 item: {
                   eventType: 'disaster',
-                  locationGeometry: ' ',
                   locationInfo: '',
                   locationInfoType: ' ',
                   message: 'synthetic-message',
@@ -747,9 +817,8 @@ describe('ITS nine-service contract matrix', () => {
               items: {
                 item: {
                   eventType: 'disaster',
-                  locationGeometry: 'garbage',
-                  locationInfo: '',
-                  locationInfoType: 'Point',
+                  locationInfo: 'garbage',
+                  locationInfoType: '1',
                   startDate: 'invalid-date',
                 },
               },
@@ -773,49 +842,58 @@ describe('ITS nine-service contract matrix', () => {
   });
 
   it.each([
-    { geometry: 'LINESTRING (127.01 37.51, 127.02 37.52)', geometryType: 'LineString', valid: true },
-    { geometry: 'LINESTRING (127.01 37.51)', geometryType: 'LineString', valid: false },
+    { geometry: 'POINT (127.01 37.51)', geometryType: '1' },
+    { geometry: 'LINESTRING (127.01 37.51, 127.02 37.52)', geometryType: '2' },
     {
       geometry: 'POLYGON ((127.01 37.51, 127.02 37.51, 127.02 37.52, 127.01 37.51))',
-      geometryType: 'Polygon',
-      valid: true,
+      geometryType: '3',
+    },
+  ])('rejects the obsolete WKT wrapper for official type $geometryType', async ({ geometry, geometryType }) => {
+    const summary = await probeDisasterItem({ locationInfo: geometry, locationInfoType: geometryType });
+
+    expect(summary.semanticValuesValid).toBe(false);
+    expect(summary.geometrySampleCounts.invalid).toBe(1);
+    expect(hasDocumentedCoreFields(disasterContract, summary)).toBe(false);
+  });
+
+  it.each([
+    { geometry: '127.01 37.51,127.02 37.52', geometryType: '1', label: 'Point with two coordinate pairs' },
+    { geometry: '127.01 37.51', geometryType: '2', label: 'LineString with one coordinate pair' },
+    {
+      geometry: '127.01 37.51,127.02 37.51,127.01 37.51',
+      geometryType: '3',
+      label: 'Polygon with fewer than three distinct vertices',
     },
     {
-      geometry: 'POLYGON ((127.01 37.51, 127.02 37.51, 127.02 37.52, 127.03 37.53))',
-      geometryType: 'Polygon',
-      valid: false,
+      geometry: '127.01 37.51,127.01 37.51',
+      geometryType: '2',
+      label: 'LineString with duplicate-only coordinates',
     },
-    { geometry: 'POLYGON ((127.01 37.51, 127.02 37.51, 127.01 37.51))', geometryType: 'Polygon', valid: false },
-    { geometry: 'POINT (0x7f 0x25)', geometryType: 'Point', valid: false },
-  ])('validates $geometryType WKT structure: $valid', async ({ geometry, geometryType, valid }) => {
-    const summary = await probeItsServiceContract({
-      contract: disasterContract,
-      fetcher: async () =>
-        jsonResponse({
-          response: {
-            body: {
-              items: {
-                item: {
-                  eventType: 'disaster',
-                  locationGeometry: geometry,
-                  locationInfo: '',
-                  locationInfoType: geometryType,
-                  message: 'synthetic-message',
-                  startDate: '20260731120000',
-                },
-              },
-              totalCount: 1,
-            },
-            header: { resultCode: 0 },
-          },
-        }),
-      now: Date.parse('2026-07-31T06:20:00.000Z'),
-      serviceKey: 'synthetic-its-key',
-      signal: AbortSignal.timeout(1_000),
-    });
+    {
+      geometry: '127.01 37.51,127.01 37.51,127.01 37.51',
+      geometryType: '3',
+      label: 'Polygon with duplicate-only coordinates',
+    },
+  ])('rejects $label', async ({ geometry, geometryType }) => {
+    const summary = await probeDisasterItem({ locationInfo: geometry, locationInfoType: geometryType });
 
-    expect(summary.semanticValuesValid).toBe(valid);
-    expect(hasDocumentedCoreFields(disasterContract, summary)).toBe(valid);
+    expect(summary.semanticValuesValid).toBe(false);
+    expect(summary.geometrySampleCounts.invalid).toBe(1);
+  });
+
+  it.each([
+    { geometry: '0 0', geometryType: '1', label: 'Point outside Korea' },
+    { geometry: '127.01 37.51,200 37.52', geometryType: '2', label: 'LineString containing an invalid longitude' },
+    {
+      geometry: '127.01 37.51,127.02 37.51,127.02 91,127.01 37.51',
+      geometryType: '3',
+      label: 'Polygon containing an invalid latitude',
+    },
+  ])('rejects $label', async ({ geometry, geometryType }) => {
+    const summary = await probeDisasterItem({ locationInfo: geometry, locationInfoType: geometryType });
+
+    expect(summary.semanticValuesValid).toBe(false);
+    expect(summary.geometrySampleCounts.invalid).toBe(1);
   });
 
   it.each([

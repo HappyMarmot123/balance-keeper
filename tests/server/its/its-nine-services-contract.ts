@@ -184,7 +184,7 @@ export const ITS_SERVICE_CONTRACTS: readonly ItsServiceContract[] = [
       ['eventType'],
       ['startDate'],
       ['LocationInfoType', 'locationInfoType'],
-      ['LocationInfo', 'locationInfo', 'locationGeometry'],
+      ['LocationInfo', 'locationInfo'],
       ['message'],
     ],
     serviceId: 'OPD_00000020',
@@ -605,16 +605,16 @@ const everySampledValue = (
 
 const isNonBlankString = (value: unknown): boolean => typeof value === 'string' && value.trim().length > 0;
 const isString = (value: unknown): boolean => typeof value === 'string';
-const WKT_DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/iu;
+const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/iu;
 
 const parseCoordinatePair = (value: string): readonly [number, number] | undefined => {
   const parts = value.trim().split(/\s+/u);
-  if (parts.length !== 2 || !parts.every((part) => WKT_DECIMAL_NUMBER.test(part))) {
+  if (parts.length !== 2 || !parts.every((part) => DECIMAL_NUMBER.test(part))) {
     return undefined;
   }
   const x = Number(parts[0]);
   const y = Number(parts[1]);
-  return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : undefined;
+  return Number.isFinite(x) && Number.isFinite(y) && x >= 124 && x <= 132 && y >= 32 && y <= 40 ? [x, y] : undefined;
 };
 
 const parseCoordinateSequence = (
@@ -627,32 +627,42 @@ const parseCoordinateSequence = (
     : undefined;
 };
 
+const countDistinctCoordinatePairs = (pairs: readonly (readonly [number, number])[]): number =>
+  new Set(pairs.map(([longitude, latitude]) => `${longitude}\u0000${latitude}`)).size;
+
 const isValidDisasterGeometry = (value: unknown, geometryType: string): boolean => {
   if (typeof value !== 'string') {
     return false;
   }
-  if (geometryType === 'point') {
-    const match = /^POINT\s*\(([^()]*)\)$/iu.exec(value.trim());
-    return match?.[1] !== undefined && parseCoordinatePair(match[1]) !== undefined;
+  if (geometryType === '1') {
+    return parseCoordinatePair(value) !== undefined;
   }
-  if (geometryType === 'linestring') {
-    const match = /^LINESTRING\s*\(([^()]*)\)$/iu.exec(value.trim());
-    return match?.[1] !== undefined && parseCoordinateSequence(match[1], 2) !== undefined;
+  if (geometryType === '2') {
+    const pairs = parseCoordinateSequence(value, 2);
+    return pairs !== undefined && countDistinctCoordinatePairs(pairs) >= 2;
   }
-  if (geometryType === 'polygon') {
-    const match = /^POLYGON\s*\(\(([^()]*)\)\)$/iu.exec(value.trim());
-    if (match?.[1] === undefined) {
-      return false;
-    }
-    const pairs = parseCoordinateSequence(match[1], 4);
-    if (pairs === undefined) {
-      return false;
-    }
-    const first = pairs[0];
-    const last = pairs.at(-1);
-    return first !== undefined && last !== undefined && first[0] === last[0] && first[1] === last[1];
+  if (geometryType === '3') {
+    const pairs = parseCoordinateSequence(value, 3);
+    return pairs !== undefined && countDistinctCoordinatePairs(pairs) >= 3;
   }
   return false;
+};
+
+const getConsistentAlternativeValue = (
+  item: Record<string, unknown>,
+  fields: readonly string[],
+  normalize: (value: unknown) => string | undefined,
+): Readonly<{ conflict: boolean; value: unknown }> => {
+  const values = fields.filter((field) => Object.hasOwn(item, field)).map((field) => item[field]);
+  if (values.length === 0) {
+    return { conflict: false, value: undefined };
+  }
+  const normalized = values.map(normalize);
+  const first = normalized[0];
+  return {
+    conflict: first === undefined || normalized.some((value) => value === undefined || value !== first),
+    value: values[0],
+  };
 };
 
 const classifyDisasterGeometry = (
@@ -671,27 +681,36 @@ const classifyDisasterGeometry = (
   }
 
   for (const item of items.slice(0, 50)) {
-    const typeValue = getAlternativeValue(item, ['LocationInfoType', 'locationInfoType']);
-    const locationValues = ['LocationInfo', 'locationInfo', 'locationGeometry']
-      .filter((field) => Object.hasOwn(item, field))
-      .map((field) => item[field]);
-    if (typeof typeValue !== 'string' || locationValues.length === 0 || !locationValues.every(isString)) {
+    const typeResult = getConsistentAlternativeValue(item, ['LocationInfoType', 'locationInfoType'], (value) =>
+      typeof value === 'string' || typeof value === 'number' ? String(value).trim() : undefined,
+    );
+    const locationResult = getConsistentAlternativeValue(item, ['LocationInfo', 'locationInfo'], (value) =>
+      typeof value === 'string' ? value.trim() : undefined,
+    );
+    const typeValue = typeResult.value;
+    const locationValue = locationResult.value;
+    if (
+      typeResult.conflict ||
+      locationResult.conflict ||
+      (typeof typeValue !== 'string' && typeof typeValue !== 'number') ||
+      typeof locationValue !== 'string'
+    ) {
       geometrySampleCounts.invalid += 1;
       continue;
     }
-    const geometryType = typeValue.trim().toLowerCase();
-    const hasLocation = locationValues.some(isNonBlankString);
+    const geometryType = String(typeValue).trim();
+    const hasLocation = isNonBlankString(locationValue);
     if (geometryType === '' && !hasLocation) {
       geometrySampleCounts.unavailable += 1;
     } else {
-      const validGeometry = locationValues.some((value) => isValidDisasterGeometry(value, geometryType));
+      const validGeometry = isValidDisasterGeometry(locationValue, geometryType);
       if (!validGeometry) {
         geometrySampleCounts.invalid += 1;
-      } else if (geometryType === 'point') {
+      } else if (geometryType === '1') {
         geometrySampleCounts.point += 1;
-      } else if (geometryType === 'linestring') {
+      } else if (geometryType === '2') {
         geometrySampleCounts.lineString += 1;
-      } else if (geometryType === 'polygon') {
+      } else if (geometryType === '3') {
         geometrySampleCounts.polygon += 1;
       } else {
         geometrySampleCounts.invalid += 1;

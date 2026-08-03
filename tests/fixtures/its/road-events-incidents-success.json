@@ -1,0 +1,55 @@
+{
+  "resultCode": "0",
+  "resultMsg": "SUCCESS",
+  "totalCount": "3",
+  "data": [
+    {
+      "type": "all",
+      "eventType": "공사",
+      "eventDetailType": "도로공사",
+      "startDate": "20260803100000",
+      "coordX": "127.01",
+      "coordY": "37.51",
+      "linkId": "LINK-ACTIVE",
+      "roadName": "합성로",
+      "roadNo": "1",
+      "roadDrcType": "상행",
+      "lanesBlockType": "일부",
+      "lanesBlocked": "1",
+      "message": "합성 도로 공사",
+      "endDate": "20260803180000"
+    },
+    {
+      "type": "all",
+      "eventType": "기타",
+      "eventDetailType": "기타",
+      "startDate": "20260803160000",
+      "coordX": 126.98,
+      "coordY": 37.55,
+      "linkId": "LINK-SCHEDULED",
+      "roadName": "합성대로",
+      "roadNo": "",
+      "roadDrcType": "",
+      "lanesBlockType": "",
+      "lanesBlocked": "",
+      "message": "   ",
+      "endDate": null
+    },
+    {
+      "type": "all",
+      "eventType": "교통사고",
+      "eventDetailType": "추돌",
+      "startDate": "20260803110000",
+      "coordX": "127.03",
+      "coordY": "37.52",
+      "linkId": "LINK-EXPIRED",
+      "roadName": "합성로",
+      "roadNo": "1",
+      "roadDrcType": "하행",
+      "lanesBlockType": "전체",
+      "lanesBlocked": "2",
+      "message": "만료된 합성 사고",
+      "endDate": "20260803140000"
+    }
+  ]
+}

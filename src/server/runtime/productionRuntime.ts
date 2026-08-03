@@ -13,6 +13,7 @@ import { createMacroRoute } from '../routes/macro';
 import { createMaritimeTrafficRoute } from '../routes/maritime-traffic';
 import { createMarketsRoute } from '../routes/markets';
 import { createNewsRoute } from '../routes/news';
+import { createRoadEventDisastersRoute, createRoadEventIncidentsRoute } from '../routes/road-events';
 import { createRoadTrafficForecastRoute } from '../routes/road-traffic';
 import { createWeatherAlertsRoute, createWeatherForecastRoute, createWeatherRoute } from '../routes/weather';
 import { createGatewayRuntime, type GatewayRuntime } from './createGatewayRuntime';
@@ -103,6 +104,18 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     serviceKey: dataGoKrServiceKey,
   });
   const itsServiceKey = readItsCredential(environment);
+  const roadEventIncidentsRoute = createRoadEventIncidentsRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: itsServiceKey,
+  });
+  const roadEventDisastersRoute = createRoadEventDisastersRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: itsServiceKey,
+  });
   const roadTrafficForecastRoute = createRoadTrafficForecastRoute({
     clock,
     fetcher: options.fetcher ?? globalThis.fetch,
@@ -148,6 +161,8 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
       newsRoute,
       disasterRoute,
       maritimeTrafficRoute,
+      roadEventIncidentsRoute,
+      roadEventDisastersRoute,
       roadTrafficForecastRoute,
       cctvListRoute,
       cctvStillImageRoute,
