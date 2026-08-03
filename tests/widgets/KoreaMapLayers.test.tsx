@@ -104,8 +104,10 @@ function response(payload: unknown, status = 200): Response {
 function sessionFixture(initialViewport: KoreaMapViewport = viewport) {
   const pointLayers: PointLayerSpy[] = [];
   const pointSelectHandlers: Array<(id: string) => void> = [];
+  const viewportListeners: Array<(nextViewport: KoreaMapViewport) => void> = [];
   const unsubscribeViewport = vi.fn();
   const subscribeViewport = vi.fn((listener: (nextViewport: KoreaMapViewport) => void) => {
+    viewportListeners.push(listener);
     listener(initialViewport);
     return unsubscribeViewport;
   });
@@ -115,10 +117,17 @@ function sessionFixture(initialViewport: KoreaMapViewport = viewport) {
       replace: vi.fn(),
       select: vi.fn(),
     };
+
     pointSelectHandlers.push(onSelect);
     pointLayers.push(layer);
     return layer;
   });
+
+  const emitViewport = (nextViewport: KoreaMapViewport) => {
+    for (const listener of viewportListeners) {
+      listener(nextViewport);
+    }
+  };
   const session = {
     createGeometryLayer: vi.fn(() => ({ destroy: vi.fn(), replace: vi.fn(), select: vi.fn() })),
     createPointLayer,
@@ -128,7 +137,15 @@ function sessionFixture(initialViewport: KoreaMapViewport = viewport) {
     subscribeViewport,
   } as unknown as KoreaMapSession;
 
-  return { createPointLayer, pointLayers, pointSelectHandlers, session, subscribeViewport, unsubscribeViewport };
+  return {
+    createPointLayer,
+    emitViewport,
+    pointLayers,
+    pointSelectHandlers,
+    session,
+    subscribeViewport,
+    unsubscribeViewport,
+  };
 }
 
 function renderLayers(session: KoreaMapSession) {
@@ -505,9 +522,9 @@ describe('KoreaMapLayers', () => {
     fireEvent.click(cameraButton);
 
     expect(await screen.findByText('실시간 영상에 연결하는 중입니다.')).toBeTruthy();
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
     expect(String(fetcher.mock.calls[1]?.[0])).toContain('/api/cctv/stream?cameraId=its-cctv%3AAbCdEfGhIjKlMnOp');
-    const viewer = screen.getByRole('dialog', { name: '서울고속도로 CCTV' });
+    const viewer = await screen.findByRole('dialog', { name: '서울고속도로 CCTV' });
     const closeButton = screen.getByRole('button', { name: '서울고속도로 CCTV 실시간 영상 닫기' });
     const video = screen.getByLabelText('서울고속도로 CCTV 실시간 영상');
     expect(viewer.parentElement?.hasAttribute('data-cctv-modal-backdrop')).toBe(true);
@@ -613,7 +630,7 @@ describe('KoreaMapLayers', () => {
 
     const rail = screen.getByRole('complementary', { name: '지도 데이터 목록' });
     fireEvent.click(within(rail).getByRole('button', { name: '승인된 CCTV 실시간 영상 보기' }));
-    expect(screen.getByRole('dialog', { name: '승인된 CCTV' })).toBeTruthy();
+    expect(await screen.findByRole('dialog', { name: '승인된 CCTV' })).toBeTruthy();
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
     expect(String(fetcher.mock.calls[1]?.[0])).toContain('/api/cctv/stream?cameraId=its-cctv%3AAbCdEfGhIjKlMnOp');
     fireEvent.click(screen.getByRole('button', { name: '승인된 CCTV 실시간 영상 닫기' }));

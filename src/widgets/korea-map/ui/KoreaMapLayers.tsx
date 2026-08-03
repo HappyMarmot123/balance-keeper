@@ -1,10 +1,12 @@
+import type { ComponentType } from 'preact';
+
 import { useEffect, useRef, useState } from 'preact/hooks';
 
+import type { CctvBounds, CctvCamera } from '../../../entities/cctv';
 import type { KoreaMapSession, KoreaMapViewport } from '../../../entities/map';
 import type { KoreaMapLayerId } from '../model/mapLayerRegistry';
 import type { MapLayerSelection, ResolvedMapLayerRuntime } from '../model/mapLayerRuntime';
 import { useKoreaMapLayerRuntimes } from '../model/useKoreaMapLayerRuntimes';
-import { CctvLivePanel } from './CctvLivePanel';
 import { KoreaMapLayerOverlays } from './KoreaMapLayerOverlays';
 import { MapLayerControls } from './MapLayerControls';
 import { MapLayerDetail } from './MapLayerDetail';
@@ -15,6 +17,21 @@ type AcceptedLayerPresentation = Readonly<{
   cctvSnapshot?: NonNullable<ReturnType<typeof useKoreaMapLayerRuntimes>['cctvSnapshot']>;
   runtime: ResolvedMapLayerRuntime;
 }>;
+
+type CctvLivePanelProps = Readonly<{
+  bounds: CctvBounds;
+  camera: CctvCamera;
+  onClose: () => void;
+}>;
+
+type CctvLivePanelComponent = ComponentType<CctvLivePanelProps>;
+
+const sameViewport = (left: KoreaMapViewport | undefined, right: KoreaMapViewport | undefined): boolean =>
+  left?.maximumLatitude === right?.maximumLatitude &&
+  left?.maximumLongitude === right?.maximumLongitude &&
+  left?.minimumLatitude === right?.minimumLatitude &&
+  left?.minimumLongitude === right?.minimumLongitude &&
+  left?.zoom === right?.zoom;
 
 export function KoreaMapLayers({ session }: Readonly<{ session: KoreaMapSession }>) {
   const [activeLayerIds, setActiveLayerIds] = useState<ReadonlySet<KoreaMapLayerId>>(() => new Set());
@@ -28,9 +45,53 @@ export function KoreaMapLayers({ session }: Readonly<{ session: KoreaMapSession 
     () => new Map(),
   );
   const [viewport, setViewport] = useState<KoreaMapViewport>();
+  const [LazyCctvLivePanel, setLazyCctvLivePanel] = useState<CctvLivePanelComponent | null>(null);
+  const cctvPanelImportRef = useRef(false);
+  const viewportFrameRef = useRef<number>();
+  const pendingViewportRef = useRef<KoreaMapViewport>();
+  const previousViewportRef = useRef<KoreaMapViewport>();
   const acceptedPresentationsRef = useRef(new Map<KoreaMapLayerId, AcceptedLayerPresentation>());
 
-  useEffect(() => session.subscribeViewport(setViewport), [session]);
+  const loadCctvPanel = () => {
+    if (LazyCctvLivePanel !== null || cctvPanelImportRef.current) {
+      return;
+    }
+    cctvPanelImportRef.current = true;
+    void import('./CctvLivePanel').then((module) => {
+      cctvPanelImportRef.current = false;
+      setLazyCctvLivePanel(() => module.CctvLivePanel);
+    });
+  };
+
+  useEffect(() => {
+    const unsubscribe = session.subscribeViewport((nextViewport) => {
+      pendingViewportRef.current = nextViewport;
+      if (viewportFrameRef.current !== undefined) {
+        return;
+      }
+      viewportFrameRef.current = window.requestAnimationFrame(() => {
+        viewportFrameRef.current = undefined;
+        const candidate = pendingViewportRef.current;
+        pendingViewportRef.current = undefined;
+        if (sameViewport(candidate, previousViewportRef.current)) {
+          return;
+        }
+        previousViewportRef.current = candidate;
+        if (candidate === undefined) {
+          return;
+        }
+        setViewport(candidate);
+      });
+    });
+
+    return () => {
+      if (viewportFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(viewportFrameRef.current);
+        viewportFrameRef.current = undefined;
+      }
+      unsubscribe();
+    };
+  }, [session]);
 
   const { cctvSnapshot, runtimes } = useKoreaMapLayerRuntimes(activeLayerIds, viewport);
   const presentedRuntimes = runtimes.map((runtime) =>
@@ -129,6 +190,13 @@ export function KoreaMapLayers({ session }: Readonly<{ session: KoreaMapSession 
     selection?.layerId === 'cctv'
       ? presentedCctvSnapshot?.cameras.find((camera) => camera.id === selection.itemId)
       : undefined;
+  const selectedCameraLayerId = selectedCamera?.id ?? null;
+
+  useEffect(() => {
+    if (selectedCameraLayerId !== null && presentedCctvSnapshot !== undefined) {
+      loadCctvPanel();
+    }
+  }, [presentedCctvSnapshot, selectedCameraLayerId]);
 
   return (
     <>
@@ -181,8 +249,8 @@ export function KoreaMapLayers({ session }: Readonly<{ session: KoreaMapSession 
         />
       )}
 
-      {selectedCamera !== undefined && presentedCctvSnapshot !== undefined && (
-        <CctvLivePanel
+      {selectedCamera !== undefined && presentedCctvSnapshot !== undefined && LazyCctvLivePanel !== null && (
+        <LazyCctvLivePanel
           bounds={presentedCctvSnapshot.bounds}
           camera={selectedCamera}
           key={selectedCamera.id}
