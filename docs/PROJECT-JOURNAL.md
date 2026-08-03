@@ -3265,7 +3265,8 @@ flowchart LR
 
 ### T31 — DashboardPage와 PanelGrid 통합
 
-- 상태: `PASS` — panel slot 소유권을 dashboard-shell로 정리하고 composition contract를 집중시키며 `npm run validate` PASS
+- 상태: `ACCEPTED` — 품질 게이트 완료 후 development 병합이 완료됨.
+- 게시: feature commit `4e3490d`, PR #29 quality-gate PASS 후 merge commit `a7688e9`로 `development`에 병합됨
 - 목적: page 조립 계층은 유지하되 slot 배치·그리드 계약을 `dashboard-shell`에서 일관되게 관리한다.
 - 포함:
   - `src/widgets/dashboard-shell/ui/PanelGrid.tsx` 신규 컴포넌트와 `PanelGridSlotProps` 추가
@@ -3282,7 +3283,7 @@ flowchart LR
   - `PanelGrid`가 슬롯 책임을 한 곳에 모아 page/feature 테스트의 결합도를 낮췄다.
   - 패널별 계약 테스트는 page composition은 유지하고, grid 자체 계약은 widget contract test로 분리해 회귀 탐지 지점을 명확화했다.
 - 회귀·잔여 범위: map registry·CCTV/Navigator·provider/gateway는 변경 없음. 화면 시각/크기 튜닝은 T31 후속 또는 T32에서 진행.
-- Guardrail: `PASS` — 정상·실패·경계·회귀 계약이 통과했으며 T31 적용은 완료. 최종 ACCEPTED 처리 후 development 반영은 다음 단계.
+- Guardrail: `ACCEPTED` — 정상·실패·경계·회귀 계약이 통과했고 development 반영까지 완료됨. T32는 패널 성능/시각 최적화 범위로 연속 진행.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3596,3 +3597,4 @@ flowchart LR
 | 2026-08-03 | T30 8-layer registry·bounded point/line/area overlay·단일 rail/selection·CCTV viewer를 RED→GREEN으로 통합했다. 전체 1,884 tests·두 build, 320/1440 light/dark browser QA와 correctness/FSD/UI 재리뷰가 PASS해 오토모드 ACCEPTED로 닫고, 사용자 요청대로 T31 시작 전 일시정지한다 | T30→PAUSED |
 | 2026-08-03 | T30 feature commit `d284761`, PR #28의 quality-gate SUCCESS를 확인하고 merge commit `9e67988`로 development에 병합·동기화했다. T31은 시작하지 않는다 | T30→PAUSED |
 | 2026-08-03 | `feature/t31-dashboard-grid`에서 DashboardShell panel 소유권을 `PanelGrid`로 이전해 composition contract를 재배치. `DashboardShell` 슬롯 9개 contract와 class contract를 widget-level 테스트로 고정하고, 관련 pages contract는 shell 참조를 줄여 정비성/회귀 탐지 지점을 축소 | T31 |
+| 2026-08-03 | T31 최종 commit `4e3490d`를 기준으로 PR #29 생성 후 `quality-gate` PASS, PR `merge` commit `a7688e9`로 development 병합 | T31 |
