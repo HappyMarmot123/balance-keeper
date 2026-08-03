@@ -9,7 +9,7 @@
 | 기준일 | 2026-08-03 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T32 성능 최적화 — ACCEPTED · T33 회귀/릴리스 증빙 진행 |
+| 현재 단계 | T33 회귀/릴리스 증빙 — PASS 대기(사용자 ACCEPTED 후 다음 Task) |
 | 다음 단계 | T33 완료 후 다음 Task 재개: preview/rollback 증빙 정합성 조건 충족 |
 
 ---
@@ -3302,7 +3302,7 @@ flowchart LR
 
 ### T33 — 전체 회귀와 Vercel preview·rollback 증빙
 
-- 상태: `VERIFYING` — 실행 모드 오토모드로 자동 진행.
+- 상태: `PASS` — 오프라인 회귀 기준은 완료. 외부 배포/롤백·region 비교 증빙은 미보유로 BLOCKED 분리.
 - 승인: `T09` 완료 및 `T32` 완료 상태에서 사용자가 `"시작"` 지시로 다음 단계 진행 승인.
 - 목적: feature 완료 상태의 전체 회귀를 마감하고, preview/rollback/운영 제한 근거를 T33으로 통합한다.
 - 포함:
@@ -3495,6 +3495,7 @@ flowchart LR
 
 | 날짜 | 변경 | Task |
 | --- | --- | --- |
+| 2026-08-03 | T33 오프라인 회귀(PASS) 근거 정리 완료 후 Playwright 실행 산출물(`test-results/`, `playwright-report/`, `tmp-t33-*.png`)를 `.gitignore`로 고정해 CI 정합성/반복 작업 안정화 | T33 |
 | 2026-08-03 | T33에서 `playwright.e2e.config.ts` + `tests/t33-dashboard-e2e.spec.ts`로 상호작용 E2E를 실행해 PASS, `npm run validate` 재실행까지 통과. 남은 BLOCKED는 preview/rollback/region failover 링크·권한 근거 미확보 | T33 |
 | 2026-08-03 | T33에서 브라우저 smoke 스크립트(Playwright + chrome)로 localhost 화면 로드 증빙을 보강하고, preview/rollback은 부적합 조건 미충족으로 유지 | T33 |
 | 2026-08-03 | T33에서 `npm run validate` 재실행(PASS)으로 회귀 정합성을 재확인했고, 상호작용 E2E는 `@playwright/test` 의존성 미설치 환경으로 블록됨 | T33 |
