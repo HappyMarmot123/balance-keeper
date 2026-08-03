@@ -6,6 +6,9 @@ dist/
 dist-server/
 dist-server-dev/
 coverage/
+test-results/
+playwright-report/
+tmp-t33-*.png
 
 # Local runtime state
 .vercel/
