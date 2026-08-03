@@ -14,6 +14,11 @@ import { createMaritimeTrafficRoute } from '../routes/maritime-traffic';
 import { createMarketsRoute } from '../routes/markets';
 import { createNewsRoute } from '../routes/news';
 import { createRoadEventDisastersRoute, createRoadEventIncidentsRoute } from '../routes/road-events';
+import {
+  createSafetyNoticeRoute,
+  createVariableSpeedLimitRoute,
+  createVmsGuidanceRoute,
+} from '../routes/road-guidance';
 import { createRoadTrafficForecastRoute } from '../routes/road-traffic';
 import { createWeatherAlertsRoute, createWeatherForecastRoute, createWeatherRoute } from '../routes/weather';
 import { createGatewayRuntime, type GatewayRuntime } from './createGatewayRuntime';
@@ -122,6 +127,24 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     readAdmissionSubject: readTrustedAdmissionSubject,
     serviceKey: itsServiceKey,
   });
+  const vmsGuidanceRoute = createVmsGuidanceRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: itsServiceKey,
+  });
+  const safetyNoticeRoute = createSafetyNoticeRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: itsServiceKey,
+  });
+  const variableSpeedLimitRoute = createVariableSpeedLimitRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: itsServiceKey,
+  });
   const cctvListRoute = createCctvListRoute({
     clock,
     fetcher: options.fetcher ?? globalThis.fetch,
@@ -164,6 +187,9 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
       roadEventIncidentsRoute,
       roadEventDisastersRoute,
       roadTrafficForecastRoute,
+      vmsGuidanceRoute,
+      safetyNoticeRoute,
+      variableSpeedLimitRoute,
       cctvListRoute,
       cctvStillImageRoute,
       cctvLiveStreamRoute,

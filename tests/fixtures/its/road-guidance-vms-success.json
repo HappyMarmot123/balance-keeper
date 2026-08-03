@@ -1,0 +1,59 @@
+{
+  "header": {
+    "resultCode": "0",
+    "resultMsg": "SUCCESS"
+  },
+  "body": {
+    "totalCount": "4",
+    "items": [
+      {
+        "vmsId": "VMS-SYNTHETIC-A",
+        "messageNo": "2",
+        "message": "  교통   정체  | | 우회  안내 |",
+        "createdDate": "20260803121600",
+        "coordX": "127.01",
+        "coordY": "37.51",
+        "roadGrad": "101",
+        "roadName": "합성로",
+        "routeNo": "1",
+        "roadDrcType": "상행"
+      },
+      {
+        "vmsId": "VMS-SYNTHETIC-B",
+        "messageNo": "1",
+        "message": "   ",
+        "createdDate": "20260803121400",
+        "coordX": "37.52",
+        "coordY": "127.02",
+        "roadGrad": "102",
+        "roadName": "합성대로",
+        "routeNo": "2",
+        "roadDrcType": "하행"
+      },
+      {
+        "vmsId": "VMS-SYNTHETIC-A",
+        "messageNo": "1",
+        "message": "첫 줄 | 둘째 줄 |",
+        "createdDate": "20260803121500",
+        "coordX": "127.01",
+        "coordY": "37.51",
+        "roadGrad": "101",
+        "roadName": "합성로",
+        "routeNo": "1",
+        "roadDrcType": "상행"
+      },
+      {
+        "vmsId": "VMS-SYNTHETIC-A",
+        "messageNo": "1",
+        "message": "첫 줄 | 둘째 줄 |",
+        "createdDate": "20260803121500",
+        "coordX": "127.01",
+        "coordY": "37.51",
+        "roadGrad": "101",
+        "roadName": "합성로",
+        "routeNo": "1",
+        "roadDrcType": "상행"
+      }
+    ]
+  }
+}

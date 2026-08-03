@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T28 ITS 사건군 — ACCEPTED·게시 중 |
-| 다음 단계 | final commit → development PR·병합 → T29 |
+| 현재 단계 | T29 ITS 안내군 — ACCEPTED |
+| 다음 단계 | T29 development PR·병합 후 PAUSED — T30 미착수 |
 
 ---
 
@@ -283,6 +283,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-063 | T27은 `road-traffic` Entity 하나와 동일 gateway registry 안의 `/api/road-traffic/current`, `/api/road-traffic/forecast`, `/api/road-traffic/detectors` 세 route로 분리한다. current·detector는 최소 2분, forecast는 30분 이상으로 독립 cache/query cadence를 유지하고 각 provider budget은 보수적으로 1,000회/일 미만에 둔다. Query는 T30 activation 전 기본 비활성화하며 Widget·지도는 만들지 않는다. | APPROVED | 세 source를 한 응답·TTL로 묶으면 매시간 성격의 forecast를 current와 함께 과호출하고 한 source 장애가 전체 stale을 유발한다. 반대로 registry route를 분리하면 하나의 Vercel gateway Function·공통 보안 정책은 유지하면서 partial failure와 source별 freshness를 독립 처리할 수 있다. T26 live에서 traffic 약 6.28 MiB·31,907건, detector 최대 약 4.10 MiB·26,468건이 관찰되어 production query의 실제 bounded cardinality와 정규화 후 payload를 먼저 재야 하며 임의 truncation은 허용하지 않는다. 사용자가 2026-08-03 “시작하세요”로 범위와 선행 gate 착수를 승인했다. |
 | D-064 | T27을 작은 forecast route부터 구현하고 current·detector public route는 별도 bounded scope가 승인될 때까지 연기한다. forecast 숫자 필드는 공식 표기의 모순을 숨기지 않도록 `speed`와 `speedUnit: 'provider-unspecified'`로 제공하며 UI에는 표시하지 않는다. | APPROVED | exact preflight에서 current raw 6,285,037 bytes, detector raw 4,100,083 bytes로 확인되어 4.5 MB 응답 경계를 안전하게 증명하지 못했다. 공식 ITS 문서는 세 speed 단위를 `시/km`로 표기하고 detector `volume`의 집계기간과 `occupancy` scale을 정의하지 않는다. 임의 truncation·단위 추측 없이 진행 가능한 독립 범위는 작은 forecast 응답뿐이다. 사용자가 2026-08-03 “다음작업진행”으로 추천 범위 변경과 forecast 구현 재개를 승인했다. |
 | D-065 | T28은 `road-event` Entity와 독립 `/api/road-events/incidents`, `/api/road-events/disasters` route로 구현하고 Query는 T30 전 기본 비활성화한다. severity는 provider 근거가 없으므로 `provider-unspecified`, blank 종료는 `unknown`, 명시적으로 종료된 항목은 공개 snapshot에서 제외한다. disaster geometry는 공식 최신 계약인 숫자 `1\|2\|3` + WKT 없는 `X Y,...`로 바로잡는다. `dangerousCarInfo`는 기간·bbox 필터 없이 과거 정밀 좌표까지 반환하고 lifecycle·보존·재배포 계약이 불충분하므로 공개 route 없이 `FEATURE_OFF`로 유지한다. | ACCEPTED | 2026-08-03 값 미출력 live gate에서 전국 event 272건·약 108 KiB, dangerous-car 143건·약 26 KiB, 최근 7일 disaster 4건·약 2 KiB를 확인했다. disaster는 `locationInfoType=1`, bare 단일 좌표, `startDate` 14자리와 문서와 다른 `endDate` 12자리를 반환해 T26 WKT validator 오해를 해소했다. dangerous-car에는 오래된 기록과 current/ended flag가 함께 있어 정밀 위치를 public relay할 안전한 근거가 없다. 사용자의 오토모드 지시를 이 명확한 최소 안전 범위의 연속 승인으로 기록한다. |
+| D-066 | T29는 새 `road-guidance` Entity에 VMS·주의운전·VSL의 서로 다른 strict snapshot을 두고, `/api/road-guidance/vms`, `/api/road-guidance/safety-notices`, `/api/road-guidance/variable-speed-limits`를 독립 cache·budget·breaker로 제공한다. VMS는 sign별 `messageNo` page를 `|` line으로 정규화하고 blank page는 빈 표출로 보존한다. 주의운전은 recipient `rev*`를 폐기하고, blank `occrrncId`를 거부하지 않는 provider/composite notice identity를 쓰며 timestamp·lifecycle·severity를 발명하지 않는다. VMS·VSL의 실응답 mixed axis는 각 row가 한국 경계에서 단 한 방향으로만 해석될 때 `[longitude, latitude]`로 정규화한다. VSL 속도는 `provider-unspecified` 단위로 보존하고 active/reduced 상태를 추론하지 않으며 source 14자리 시각은 timezone 없는 문자열로만 보존한다. 세 provider는 raw 2 MiB·5,000 rows, public 2 MiB 상한에서 잘라내지 않고 실패하며 Query는 T30 전 기본 비활성이다. | ACCEPTED | 공식 HTML·JS와 2026-08-03 값 미출력 preflight에서 VMS 약 821 KiB/3,232 rows/1,409 signs, 주의운전 약 626 KiB/1,546 rows, VSL 약 839 KiB/3,903 rows를 확인했다. VMS·VSL은 한 response 안에 두 좌표축이 섞였고, 주의운전은 80% 이상의 ID가 blank이며 recipient 확장으로 row가 증폭됐다. VSL 공식 단위 `시/km`는 불명확하고 status/end가 없으므로 숫자 비교로 상태를 만들 수 없다. 사용자의 오토모드 지시에 따라 이 최소 안전 범위를 연속 승인한다. |
 
 ---
 
@@ -718,9 +719,9 @@ primitive OKLCH
 | A17 | ITS `event` | MISSING | NOT_STARTED | 공식 endpoint 존재; severity·유효기간·중복 keyed probe | T26~T28 |
 | A18 | ITS `fcTraffic` | MISSING | NOT_STARTED | 우회도로 예측 전용; 필수 section/date/hour와 본선·우회 horizon 모델 필요 | T26~T27 |
 | A19 | ITS `detectorInfo` | MISSING | NOT_STARTED | 공식 endpoint 존재; 집계 단위·빈 값·coverage 검증 | T26~T27 |
-| A20 | ITS `vms` | MISSING | NOT_STARTED | 공식 endpoint 존재; 메시지 sanitize·좌표·만료 검증 | T26~T29 |
-| A21 | ITS `safeDriving` | MISSING | NOT_STARTED | 고속도로 주의운전 전용; 필수 bbox·유형·geometry·유효기간 검증 | T26~T29 |
-| A22 | ITS `vsl` | MISSING | NOT_STARTED | 공식 endpoint 존재; 속도 단위·발효·해제 검증 | T26~T29 |
+| A20 | ITS `vms` | MISSING | ACCEPTED | 1,400여 sign의 page·`|` line·blank display를 엄격히 정규화하고 row별 mixed axis·최신 source-local 시각·plain text·live parser를 검증 | T26~T29 |
+| A21 | ITS `safeDriving` | MISSING | ACCEPTED | 전국 bbox의 recipient `rev*`를 제거하고 80% 이상 blank ID를 composite notice로 안전하게 정규화; timestamp·lifecycle·severity는 미추론 | T26~T29 |
+| A22 | ITS `vsl` | MISSING | ACCEPTED | 약 3,900개 표지의 row별 mixed axis, blank link, 두 속도를 검증; 불명확한 단위·active/reduced는 `provider-unspecified` 유지 | T26~T29 |
 | A23 | ITS `dangerousCarInfo` | MISSING | NOT_STARTED | sparse/종료 event의 빈 결과를 정상으로 처리; 정밀 위치·민감도·보존·안전 정책 선행 | T26~T28 |
 | A24 | ITS `disaster` | MISSING | NOT_STARTED | category D·4개 event·필수 날짜창·선택 bbox·3종 geometry와 A17/A09 fallback 우선순위 | T26~T28 |
 
@@ -3200,6 +3201,33 @@ flowchart LR
 - 제외·잔여 release condition: Widget·지도·사용자 bbox와 dangerous-car는 제외한다. T30 activation 전 Query는 기본 비활성을 유지하고 실제 표시 문구·레이어 소비 계약을 별도 검증한다.
 - Guardrail: `ACCEPTED` — 정상·실패·경계·회귀·독립 리뷰가 모두 PASS했고 알려진 회귀가 없다. 사용자의 오토모드 지시에 따라 final commit·development PR·병합을 연속 진행한다.
 
+### T29 — ITS 안내군
+
+- 상태: `ACCEPTED` — D-066 범위의 RED→GREEN·실계약·전체 회귀·독립 리뷰를 통과했고, 사용자 요청에 따라 T29 게시 후 T30 전에서 일시정지한다.
+- 목적: VMS 표출 문구, 주의운전 안내, VSL 제한속도를 서로의 의미를 혼합하지 않는 엄격한 데이터 수직 슬라이스로 준비한다.
+- 할 일·이유·변경 범위:
+  - `road-guidance` Entity에 세 channel별 public schema와 기본 비활성 Query를 두고 server는 `contract` 경계만 import한다.
+  - VMS sign page 순서·line 정규화, 주의운전 recipient 제거·blank ID fallback, VSL unit/state 미추론과 mixed-axis row 정규화를 고정한다.
+  - 세 queryless route의 인증·strict transport/envelope/cardinality·크기·credential reflection, cache·budget·breaker·ETag를 독립 검증한다.
+- 제외: UI·지도·viewport·marker, VSL km/h·active 표시, raw provider ID·recipient 위치, T27 current/detector, 기존 provider 공통화 refactor, 신규 dependency.
+- 완료 조건:
+  - 정상: VMS grouping/page/blank display, 주의운전 provider/composite notice identity·recipient dedup, VSL 2개 속도·도로 구분·blank link를 정규화한다.
+  - 실패: non-200·redirect·MIME·UTF-8·JSON·provider code·count·query·credential reflection·payload 상한·고유 ID 충돌을 fail-closed한다.
+  - 경계: 51번째 이후를 포함한 mixed axis, VMS `|`·blank·control, 주의운전 blank ID·trimmed code, VSL blank link·`limit > default`·timestamp 선후 미강제·unknown field를 검증한다.
+  - 회귀: focused·gated live parser·`npm run validate`와 FSD·correctness·security·gateway 독립 리뷰를 통과한다.
+- 구현·판단:
+  - `road-guidance` Entity에 세 channel별 strict schema·정렬·고유 ID·2 MiB 계약과 2분/5분/5분 기본 비활성 Query를 두고 server는 `contract` direct import만 사용했다.
+  - VMS는 sign별 1..N page와 `|` line을 정규화하고 빈 표출을 보존했다. 실계약에서 한 sign의 page별 `createdDate`가 다른 정상 사례를 재현해 최신 문자열을 `sourceTimestamp`로 선택하고 동일 page 충돌은 계속 거부한다.
+  - 주의운전은 recipient 필드를 폐기하고 provider/composite notice ID로 중복을 제거했으며, VSL은 모든 row의 좌표축을 개별 판별하고 unit·restriction state·timestamp order를 추론하지 않았다.
+  - 세 queryless route를 production runtime에 등록하고 fresh/stale/negative/CDN·upstream budget·breaker·cache identity를 채널별로 격리했다.
+- 검증:
+  - Entity RED `27 FAIL`, provider RED `34 FAIL`, route/runtime RED `22 FAIL`를 각각 확인한 후 통합 focused `88 PASS`·기본 live `1 SKIP`로 GREEN했다.
+  - 값·키 미출력 3-channel live smoke에서 VMS·주의운전·VSL을 각 1회 호출해 `1/1 PASS`했다.
+  - 독립 리뷰 finding인 page별 VMS timestamp와 JSON-escaped 특수문자 credential reflection을 deterministic RED 각 1건으로 재현·해소했다. 최종 FSD·correctness·security·gateway 재리뷰는 잔여 finding 0건으로 PASS했다.
+  - `npm run validate`: 1,837 tests PASS·15 gated SKIP, Biome·strict typecheck·client/server build PASS. 기존 lazy HLS 500 KiB warning은 변경 없다.
+- 제외·잔여 release condition: 지도·UI·viewport·marker는 T30 범위다. 약 6,800개 전국 point를 DOM marker로 전량 렌더링하지 않고 viewport·zoom·layer point budget을 먼저 고정해야 한다. VSL 단위·active/reduced와 주의운전 lifecycle·severity는 공식 근거 전 표시하지 않는다.
+- Guardrail: `ACCEPTED` — 정상·실패·경계·실계약·전체 회귀·독립 리뷰가 모두 PASS했고 알려진 회귀가 없다. final commit·development PR·병합 후 사용자 요청대로 T30 전에서 멈춘다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -3504,3 +3532,7 @@ flowchart LR
 | 2026-08-03 | T27 final commit `1289c3f`, PR #25 quality-gate PASS와 Codex Job SKIP 후 merge commit `c2fd9d1`로 development에 병합·동기화하고 `feature/t28-its-events`를 생성 | T27→T28 |
 | 2026-08-03 | T28 공식 페이지·T26 계약과 값 미출력 live gate를 교차 검증해 WKT validator 오해를 확인하고 D-065를 동결; incidents+disasters는 RED 착수, unbounded historical dangerous-car 정밀 위치는 `FEATURE_OFF` 유지 | T28 |
 | 2026-08-03 | T28 `road-event` Entity·기본 비활성 Query·incidents/disasters strict provider·독립 gateway/runtime을 RED→GREEN; T26 disaster geometry 계약 교정, 종료 status 제거와 incident ID 안정성 finding을 회귀로 고정했다. focused 112 tests·live 두 channel·전체 1,749 tests·두 build·독립 FSD/security/gateway 재리뷰 PASS로 오토모드 ACCEPTED, dangerous-car는 `FEATURE_OFF` 유지 | T28 |
+| 2026-08-03 | T28 final commit `ed2b8af`, PR #26 quality-gate PASS·Codex 두 Job SKIP 후 merge commit `3a9cc22`로 development에 병합·동기화하고 `feature/t29-its-guidance`를 생성 | T28→T29 |
+| 2026-08-03 | T29 공식 HTML·JS·T26 계약과 3-call 값 미출력 preflight를 교차 검증해 VMS/VSL 혼합 좌표축, 주의운전 blank ID·recipient 증폭, VSL 단위/status 미정을 확인; 추론 없는 `road-guidance` 3-channel D-066을 동결하고 RED 착수 | T29 |
+| 2026-08-03 | T29 `road-guidance` Entity·기본 비활성 Query·3 strict ITS provider·독립 gateway/runtime을 RED→GREEN; live에서 page별 VMS timestamp 변형을 최신값 집계로 고정하고 특수문자 JSON-escaped credential reflection을 차단했다. focused 88 tests, 3-channel live 1 test, 전체 1,837 tests·두 build·FSD/security/gateway 재리뷰 PASS로 오토모드 ACCEPTED | T29 |
+| 2026-08-03 | 사용자가 다음 Task 진행 전 일시정지를 요청; T29 final commit·development PR·병합까지만 완료하고 T30은 착수하지 않는다 | T29→PAUSED |

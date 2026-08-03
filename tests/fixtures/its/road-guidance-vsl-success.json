@@ -1,0 +1,47 @@
+{
+  "header": {
+    "resultCode": "0",
+    "resultMsg": "SUCCESS"
+  },
+  "body": {
+    "totalCount": "3",
+    "items": [
+      {
+        "vslId": "VSL-SYNTHETIC-A",
+        "sectionCode": "1",
+        "createdDate": "20260803121600",
+        "limitSpeed": "80",
+        "defLmtSpeed": "100",
+        "roadNo": "1",
+        "linkId": "",
+        "coordX": "37.51",
+        "coordY": "127.01",
+        "registedDate": "20260803121700"
+      },
+      {
+        "vslId": "VSL-SYNTHETIC-B",
+        "sectionCode": "2",
+        "createdDate": "20260803121900",
+        "limitSpeed": 110,
+        "defLmtSpeed": 100,
+        "roadNo": "2",
+        "linkId": "SYNTHETIC-VSL-LINK",
+        "coordX": 127.02,
+        "coordY": 37.52,
+        "registedDate": "20260803121800"
+      },
+      {
+        "vslId": "VSL-SYNTHETIC-B",
+        "sectionCode": "2",
+        "createdDate": "20260803121900",
+        "limitSpeed": 110,
+        "defLmtSpeed": 100,
+        "roadNo": "2",
+        "linkId": "SYNTHETIC-VSL-LINK",
+        "coordX": 127.02,
+        "coordY": 37.52,
+        "registedDate": "20260803121800"
+      }
+    ]
+  }
+}
