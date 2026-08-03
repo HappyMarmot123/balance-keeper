@@ -29,3 +29,10 @@ export {
   type ItsCctvStillImage,
   type ItsCctvStillMetadata,
 } from './cctvStillImage';
+export {
+  type FetchItsRoadTrafficForecastOptions,
+  fetchItsRoadTrafficForecast,
+  ITS_ROAD_TRAFFIC_FORECAST_MAX_RESPONSE_BYTES,
+  ITS_ROAD_TRAFFIC_FORECAST_SECTION_ID,
+  ItsRoadTrafficForecastProviderError,
+} from './roadTrafficForecast';

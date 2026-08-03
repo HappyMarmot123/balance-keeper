@@ -1,0 +1,31 @@
+{
+  "header": {
+    "resultCode": "0",
+    "resultMsg": "SUCCESS"
+  },
+  "body": {
+    "totalCount": "2",
+    "items": [
+      {
+        "fcastDate": "20260803",
+        "fcastHour": "15",
+        "linkId": "LINK-002",
+        "sectionId": "1",
+        "sectionType": "M",
+        "detourId": "",
+        "length": "1200",
+        "speed": "80"
+      },
+      {
+        "fcastDate": "20260803",
+        "fcastHour": "15",
+        "linkId": "LINK-001",
+        "sectionId": "1",
+        "sectionType": "D",
+        "detourId": "DETOUR-001",
+        "length": "950.5",
+        "speed": "72.5"
+      }
+    ]
+  }
+}
