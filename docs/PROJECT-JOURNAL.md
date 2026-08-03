@@ -3232,6 +3232,7 @@ flowchart LR
 ### T30 — 지도 layer registry 통합
 
 - 상태: `ACCEPTED` — D-067 범위의 RED→GREEN, 전체 회귀, 브라우저 QA와 독립 리뷰가 PASS했으며 사용자 요청에 따라 T31 시작 전 일시정지한다.
+- 게시: feature commit `d284761`, development 대상 PR #28. quality-gate 통과 후 병합한다.
 - 목적: 공식 위치 계약이 있는 공공 신호를 하나의 NAVER GL 지도에서 안전하게 켜고 끄며, 밀집 데이터가 브라우저 렌더링과 키보드 탐색을 압도하지 않게 한다.
 - 할 일·이유·변경 범위:
   - `widgets/korea-map`이 고정 registry, 활성 layer 집합, 단일 viewport snapshot, 단일 탐색 rail과 전역 selection을 소유한다.
@@ -3572,3 +3573,4 @@ flowchart LR
 | 2026-08-03 | 사용자가 다음 Task 진행 전 일시정지를 요청; T29 final commit·development PR·병합까지만 완료하고 T30은 착수하지 않는다 | T29→PAUSED |
 | 2026-08-03 | 활성 목표 재개 지시에 따라 `development@a08711e`와 T07·T10~T29 위치 계약을 재감사했다. 공식 geometry가 있는 8개 layer만 registry에 포함하고, geometry 없는 5개 source는 추정하지 않으며, query→zoom→viewport→layer/global budget 순서를 강제하는 D-067/T30을 오토모드 APPROVED·IN_PROGRESS로 전환해 `feature/t30-map-layer-registry`에서 RED 착수 | T30 |
 | 2026-08-03 | T30 8-layer registry·bounded point/line/area overlay·단일 rail/selection·CCTV viewer를 RED→GREEN으로 통합했다. 전체 1,884 tests·두 build, 320/1440 light/dark browser QA와 correctness/FSD/UI 재리뷰가 PASS해 오토모드 ACCEPTED로 닫고, 사용자 요청대로 T31 시작 전 일시정지한다 | T30→PAUSED |
+| 2026-08-03 | T30 feature commit `d284761`을 development 대상 PR #28로 게시하고 필수 quality-gate 결과를 대기한다 | T30 |
