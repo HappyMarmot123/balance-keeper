@@ -9,8 +9,8 @@
 | 기준일 | 2026-07-31 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T31 DashboardPage/PanelGrid 통합 — ACCEPTED · T32 준비 |
-| 다음 단계 | RED → GREEN → browser·전체 회귀 → development PR·병합 |
+| 현재 단계 | T31 DashboardPage/PanelGrid 통합 — ACCEPTED · T32 성능 최적화 반영 |
+| 다음 단계 | RED → GREEN → browser → T33 |
 
 ---
 
@@ -3284,6 +3284,21 @@ flowchart LR
   - 패널별 계약 테스트는 page composition은 유지하고, grid 자체 계약은 widget contract test로 분리해 회귀 탐지 지점을 명확화했다.
 - 회귀·잔여 범위: map registry·CCTV/Navigator·provider/gateway는 변경 없음. 화면 시각/크기 튜닝은 T31 후속 또는 T32에서 진행.
 - Guardrail: `ACCEPTED` — 정상·실패·경계·회귀 계약이 통과했고 development 반영까지 완료됨. T32는 패널 성능/시각 최적화 범위로 연속 진행.
+
+### T32 — 측정된 병목만 Worker·lazy loading 최적화
+
+- 상태: `ACCEPTED` — 품질 게이트 통과 후 PR 병합 완료.
+- 게시: feature commit `534d3ef`, PR #31 quality-gate PASS 후 merge commit `81b154c`로 `development`에 병합됨
+- 목적: 지도 오버레이 불필요 갱신을 줄이고 뷰포트/시각 갱신 경로와 미디어 로딩 지연 부하를 완화한다.
+- 포함:
+  - `src/widgets/korea-map/ui/MapLayerOverlay.tsx`에서 포인트/지오메트리 오버레이 `replace` 호출을 구조 비교 기반으로 최소화.
+  - `src/widgets/korea-map/ui/KoreaMapLayers.tsx`에서 CCTV 실시간 패널 lazy import와 viewport requestAnimationFrame coalescing 적용.
+  - KoreaMap overlay/model 테스트에서 re-render 동등성 경로를 추가해 회귀를 방지.
+- 제외:
+  - Worker/Canvas/WebGL 계열 본격 이관, 지도/패널 전체 재배치, API/게이트웨이 변경.
+- 검증:
+  - `npm run validate` PASS (Biome/check, Vitest, strict tsc, client/server build)
+- 회귀·잔여 범위: T33에서 전체 회귀/preview/rollback 근거를 이어서 누적한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
