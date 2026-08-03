@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",
+    "@playwright/test": "^1.55.0",
     "@preact/preset-vite": "2.10.5",
     "@tailwindcss/vite": "4.3.1",
     "@testing-library/preact": "3.2.4",

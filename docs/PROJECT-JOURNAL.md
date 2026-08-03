@@ -6,11 +6,11 @@
 | --- | --- |
 | 문서 역할 | 제품 기획·기술 결정·Task·검증·개발일지의 단일 정본 |
 | 실행 모드 | 오토모드 |
-| 기준일 | 2026-07-31 (Asia/Seoul) |
+| 기준일 | 2026-08-03 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T31 DashboardPage/PanelGrid 통합 — ACCEPTED · T32 성능 최적화 반영 |
-| 다음 단계 | RED → GREEN → browser → T33 |
+| 현재 단계 | T32 성능 최적화 — ACCEPTED · T33 회귀/릴리스 증빙 진행 |
+| 다음 단계 | T33 완료 후 다음 Task 재개: preview/rollback 증빙 정합성 조건 충족 |
 
 ---
 
@@ -3300,6 +3300,46 @@ flowchart LR
   - `npm run validate` PASS (Biome/check, Vitest, strict tsc, client/server build)
 - 회귀·잔여 범위: T33에서 전체 회귀/preview/rollback 근거를 이어서 누적한다.
 
+### T33 — 전체 회귀와 Vercel preview·rollback 증빙
+
+- 상태: `VERIFYING` — 실행 모드 오토모드로 자동 진행.
+- 승인: `T09` 완료 및 `T32` 완료 상태에서 사용자가 `"시작"` 지시로 다음 단계 진행 승인.
+- 목적: feature 완료 상태의 전체 회귀를 마감하고, preview/rollback/운영 제한 근거를 T33으로 통합한다.
+- 포함:
+  - `npm run validate` 실행과 결과 정합성 유지.
+  - Vercel preview/rollback 운영 증거의 부재 여부를 분리 기록.
+  - `frontend-pr-review`에서 Codex 비활성화 상태와 영향 범위 정리.
+  - CI 오프라인 회귀가 가능하지 않은 항목(실제 preview/deploy, rollback drill)을 BLOCKED 항목으로 구분.
+- 제외:
+  - 코드 변경, 신규 기능 구현, 공개 배포 환경 mutation.
+  - 미지원/미확인 환경의 외부 live smoke 확장.
+- 완료 조건:
+  - 정상: `npm run validate` 결과가 현재 작업 기준에서 PASS이며, 오프라인 회귀 경계가 문서화.
+  - 실패: preview/rollback 핵심 근거는 외부 배포/권한 근거가 없어 BLOCKED로 기록. Browser 상호작용 E2E는 로컬에서 정규화.
+  - 경계: preview 링크/환경 부재, 키 없는 상태의 live smoke 분리.
+- RED→GREEN·판단:
+  - T33은 코드 변경 없이 문서/근거 정리에 집중.
+  - `npm run validate` 2026-08-03 14:57:26 기준으로 Biome check, Vitest 1887 passed(15 skipped), strict typecheck, client/server build 모두 PASS.
+- 검증:
+  - `npm run validate` PASS (`Biome check`, Vitest `1887/15`, build two targets).
+  - 브라우저 자동화 smoke: `npx --yes playwright@1.55.0 screenshot --browser=chromium --channel=chrome --full-page --timeout=120000 http://localhost:5173 tmp-t33-browser-smoke.png` 실행으로 페이지 로드 성공 및 스크린샷 생성(`tmp-t33-browser-smoke.png`, `121,061 bytes`, `SHA256=BDA0E2EA3B951956B165AACA212F19E0F9BA9AA0D528BFC09FAAF6B28242EE9D`).
+  - 지도 존재성 추가 검증: `npx --yes playwright@1.55.0 screenshot --browser=chromium --channel=chrome --full-page --viewport-size='1600,1200' --wait-for-selector='[data-naver-map-root]' http://localhost:5173 tmp-t33-browser-maproot.png` 실행으로 `[data-naver-map-root]` 요소 로드까지 성공했고 `tmp-t33-browser-maproot.png`(`113,930 bytes`, `SHA256=0B2243DDBC237316A94C3E70D5801DCE4992B4261649A0E6BDB99D4F881D72E3`)를 저장했다.
+  - 상호작용 E2E 추가: `playwright.e2e.config.ts` + `tests/t33-dashboard-e2e.spec.ts`로 `npx playwright test --config=playwright.e2e.config.ts` 실행 시, 지도 루트 노출·맵 패널 토글·테마 토글 상호작용이 PASS.
+  - `npm run validate`를 재실행해 현재 기준(2026-08-03T15:52:55+09:00) 기준 정적 회귀를 재확인: Biome check, Vitest 1887/15, client/server build 모두 PASS.
+  - `.github/workflows/ci.yml`의 push 기준 quality gate가 유지됨을 확인.
+  - `.github/workflows/frontend-pr-review.yml`에서 `codex-review`/`post-feedback`가 `if: false`로 비활성화되고 `quality-gate`만 동작함을 확인.
+- 회귀·잔여 범위 (BLOCKED):
+  - `Vercel preview`/`production` 배포 링크, region 비교(`hnd1`/`icn1`), rollback drill은 저장소/권한 내에서 링크가 없어 미실행.
+  - 위 항목은 해결 조건만 기록한 뒤 T33 PASS 후 확장.
+- 진행 증거:
+  - 브라우저 스모크로 기본 화면 로드를 확인했고, `npm run validate`도 PASS이므로 코드 회귀는 오프라인 기준으로 안정화됨.
+  - 저장소 내 `.vercel` 메타(`project.json`)가 없어 Vercel preview 링크 자동 추적 증빙을 수집할 수 없음.
+- 추가 정리:
+- 반복 실행 시점: `2026-08-03T15:52:55+09:00` (validate 재실행·브라우저 smoke·지도 루트 존재성 검사 각각 실행).
+  - 회귀 지표: lint 477 files, test file 196개 / 1887 tests PASS (15 skipped), client/server build PASS.
+- Codex 리뷰 workflow는 `if: false`로 비활성 상태가 유지됨. 오토 리뷰 의존 회귀는 제외하고 quality-gate 기반 회귀만 정합성 판단.
+- 미완료 남은 항목: preview/rollback drill, region failover 비교(`hnd1`/`icn1`), 공개 배포 기반 실측 링크 미수집 상태.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -3455,6 +3495,10 @@ flowchart LR
 
 | 날짜 | 변경 | Task |
 | --- | --- | --- |
+| 2026-08-03 | T33에서 `playwright.e2e.config.ts` + `tests/t33-dashboard-e2e.spec.ts`로 상호작용 E2E를 실행해 PASS, `npm run validate` 재실행까지 통과. 남은 BLOCKED는 preview/rollback/region failover 링크·권한 근거 미확보 | T33 |
+| 2026-08-03 | T33에서 브라우저 smoke 스크립트(Playwright + chrome)로 localhost 화면 로드 증빙을 보강하고, preview/rollback은 부적합 조건 미충족으로 유지 | T33 |
+| 2026-08-03 | T33에서 `npm run validate` 재실행(PASS)으로 회귀 정합성을 재확인했고, 상호작용 E2E는 `@playwright/test` 의존성 미설치 환경으로 블록됨 | T33 |
+| 2026-08-03 | T33를 `VERIFYING`로 상태 갱신하고 오프라인 회귀(PASS) 및 Codex 비활성 상태를 문서 근거로 정리 | T33 |
 | 2026-07-30 | 사용자가 T18 PASS와 D-049의 OpenSky `NO_GO`·ADSB.lol `CONDITIONAL`·제품 `FEATURE_OFF` 유지안을 승인하고 final commit·push·development PR을 허가 | T18 |
 | 2026-07-30 | OpenSky·ADSB.lol 공식 계약과 레거시 군용기 heuristic을 감사해 OpenSky `NO_GO`, ADSB.lol `CONDITIONAL`, 제품 `FEATURE_OFF` 유지안을 판정 | T18 |
 | 2026-07-20 | 제품 비전, 기술 검증, 코드 분석, API 장부와 승인 Task 정본 생성 | T00 |
