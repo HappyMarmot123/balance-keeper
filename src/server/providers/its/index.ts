@@ -37,6 +37,12 @@ export {
   ItsRoadEventsProviderError,
 } from './roadEvents';
 export {
+  type FetchItsRoadTrafficCurrentOptions,
+  fetchItsRoadTrafficCurrent,
+  ITS_ROAD_TRAFFIC_CURRENT_MAX_RESPONSE_BYTES,
+  ItsRoadTrafficCurrentProviderError,
+} from './roadTrafficCurrent';
+export {
   type FetchItsRoadTrafficForecastOptions,
   fetchItsRoadTrafficForecast,
   ITS_ROAD_TRAFFIC_FORECAST_MAX_RESPONSE_BYTES,

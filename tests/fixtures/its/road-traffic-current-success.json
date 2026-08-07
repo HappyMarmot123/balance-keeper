@@ -1,0 +1,33 @@
+{
+  "header": {
+    "resultCode": 0,
+    "resultMsg": "SUCCESS"
+  },
+  "body": {
+    "totalCount": 2,
+    "items": [
+      {
+        "roadName": "합성대로",
+        "roadDrcType": "up",
+        "linkNo": "2",
+        "linkId": "LINK-002",
+        "startNodeId": "",
+        "endNodeId": "",
+        "speed": "0",
+        "travelTime": "0",
+        "createdDate": "20260803152000"
+      },
+      {
+        "roadName": "합성로",
+        "roadDrcType": "",
+        "linkNo": "1",
+        "linkId": "LINK-001",
+        "startNodeId": "NODE-001",
+        "endNodeId": "NODE-002",
+        "speed": "42.5",
+        "travelTime": "120.25",
+        "createdDate": "20260803151930"
+      }
+    ]
+  }
+}

@@ -5,10 +5,12 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-describe('road traffic forecast entity boundary', () => {
-  it('publishes the approved forecast-only entity slice', () => {
+describe('road traffic entity boundary', () => {
+  it('publishes the approved forecast and bounded-current entity slice', () => {
     for (const path of [
+      'src/entities/road-traffic/model/roadTrafficCurrent.ts',
       'src/entities/road-traffic/model/roadTrafficForecast.ts',
+      'src/entities/road-traffic/api/roadTrafficCurrentQuery.ts',
       'src/entities/road-traffic/api/roadTrafficForecastQuery.ts',
       'src/entities/road-traffic/contract.ts',
       'src/entities/road-traffic/index.ts',
