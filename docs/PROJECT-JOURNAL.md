@@ -9,8 +9,8 @@
 | 기준일 | 2026-08-07 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T38 비배포 릴리스 게이트 정리 — PASS, 사용자 ACCEPTED 대기 |
-| 다음 단계 | T38 development PR·병합 후 최종 development 통합 확인 |
+| 현재 단계 | T39 의존성 보안 패치 갱신 — PASS, 사용자 ACCEPTED 대기 |
+| 다음 단계 | T39 development PR·병합 후 기본 경로 최종 동기화 |
 
 ---
 
@@ -291,6 +291,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-071 | T37은 `/api/road-traffic/detectors` 하나의 전국 snapshot cache key로 ITS `/vdsInfo`를 제공한다. detector ID와 공식 확장 `linkIds`별로 그룹화하고 각 관측은 명명된 tuple로 보존해 반복 key 비용을 줄인다. speed·volume·occupancy는 모두 `provider-unspecified`, `-1`과 관찰된 occupancy blank는 `null`, source 14자리 시각은 timezone 없는 문자열로 둔다. raw 6 MiB·30,000 rows와 public 2.5 MiB·30,000 observations를 넘으면 자르지 않고 실패하며 Query는 기본 비활성화한다. | APPROVED | 공식 endpoint는 `apiKey/getType` 외 bbox·ID·page filter가 없어 요청별 cohort route는 서로 다른 cache key마다 동일 전국 fetch를 증폭한다. 2026-08-07 값 미출력 실측은 26,468 rows·약 4.10 MiB, 9,727 detector IDs, detector별 최대 8 lanes, `(vdsId,laneNo)` revision 충돌과 occupancy blank·100 초과 값을 확인했다. 단일 compact normalized snapshot은 이 증폭을 피하면서 public 상한을 fail-closed로 검증할 수 있다. 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 진행하도록 승인했다. |
 | D-072 | T37 실응답에서 확인한 `-1 < occupancy < 0` 값은 오류 sentinel로 추측해 버리지 않고 unit-neutral provider 값으로 보존한다. exact `-1`과 blank만 `null`이며 percentage·congestion 의미는 부여하지 않는다. | ACCEPTED | 첫 strict live smoke가 음수 소수 occupancy 7건을 공개 nonnegative schema에서 거부했다. 값 미출력 집계에서 speed·volume·timestamp·lane·link 경계는 모두 유효했고, official contract는 occupancy scale·sentinel을 정의하지 않는다. 원문 보존이 임의 결측 처리보다 D-071과 일치하며 사용자의 비배포 잔여 작업 오토모드 범위에서 경계 테스트와 재실행을 승인했다. |
 | D-073 | T38은 배포 준비 완료를 선언하는 Task가 아니라 비배포 환경에서 실행 가능한 release gate를 코드로 고정하고 현재 결과를 분류하는 Task다. 코드·offline 회귀·실행 가능한 gate가 통과하면 Task는 완료할 수 있지만, provider access·실제 브라우저·Upstash처럼 현재 환경 밖의 조건은 public release 상태를 `EXTERNAL`로 유지한다. | ACCEPTED | 사용자가 Vercel 배포만 제외하고 나머지 작업을 오토모드로 진행하도록 지시했다. 외부 실패를 임의 mock PASS로 바꾸지 않으면서도 전용 gate 부재와 로컬에서 검증 가능한 경로는 마감한다. |
+| D-074 | T39는 `npm audit fix`의 non-force·현재 semver 범위 내 lockfile 갱신만 허용한다. package manifest 범위, major dependency, 제품 코드, browser binary와 배포 설정이 바뀌면 자동 진행하지 않는다. | APPROVED | 최종 clean install에서 Playwright·PostCSS·Undici 경로의 moderate 1·high 3 advisory가 재현됐고 dry-run은 선언된 범위 안의 6개 transitive/direct package 갱신으로 해소 가능하다고 제시했다. 사용자의 비배포 잔여 작업 오토모드 지시 범위에서 최소 공급망 패치를 적용한다. |
 
 ---
 
@@ -3506,6 +3507,26 @@ flowchart LR
 - 독립 review 2건 PASS — 실행 결과 분류의 과장을 제거했고, explicit gate의 missing credential silent-skip finding을 회귀 테스트와 함께 해소했다. 최신 diff에 추가 finding은 없다.
 - Guardrail: `PASS` — T38 자체 완료와 public release의 `EXTERNAL` 조건을 분리했으며 제품 런타임·UI·배포 구성을 변경하지 않았다.
 
+### T39 — 의존성 보안 패치 갱신
+
+- 상태: `PASS` — non-force lockfile 갱신으로 audit 4건을 0건으로 해소했고 전체 회귀가 통과했다. 사용자 `ACCEPTED`를 기다린다.
+- 목적: 선언된 semver 범위를 바꾸거나 강제 major upgrade하지 않고 현재 lockfile의 알려진 Playwright·PostCSS·Undici advisory를 제거한다.
+- 포함: non-force `npm audit fix`, package-lock diff 감사, `npm audit` 0 확인, Playwright CLI·repository contract·전체 `npm run validate`, 독립 dependency review.
+- 제외: `npm audit fix --force`, package.json 범위 변경, 새 dependency, browser binary download, E2E 범위 확대, 제품 코드·UI·Vercel 배포 변경.
+- 완료 조건:
+  - 정상: audit 결과가 0이고 lockfile은 현재 선언 범위 안의 advisory 해소 package만 갱신한다.
+  - 실패: package.json·major range·제품 코드가 바뀌거나 audit가 남으면 완료하지 않는다.
+  - 경계: Playwright CLI가 실행되고 기존 browser contract·Vitest·TypeScript·client/server build가 모두 PASS한다.
+  - 회귀: 기본 경로와 feature worktree 모두 source tree가 clean하고 `development` 결과를 재현할 수 있다.
+- RED: `npm ci`와 `npm audit`에서 4 vulnerabilities(1 moderate·3 high)를 재현했다. 직접 경로는 `@playwright/test@1.55.0`, transitive 경로는 `playwright@1.55.0`, `postcss@8.5.20`, `undici@7.28.0`이다.
+- GREEN·검증:
+  - non-force `npm audit fix`는 `package.json`과 제품 코드를 바꾸지 않고 lockfile의 6개 package만 갱신했다: `@playwright/test 1.62.1`, `playwright 1.62.1`, `playwright-core 1.62.1`, `postcss 8.5.26`, `undici 7.29.0`, `nanoid 3.3.17`.
+  - `npm audit --audit-level=moderate` 결과 0 vulnerabilities.
+  - `npx playwright --version`은 1.62.1, `playwright test --list`는 기존 T33 spec 1건을 정상 수집했다. browser binary 설치·실행이나 새 E2E PASS를 주장하지 않는다.
+  - `npm run validate` PASS — Biome 503 files, Vitest 1,966 passed·18 skipped, strict TypeScript, client/server build.
+  - 독립 dependency review 2건 PASS — 변경은 예상한 lockfile 6개 entry와 정본뿐이며 package.json·제품 코드·registry·integrity·dependency graph에 추가 finding이 없다.
+- Guardrail: `PASS` — 범위·근거·완료 조건이 명확하고 배포·제품 동작과 독립된 lockfile 보안 갱신이다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `ACCEPTED` — RED→GREEN, 전체 품질 게이트와 독립 correctness/security 재리뷰가 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
@@ -3847,3 +3868,4 @@ flowchart LR
 | 2026-08-07 | T09-R2 multi-area finding 계약을 RED→GREEN하고 focused 58 tests·전체 validate를 통과했다. commit `87af820`, PR #35 quality-gate PASS, merge `bc9ea9e`로 development 반영; Codex jobs는 계속 비활성 | T09-R2 |
 | 2026-08-07 | T34 정본을 최신 development와 재정합해 API 장부를 22 ACCEPTED·2 FEATURE_OFF로 갱신하고 T17 카드, T35~T37·T09-R2 병합 증거와 열린 외부 gate를 복구했다. 전체 1,964 tests·두 build와 독립 감사 PASS | T34 |
 | 2026-08-07 | T38 forecast production-gateway 전용 gate를 RED→GREEN해 실키 1/1과 CCTV transport 3/3을 통과했다. KMA·KOMSA direct HTTP 403, Upstash pair·browser tool 부재는 원인을 발명하지 않고 EXTERNAL/NOT_RUN으로 유지했으며 Vercel은 사용자 지시로 제외했다. focused 110 tests·전체 1,966 tests·두 build·독립 재리뷰 PASS | T38 |
+| 2026-08-07 | T39에서 clean install audit의 moderate 1·high 3을 RED로 고정하고 non-force lockfile 6-entry 갱신으로 0 vulnerabilities를 달성했다. Playwright 1.62.1 CLI/spec collection, 전체 1,966 tests·두 build와 독립 dependency review PASS | T39 |
