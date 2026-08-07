@@ -6,9 +6,11 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('road traffic entity boundary', () => {
-  it('publishes the approved forecast and bounded-current entity slice', () => {
+  it('publishes the approved forecast, bounded-current and detector entity slices', () => {
     for (const path of [
       'src/entities/road-traffic/model/roadTrafficCurrent.ts',
+      'src/entities/road-traffic/model/roadTrafficDetectors.ts',
+      'src/entities/road-traffic/api/roadTrafficDetectorsQuery.ts',
       'src/entities/road-traffic/model/roadTrafficForecast.ts',
       'src/entities/road-traffic/api/roadTrafficCurrentQuery.ts',
       'src/entities/road-traffic/api/roadTrafficForecastQuery.ts',

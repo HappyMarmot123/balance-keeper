@@ -16,6 +16,23 @@ export {
   roadTrafficCurrentDataSchema,
   roadTrafficCurrentSnapshotSchema,
 } from './model/roadTrafficCurrent';
+export type {
+  RoadTrafficDetector,
+  RoadTrafficDetectorObservation,
+  RoadTrafficDetectorSnapshot,
+} from './model/roadTrafficDetectors';
+export {
+  compareRoadTrafficDetectorObservations,
+  compareRoadTrafficDetectors,
+  ROAD_TRAFFIC_DETECTOR_MAX_ID_LENGTH,
+  ROAD_TRAFFIC_DETECTOR_MAX_LINKS,
+  ROAD_TRAFFIC_DETECTOR_MAX_OBSERVATIONS,
+  ROAD_TRAFFIC_DETECTOR_MAX_SERIALIZED_BYTES,
+  ROAD_TRAFFIC_DETECTOR_METRIC_UNIT,
+  ROAD_TRAFFIC_DETECTOR_SOURCE_TIME_BASIS,
+  roadTrafficDetectorDataSchema,
+  roadTrafficDetectorSnapshotSchema,
+} from './model/roadTrafficDetectors';
 export type { RoadTrafficForecastSegment, RoadTrafficForecastSnapshot } from './model/roadTrafficForecast';
 export {
   compareRoadTrafficForecastSegments,

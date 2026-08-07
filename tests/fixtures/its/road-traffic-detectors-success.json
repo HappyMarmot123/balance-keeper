@@ -1,0 +1,38 @@
+{
+  "header": {
+    "resultCode": "0",
+    "resultMsg": "OK"
+  },
+  "body": {
+    "items": [
+      {
+        "vdsId": "VDS-002",
+        "linkIds": "2001",
+        "laneNo": "2",
+        "colctedDate": "20260807120100",
+        "speed": "48",
+        "volume": "31",
+        "occupancy": "17.5"
+      },
+      {
+        "vdsId": "VDS-001",
+        "linkIds": "1001,1002",
+        "laneNo": "1",
+        "colctedDate": "20260807120000",
+        "speed": "72.5",
+        "volume": "18",
+        "occupancy": "121"
+      },
+      {
+        "vdsId": "VDS-001",
+        "linkIds": "1001,1002",
+        "laneNo": "0",
+        "colctedDate": "20260807120100",
+        "speed": "-1",
+        "volume": "-1",
+        "occupancy": ""
+      }
+    ],
+    "totalCount": "3"
+  }
+}
