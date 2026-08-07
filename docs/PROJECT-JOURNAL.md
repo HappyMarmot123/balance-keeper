@@ -6,11 +6,11 @@
 | --- | --- |
 | 문서 역할 | 제품 기획·기술 결정·Task·검증·개발일지의 단일 정본 |
 | 실행 모드 | 오토모드 |
-| 기준일 | 2026-08-03 (Asia/Seoul) |
+| 기준일 | 2026-08-07 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T09-R2 Codex feedback multi-area finding contract — ACCEPTED, 최신 development 재기준화 |
-| 다음 단계 | T09-R2 통합 회귀·development PR 후 T34 정본 재정합 |
+| 현재 단계 | T34 구현 장부 정합성 복구 — ACCEPTED, 최신 development 재정합 완료 |
+| 다음 단계 | T34 development PR·병합 후 T38 비배포 릴리스 게이트 |
 
 ---
 
@@ -706,32 +706,32 @@ primitive OKLCH
 
 | ID | 기능 | 레거시 증거 | 새 저장소 | 검증·Gap | Task |
 | --- | --- | --- | --- | --- | --- |
-| A01 | `/api/weather` 초단기실황 | PARTIAL | NOT_STARTED | `getUltraSrtNcst` 공식 확인, KST base time·게시 지연·null keyed probe | T10 |
+| A01 | `/api/weather` 초단기실황 | PARTIAL | ACCEPTED | KST 발표시각·격자·신선도·5상태 Panel과 production gateway live smoke 완료 | T10 |
 | A02 | 기상 단기·시간별 예보 | MISSING | ACCEPTED | `getVilageFcst` 현재 이후 24시간·누락 slot·gateway live smoke와 자동 회귀 PASS; 연결 browser 부재의 수동 시각 QA 제한을 사용자가 인지하고 병합 승인 | T22 |
 | A03 | 기상특보 | MISSING | ACCEPTED | offline 구현·전체 자동 회귀 PASS; 사용자가 browser 시각 QA 미검증 제한을 수락, data.go.kr live는 외부 공개 release condition | T23 |
-| A04 | `/api/air` PM10/PM2.5 | PARTIAL | NOT_STARTED | 개발 500/일·심사 후 운영 10,000/일 안내, 2026 행정구역·결측·측정시각과 측정소 `dmX=위도/dmY=경도` 보강 | T11 |
+| A04 | `/api/air` PM10/PM2.5 | PARTIAL | ACCEPTED | 측정·측정소 분리 계약, 지역 정규화·좌표·등급·결측과 production gateway live smoke 완료 | T11 |
 | A05 | `/api/earthquake` KMA+USGS | PARTIAL | ACCEPTED | KMA 3일+USGS 7일, 수정 통보·보수적 dedup·partial/stale·500건 상한과 keyed live smoke PASS | T12 |
 | A06 | `/api/macro` | PARTIAL | ACCEPTED | 공식 코드·항목 확정, offline 전체 회귀와 production gateway 3-call live smoke PASS | T13 |
-| A07 | `/api/markets` | MVP | PASS | 금융위원회 KOSPI·KOSDAQ 하루 지연 구현, strict 실응답·2-call gateway live smoke와 전체 회귀 PASS | T14 |
-| A08 | `/api/news` | PARTIAL | NOT_STARTED | 직접 publisher RSS만 conditional, Google/우회 feed 제거, 부분 실패·권리 확인 | T15 |
-| A09 | `/api/disaster` | PARTIAL | NOT_STARTED | 1분 갱신 확인, license 표기 충돌·XML 오류·무정렬 가능성·pagination/dedup·원문 보존 keyed probe | T16 |
-| A10 | 한국 기준 동아시아 상황 (client projection) | MVP | PASS | 기존 기상·지진·시장·보도자료 exact Query key를 재사용하고 `/api/neighbor` 없이 요청 중복 제거 | T17 |
-| A11 | `/api/military` 군용기 | PARTIAL | NOT_STARTED | OpenSky `NO_GO` until written license; T18을 provider feasibility로 변경 | T18 |
+| A07 | `/api/markets` | MVP | ACCEPTED | 금융위원회 KOSPI·KOSDAQ 하루 지연 구현, strict 실응답·2-call gateway live smoke와 전체 회귀 완료 | T14 |
+| A08 | `/api/news` | PARTIAL | ACCEPTED | 직접 publisher RSS만 사용하고 부분 실패·MIME·XML·SSRF·권리 경계를 검증 | T15 |
+| A09 | `/api/disaster` | PARTIAL | ACCEPTED | Safetydata pagination·무정렬·dedup·원문·stale 계약과 credential-gated live smoke 완료 | T16 |
+| A10 | 한국 기준 동아시아 상황 (client projection) | MVP | ACCEPTED | 기존 기상·지진·시장·보도자료 exact Query key를 재사용하고 `/api/neighbor` 없이 요청 중복 제거 | T17 |
+| A11 | `/api/military` 군용기 | PARTIAL | FEATURE_OFF | OpenSky 운영 계약·군 분류 근거 전 `NO_GO`; ADSB.lol 대체안도 별도 승인 전 비활성 | T18 |
 | A12 | `/api/maritime-traffic` 해상교통 밀도 | PARTIAL | ACCEPTED | 비식별 latest snapshot Entity·기본 비활성 Query·strict KOMSA provider·coarse gateway offline PASS; live 200 JSON·pagination·quota와 grid geometry는 release gate | T24~T25 |
-| A13 | `/api/cctv/list` | MVP | NOT_STARTED | current ITS `type=ex\|its`, bbox·좌표·media URL·실 quota keyed probe | T19 |
-| A14 | `/api/cctv/image` | BROKEN_FLOW | NOT_STARTED | 레거시는 null이나 current ITS `cctvType=3` 존재; HTTPS·크기·CORS 검증 | T20 |
-| A15 | `/api/cctv/stream` | PARTIAL | NOT_STARTED | `cctvType=4` HTTPS-HLS 우선, Vercel segment relay 제거·browser 검증 | T21 |
-| A16 | ITS `traffic` | MISSING | NOT_STARTED | 공식 endpoint 존재; 공통 도로 segment·속도·빈 구간 keyed probe | T26~T27 |
-| A17 | ITS `event` | MISSING | NOT_STARTED | 공식 endpoint 존재; severity·유효기간·중복 keyed probe | T26~T28 |
-| A18 | ITS `fcTraffic` | MISSING | NOT_STARTED | 우회도로 예측 전용; 필수 section/date/hour와 본선·우회 horizon 모델 필요 | T26~T27 |
-| A19 | ITS `detectorInfo` | MISSING | NOT_STARTED | 공식 endpoint 존재; 집계 단위·빈 값·coverage 검증 | T26~T27 |
+| A13 | `/api/cctv/list` | MVP | ACCEPTED | `ex\|its × cctvType=3\|4`, bbox·좌표·media URL allowlist와 지도 activation 완료 | T19,T30 |
+| A14 | `/api/cctv/image` | BROKEN_FLOW | ACCEPTED | on-demand bounded JPEG gateway와 지도 정지영상 상세·cleanup 완료 | T20,T20-R1 |
+| A15 | `/api/cctv/stream` | PARTIAL | ACCEPTED | strict final-manifest 경계, lazy `hls.js`, 단일 stream UI 구현; 실제 browser playback은 local release gate | T21,T30 |
+| A16 | ITS `traffic` | MISSING | ACCEPTED | `/api/road-traffic/current`를 축별 최대 0.1° canonical bbox로 제한하고 strict live smoke·전체 통합 회귀 완료 | T26,T27,T36 |
+| A17 | ITS `event` | MISSING | ACCEPTED | 돌발상황 strict Entity·gateway·Query·지도 geometry와 incident revision·disaster WKT/end sentinel 실데이터 회귀 해소 완료 | T26,T28,T30,T35 |
+| A18 | ITS `fcTraffic` | MISSING | ACCEPTED | unit-neutral 우회도로 예측 Entity·gateway·기본 비활성 Query 완료; geometry 부재로 지도 미표시 | T26,T27 |
+| A19 | ITS `detectorInfo` | MISSING | ACCEPTED | `/api/road-traffic/detectors` 전국 bounded snapshot과 unit-neutral metrics를 구현하고 26,468 observations·11,274 groups live smoke 완료 | T26,T27,T37 |
 | A20 | ITS `vms` | MISSING | ACCEPTED | 1,400여 sign의 page·`|` line·blank display를 엄격히 정규화하고 row별 mixed axis·최신 source-local 시각·plain text·live parser를 검증 | T26~T29 |
 | A21 | ITS `safeDriving` | MISSING | ACCEPTED | 전국 bbox의 recipient `rev*`를 제거하고 80% 이상 blank ID를 composite notice로 안전하게 정규화; timestamp·lifecycle·severity는 미추론 | T26~T29 |
 | A22 | ITS `vsl` | MISSING | ACCEPTED | 약 3,900개 표지의 row별 mixed axis, blank link, 두 속도를 검증; 불명확한 단위·active/reduced는 `provider-unspecified` 유지 | T26~T29 |
-| A23 | ITS `dangerousCarInfo` | MISSING | NOT_STARTED | sparse/종료 event의 빈 결과를 정상으로 처리; 정밀 위치·민감도·보존·안전 정책 선행 | T26~T28 |
-| A24 | ITS `disaster` | MISSING | NOT_STARTED | category D·4개 event·필수 날짜창·선택 bbox·3종 geometry와 A17/A09 fallback 우선순위 | T26~T28 |
+| A23 | ITS `dangerousCarInfo` | MISSING | FEATURE_OFF | 무제한 과거 정밀 위치의 lifecycle·보존·재배포·안전 계약 전 공개 route 금지 | T26,T28 |
+| A24 | ITS `disaster` | MISSING | ACCEPTED | 실제 숫자 location type·bare geometry 계약을 반영한 strict route·Query·지도 layer 완료 | T26,T28,T30 |
 
-새 저장소 진행률: `0/24`. 레거시 route 파일 수: `12`. 이 둘을 같은 “구현”으로 표시하지 않는다.
+새 저장소 진행률: `22/24 ACCEPTED`, `2/24 FEATURE_OFF`. 레거시 route 파일 수 `12`와 같은 지표로 취급하지 않는다.
 
 ---
 
@@ -2566,6 +2566,18 @@ flowchart LR
 - license 경계: Safetydata의 제3유형 안내와 data.go.kr 연결 메타의 제4유형 표기가 충돌하므로 더 엄격한 출처표시·비상업·변경금지를 유지한다. 상업 공개는 제공기관 확인 전 제외한다.
 - 해제 조건: 충족. 사용자 승인에 따라 final commit·push·development PR을 진행한다.
 
+### T17 — 한국 기준 동아시아 상황
+
+- 상태: `ACCEPTED` — commit `24afcf4`, PR #14, merge commit `9698ff7`로 `development`에 반영됐다.
+- 목적: 이미 수집한 정규화 snapshot을 같은 Query key로 재사용해 한국 중심 신호와 동아시아 지진을 한 패널에서 함께 보되, 이를 동일 지표 국가 비교로 오인시키지 않는다.
+- 의존성: T10·T12·T14·T15는 모두 `ACCEPTED`.
+- 포함:
+  - `widgets/regional-context`가 서울 기상, KMA+USGS 동아시아 지진, KOSPI·KOSDAQ, MCST·MOIS 보도자료 Entity의 public query options를 그대로 구독
+  - source별 loading/error/empty/stale/success·upstream `fetchedAt` 보존, 비대칭 signal rail, 전체 재시도와 좁은 화면 안전성
+  - 동일 QueryClient와 exact query key에 의한 네트워크 dedup
+- 제외: `/api/neighbor`, 새 provider·credential, Yahoo/Google News, 국가별 동일 지표 비교·국가 귀속·위험도 추론·지도 overlay.
+- 검증: focused architecture·App·T17 6 files 54 tests, 당시 `npm run validate` 1,282 passed·6 credential-gated skipped, strict TypeScript와 client/server build PASS. 기존 네 Widget과 동시 렌더 시 네 API path는 각각 1회, `/api/neighbor`는 0회였다.
+
 ### T18 — 항공 provider feasibility
 
 - 상태: `ACCEPTED` — 제공자 타당성 판정과 기존 `FEATURE_OFF` 유지안을 사용자가 승인해 final commit·push·development PR을 허가했다.
@@ -3307,7 +3319,7 @@ flowchart LR
 
 ### T33 — 전체 회귀와 Vercel preview·rollback 증빙
 
-- 상태: `PASS` — 오프라인 회귀 기준은 완료. Vercel 배포 증빙(`preview`/`production`/`rollback`/`region compare`)은 이번 범위에서 의도적으로 제외.
+- 상태: `ACCEPTED` — 오프라인 회귀 기준은 완료했고, 사용자가 2026-08-07 Vercel 배포를 제외한 후속 작업 진행을 지시해 배포 증빙 제외 조건과 T33 결과를 수락했다.
 - 승인: `T09` 완료 및 `T32` 완료 상태에서 사용자가 `"시작"` 지시로 다음 단계 진행 승인.
 - 목적: feature 완료 상태의 전체 회귀를 마감하고, preview/rollback/운영 제한 근거를 T33으로 통합한다.
 - 포함:
@@ -3348,6 +3360,7 @@ flowchart LR
 ### T35 — ITS 사건 실데이터 identity 충돌 복구
 
 - 상태: `ACCEPTED` — offline·credential-gated live·전체 validation과 독립 변경분 review가 모두 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
+- 반영: commit `0c56e57`, PR #32 quality-gate PASS 후 merge commit `1047ee8`로 `development`에 반영했다.
 - 목적: `/api/road-events/incidents`가 provider ID 없는 동시 revision 행 때문에 전체 502가 되는 실데이터 회귀를 추측 없이 복구한다.
 - 의존성: T28·T30 `ACCEPTED`.
 - 포함:
@@ -3377,6 +3390,7 @@ flowchart LR
 ### T36 — viewport-bounded ITS 현재 교통소통
 
 - 상태: `ACCEPTED` — offline·credential-gated live·전체 validation과 독립 리뷰 3건이 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
+- 반영: commit `fc77e76`, PR #33 quality-gate PASS 후 merge commit `5e2e19a`로 `development`에 반영했다.
 - 목적: 전국 약 6~8 MiB 응답 때문에 T27에서 연기한 ITS 현재 교통소통을 작은 canonical bbox 단위의 독립 route로 안전하게 제공한다.
 - 의존성: T27·T30 `ACCEPTED`; T35와 독립.
 - 포함:
@@ -3408,7 +3422,8 @@ flowchart LR
 
 ### T37 — bounded ITS 차량검지 snapshot
 
-- 상태: `ACCEPTED` — offline·credential-gated nationwide live·전체 validation과 독립 리뷰가 모두 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다. T36 병합 뒤 shared barrel/runtime 통합 회귀를 거쳐 PR로 게시한다.
+- 상태: `ACCEPTED` — offline·credential-gated nationwide live·전체 validation과 독립 리뷰가 모두 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
+- 반영: commit `060e1f8`, PR #34 quality-gate PASS 후 merge commit `e7d37b8`로 `development`에 반영했다. T35·T36을 포함한 current+forecast+detector 통합 회귀 108 tests도 PR 전에 PASS했다.
 - 목적: 필터·pagination 없는 ITS 차량검지 전국 응답을 임의 절단이나 단위 추론 없이 하나의 bounded·cacheable data snapshot으로 제공한다.
 - dependency·기준선: T26·T27 `ACCEPTED`, `development@7cc8b89`, server-only `ITS_API_KEY`를 재사용한다.
 - 포함:
@@ -3431,12 +3446,34 @@ flowchart LR
   - focused Entity·Query·provider·route·runtime·지도 비등록 7 files 28 tests PASS; raw/stream 6 MiB, aggregate 30,000 observations, public UTF-8 2.5 MiB, exact 200/full URL, malformed encoding/JSON, direct·JSON-escaped credential reflection을 포함한다.
   - `RUN_ITS_ROAD_TRAFFIC_DETECTORS_LIVE_SMOKE=1` one-call PASS: raw/normalized observations 26,468, detector+link groups 11,274, normalized JSON 2,068,713 bytes, 최종 호출 약 3.03초. provider 값·ID·credential은 출력·저장하지 않았다.
   - `npm run validate` PASS — Biome 490 files, Vitest 1,905 passed·16 skipped, strict TypeScript, client/server build.
-  - 독립 correctness/security/FSD review 2건 `PASS`; T36 선병합 뒤 current+forecast+detector 통합 회귀만 PR 전 필수 조건으로 남겼다.
+  - 독립 correctness/security/FSD review 2건 `PASS`; T36 선병합 뒤 current+forecast+detector 통합 회귀 108 tests를 추가로 통과했다.
   - 별도 CCTV transport live smoke 3/3 PASS. T27 전용 forecast live smoke 파일은 아직 없어 T38 release-gate Task로 분리한다.
+### T34 — 구현 장부 정합성 복구
+
+- 상태: `ACCEPTED` — 최신 `development@bc9ea9e`의 T35~T37·T09-R2 병합 결과를 실제 코드·Task 증거와 재대조했고, 사용자의 비배포 잔여 작업 오토모드 지시에 따라 검증 결과를 수락했다.
+- 목적: 실제 `development` 코드·Task 카드·merge 증거와 오래된 API 구현 장부를 일치시켜 후속 작업의 범위를 잘못 판단하지 않게 한다.
+- 포함:
+  - A01~A24를 `ACCEPTED | FEATURE_OFF`로 재분류하고 진행률 재계산
+  - merge 과정에서 누락된 T17 Task 카드 복구
+  - T35 이후 non-Vercel 후속 Task의 범위·의존성·release condition 기록
+- 제외: 제품 런타임·API·UI·환경변수·workflow 변경, Vercel 배포·Preview·rollback·region 비교.
+- 완료 조건:
+  - A01~A24가 중복·누락 없이 24개이며 집계와 행별 상태가 일치한다.
+  - 기존 `ACCEPTED` 구현을 `NOT_STARTED`로 표시하는 항목이 없고, 실제 미구현은 `DEFERRED` 또는 `FEATURE_OFF` 사유를 가진다.
+  - T17의 목적·범위·검증·merge 증거가 복구되고 `npm run validate`가 PASS한다.
+- 검증 계획: Task ID·API ID 연속성, 상태 집계 스크립트, `git diff --check`, `npm run validate`, 문서 변경분 독립 검토.
+- 검증 증거:
+  - API 구현 장부는 A01~A24 정확히 24행이며 `22 ACCEPTED / 2 FEATURE_OFF` 집계가 본문과 일치한다.
+  - T17 카드가 commit `24afcf4`, PR #14, merge commit `9698ff7` 증거와 함께 복구됐다.
+  - `git diff --check` PASS.
+  - 독립 읽기 전용 감사에서 A16·A19 상태, stale 열린 질문과 T35~T37·T09-R2 보존 항목을 재확인했다.
+  - `npm run validate` PASS — Biome 502 files, Vitest 1,964 passed·17 skipped, strict TypeScript, client/server build.
+- Guardrail: `PASS` — 문서만 변경했고 제품 런타임·환경·workflow와 Vercel 배포에는 영향이 없다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `ACCEPTED` — RED→GREEN, 전체 품질 게이트와 독립 correctness/security 재리뷰가 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
+- 반영: commit `87af820`, PR #35 quality-gate PASS 후 merge commit `bc9ea9e`로 `development`에 반영했다. Codex 관련 job은 계속 `if: false`로 비활성화되어 있다.
 - 목적: 하나의 재현 가능한 finding이 여러 review area에 영향을 줄 때 valid `CHANGES_REQUESTED`를 fallback `BLOCKED`로 숨기지 않도록 schema·prompt·validator 불변식을 정렬한다.
 - 포함:
   - PR #3 형태의 단일 finding·복수 ISSUE area를 재현하는 계약 RED
@@ -3507,24 +3544,25 @@ flowchart LR
 | T01 시작 | RESOLVED | 사용자 승인, T00 ACCEPTED 이후 착수 |
 | T01 Tailwind source 경계 | RESOLVED | 단일 파일 amendment와 RED/GREEN build 재검증 완료 |
 | Docker 역할 | RESOLVED | Vercel 운영 정본·Docker local/CI 역할을 유지하며 T08 Nginx web+Node API clean build, health, non-root·read-only image smoke까지 PASS |
-| Function region 실측 | DEFERRED | D-037에 따라 provisional `hnd1`; 실제 linked Preview의 `hnd1`/`icn1` 비교는 T33에서 수행 |
+| Function region 실측 | DEFERRED_OUT_OF_SCOPE | D-037의 provisional `hnd1`은 유지한다. 실제 Preview region 비교는 Vercel 배포가 다시 승인되는 별도 Task에서만 수행 |
 | T08 시작 | RESOLVED | 사용자가 D-034~D-037과 T08 전체 상세 범위를 “네”로 승인해 public-boundary RED 착수 |
 | Router | DEFERRED | 두 번째 독립 URL 요구 또는 사용자 변경 승인 |
-| NAVER overlay 상한 | NEEDS_EVIDENCE | T07 실제 브라우저 benchmark |
-| Public API 계약·쿼터 | PARTIALLY_FROZEN | 공식 후보와 no-go는 T02에서 동결; 승인 키의 schema·실 quota는 각 구현 Task gated probe |
+| NAVER overlay 상한 | RESOLVED | T30에서 layer 100·global 240·geometry vertex 4,000 상한과 320/1440 light/dark browser QA 완료 |
+| Public API 계약·쿼터 | EXTERNAL_REMAINDER | T23 기상특보 활용승인, T25 KOMSA live·quota·geometry, ITS 운영 quota만 외부 확인으로 남고 구현 계약은 동결 |
 | OpenSky 군용기 | NO_GO_CURRENT | 서면 live/automated product 계약 또는 권리·분류 한계가 승인된 대체 source |
 | ADSB.lol 군 등록 항공기 | CONDITIONAL | D-049의 제품 경계는 승인됨; 별도 구현 Task를 승인하고 bounded payload·429 contract를 검증 |
-| AISstream 개별 군함 | NO_GO_CURRENT | T24에서 서면 재배포·상업·retention·안전 계약 또는 공식 집계형 scope 승인; 그 전 T25 금지 |
+| AISstream 개별 군함 | NO_GO_CURRENT | 서면 재배포·상업·retention·안전 계약 전 개별 vessel 추적은 금지. T25의 비식별 MTIS 집계는 별개로 ACCEPTED |
 | Yahoo Finance | NO_GO_CURRENT | T14에서 KRX와 권리 승인된 EOD·지연 source 계약 확정 |
 | Google News search RSS | NO_GO_CURRENT | T15에서 이용범위가 확인된 직접 publisher feed만 채택 |
-| CCTV 정지영상·HTTPS-HLS | CONDITIONAL | T19~T21 승인 key로 정확한 HTTPS path·URL expiry·size·CORS와 표시조건 확인 |
-| ITS quota·resource path | CONDITIONAL | T19/T26 승인 계정 gated probe와 필요 시 운영기관 확인 |
+| CCTV 정지영상·HTTPS-HLS | BROWSER_GATE | T19~T21·T30 정지영상과 strict HLS transport는 구현·live smoke 완료. 실제 브라우저 `playing/currentTime/teardown`만 외부 수동 gate |
+| ITS quota·resource path | EXTERNAL_QUOTA | T19·T26·T35~T37 live smoke로 path/schema는 확인했다. 운영 quota만 제공기관 확인 필요 |
 | Gateway skill media 예외 | RESOLVED | T05에서 skill contract·validator·lock hash와 독립 forward-test 3종 PASS |
 | T06 cache·resilience 상세 범위 | RESOLVED | 사용자가 D-024~D-027과 T06 전체 범위를 “시작해”로 승인, 첫 public-boundary RED부터 착수 |
 | T09 repository artifact 시작 | RESOLVED | 사용자가 “진행”으로 D-012·D-038~D-041과 T09 상세 범위를 승인해 첫 architecture RED부터 착수 |
 | Codex review 실행 조건 | RESOLVED | D-012의 quality PASS 후 실행안을 사용자가 T09 진행 지시로 승인 |
-| T09 remote activation | PARTIAL | 사용자 등록 `OPENAI_API_KEY`와 `CODEX_REVIEW_ENABLED=true`로 실제 Codex review·feedback까지 PASS했다. required check/ruleset·merge·main push는 계속 EXTERNAL이다. |
-| Production Upstash·provider keys | EXTERNAL | 해당 live smoke Task에서 secret 존재 확인 |
+| T09 remote activation | DISABLED_BY_DECISION | `codex-review`·`post-feedback`은 `if: false`; T09-R2는 재활성화 없이 출력 계약만 정렬했다. 재활성화는 별도 사용자 결정 필요 |
+| Production Upstash | DEFERRED_OUT_OF_SCOPE | 실제 cache 통합은 Vercel 배포 범위가 다시 승인될 때 별도 검증 |
+| Provider external gates | EXTERNAL | T23 기상특보 활용승인과 T25 KOMSA live·quota·geometry를 제공기관 상태가 해제된 뒤 재검증 |
 | T11 fixture browser QA | RESOLVED | 사용자 수동 반응형·light/dark theme와 기존 지도·서울 기상 실황 Panel 존재 PASS; D-044에 따라 keyboard 별도 수동 검증은 현재 gate에서 제외 |
 
 ---
@@ -3767,7 +3805,8 @@ flowchart LR
 | 2026-08-03 | T30 feature commit `d284761`, PR #28의 quality-gate SUCCESS를 확인하고 merge commit `9e67988`로 development에 병합·동기화했다. T31은 시작하지 않는다 | T30→PAUSED |
 | 2026-08-03 | `feature/t31-dashboard-grid`에서 DashboardShell panel 소유권을 `PanelGrid`로 이전해 composition contract를 재배치. `DashboardShell` 슬롯 9개 contract와 class contract를 widget-level 테스트로 고정하고, 관련 pages contract는 shell 참조를 줄여 정비성/회귀 탐지 지점을 축소 | T31 |
 | 2026-08-03 | T31 최종 commit `4e3490d`를 기준으로 PR #29 생성 후 `quality-gate` PASS, PR `merge` commit `a7688e9`로 development 병합 | T31 |
-| 2026-08-07 | T35 실데이터 502를 재현한 incident revision 충돌과 disaster 응답 drift를 RED→GREEN; 독립 리뷰가 찾은 all-ended 재노출·비폐쇄 WKT Polygon도 경계 테스트로 수정했다. provider 37 tests, credential-gated live 1 test, 전체 1,897 tests·두 build와 독립 재리뷰 2건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 commit·development PR을 진행 | T35 |
-| 2026-08-07 | T36에서 전국 6~8 MiB ITS traffic 응답을 각 축 0.1° bbox로 제한한 current Entity·기본 비활성 Query·strict provider·독립 gateway/runtime을 RED→GREEN했다. 206·credential reflection 리뷰 finding도 회귀로 수정하고 focused 90 tests, live 1 test, 전체 1,930 tests·두 build와 독립 리뷰 3건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 T35 병합 뒤 재기준화한다 | T36 |
-| 2026-08-07 | T37 전국 단일 차량검지 snapshot을 RED→GREEN하고 26,468 observations·11,274 groups·2,068,713 bytes 실키 one-call을 통과했다. 음수 소수 occupancy 7건은 D-072에 따라 unit-neutral 원문값으로 보존했고 focused 28 tests·전체 1,905 tests·두 build·독립 리뷰 2건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 T36 병합 뒤 재기준화한다 | T37 |
-| 2026-08-07 | T09-R2에서 단일 finding·복수 ISSUE area가 fallback BLOCKED로 숨겨지는 계약을 RED로 재현하고 `affectedAreas` schema·prompt·validator·comment를 정렬했다. OpenAI Structured Outputs 미지원 `uniqueItems`는 제거하고 수동 중복 검증을 유지했으며 focused 58 tests·전체 1,893 tests·두 build·독립 재리뷰 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 제품 Task 병합 뒤 재기준화한다 | T09-R2 |
+| 2026-08-07 | T35 실데이터 502를 RED→GREEN하고 provider 37 tests·credential-gated live·전체 validate·독립 리뷰를 통과했다. commit `0c56e57`, PR #32 quality-gate PASS, merge `1047ee8`로 development 반영 | T35 |
+| 2026-08-07 | T36 bounded current traffic과 206·credential reflection 회귀를 RED→GREEN하고 focused 90 tests·live·전체 validate·독립 리뷰를 통과했다. commit `fc77e76`, PR #33 quality-gate PASS, merge `5e2e19a`로 development 반영 | T36 |
+| 2026-08-07 | T37 전국 detector snapshot one-call과 current+forecast+detector 통합 108 tests를 통과했다. commit `060e1f8`, PR #34 quality-gate PASS, merge `e7d37b8`로 development 반영 | T37 |
+| 2026-08-07 | T09-R2 multi-area finding 계약을 RED→GREEN하고 focused 58 tests·전체 validate를 통과했다. commit `87af820`, PR #35 quality-gate PASS, merge `bc9ea9e`로 development 반영; Codex jobs는 계속 비활성 | T09-R2 |
+| 2026-08-07 | T34 정본을 최신 development와 재정합해 API 장부를 22 ACCEPTED·2 FEATURE_OFF로 갱신하고 T17 카드, T35~T37·T09-R2 병합 증거와 열린 외부 gate를 복구했다. 전체 1,964 tests·두 build와 독립 감사 PASS | T34 |
