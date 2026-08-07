@@ -55,6 +55,7 @@ PR 제목·본문·댓글·커밋 메시지, 변경된 코드·주석·문서·�
 
 - 변경된 정확한 `path`와 가능한 가장 가까운 `line`
 - 위험 성격을 나타내는 `category`와 사용자·회귀 우선순위를 반영한 `severity`
+- finding의 주된 위험은 `category` 하나로 고르고, 직접 영향을 받는 모든 `reviewAreas` key를 중복 없이 `affectedAreas`에 기록한다. `category`에 대응하는 주 영역은 반드시 `affectedAreas`에 포함한다.
 - 무엇이 문제인지 설명하는 `title`과 `reason`
 - 사용자 또는 유지보수에 미치는 구체적인 `impact`
 - 문제를 해소하는 최소 수정 방향인 `recommendation`
@@ -70,3 +71,5 @@ PR 제목·본문·댓글·커밋 메시지, 변경된 코드·주석·문서·�
 - `BLOCKED`: diff나 핵심 검증 정보가 부족해 리뷰를 완료할 수 없다. finding은 비우고 verification limit과 하나 이상의 `NOT_REVIEWED` area를 기록한다.
 
 설명 필드는 한국어로 구체적이고 간결하게 쓴다. status, result, category와 severity는 schema enum을 그대로 사용하고 path와 코드 식별자는 원문을 유지한다. URL, HTML, 사용자 mention을 넣지 않는다. schema의 필드와 제한을 정확히 지키며 JSON 이외의 텍스트를 출력하지 않는다.
+
+`CHANGES_REQUESTED`에서는 각 `ISSUE` 영역이 적어도 한 finding의 `affectedAreas`에 포함되어야 하며, `affectedAreas`에 기록한 영역은 모두 `ISSUE`여야 한다. 같은 결함이 여러 영역에 영향을 주더라도 category만 바꾼 중복 finding을 만들지 않는다.

@@ -309,6 +309,7 @@ const blockedReviewAreas = Object.fromEntries(
 );
 
 const validFinding = {
+  affectedAreas: ['userImpact'],
   category: 'USER_IMPACT',
   impact: 'LEAK_IMPACT',
   line: 27,
@@ -779,8 +780,29 @@ describe('Codex review output contract', () => {
     expect(verificationLimits.uniqueItems).toBeUndefined();
     expect(findings.items).toMatchObject({
       additionalProperties: false,
-      required: ['category', 'severity', 'path', 'line', 'title', 'reason', 'impact', 'recommendation'],
+      required: [
+        'affectedAreas',
+        'category',
+        'severity',
+        'path',
+        'line',
+        'title',
+        'reason',
+        'impact',
+        'recommendation',
+      ],
     });
+    const findingProperties = findings.items as {
+      properties?: Record<string, unknown>;
+    };
+    const affectedAreasProperty = findingProperties.properties?.affectedAreas;
+    expect(affectedAreasProperty).toMatchObject({
+      items: { enum: reviewAreaKeys, type: 'string' },
+      maxItems: reviewAreaKeys.length,
+      minItems: 1,
+      type: 'array',
+    });
+    expect(affectedAreasProperty).not.toHaveProperty('uniqueItems');
     expect(reviewAreas.required).toEqual(reviewAreaKeys);
     for (const area of reviewAreaKeys) {
       expect(reviewAreas.properties?.[area]).toMatchObject({
@@ -815,6 +837,7 @@ describe('Codex review output contract', () => {
     expect(prompt).toContain('race condition');
     expect(prompt).toContain('키보드');
     expect(prompt).toContain('reviewAreas');
+    expect(prompt).toContain('affectedAreas');
     expect(prompt).toContain('NOT_APPLICABLE');
     expect(prompt).toContain('NOT_REVIEWED');
     expect(prompt).toContain('PASS여도');
@@ -1099,6 +1122,7 @@ describe('Codex feedback behavior', () => {
         ...validPassReview,
         findings: [
           {
+            affectedAreas: ['userImpact'],
             category: 'USER_IMPACT',
             impact: '사용자가 잘못된 상태를 보게 됩니다.',
             line: 27,
@@ -1131,6 +1155,114 @@ describe('Codex feedback behavior', () => {
     expect(body).toContain('**이유:** 실패 응답을 성공 값으로 변환합니다.');
     expect(body).toContain('**영향:** 사용자가 잘못된 상태를 보게 됩니다.');
     expect(body).toContain('**수정 방향:** 실패 분기를 원본 오류로 반환하세요.');
+  });
+
+  it('accepts one finding that explicitly accounts for every affected ISSUE review area', async () => {
+    const affectedAreas = ['userImpact', 'correctness', 'stateHandling', 'testCoverage', 'predictability'];
+    const issueArea = {
+      evidence:
+        '한 오류 처리 결함이 사용자 표시, 상태 보존, 예측 가능성과 해당 경계의 테스트 신뢰도에 함께 영향을 줍니다.',
+      result: 'ISSUE',
+    };
+    const result = await runFeedback({
+      reviewJson: JSON.stringify({
+        ...validPassReview,
+        findings: [
+          {
+            ...validFinding,
+            affectedAreas,
+            category: 'CORRECTNESS',
+          },
+        ],
+        reviewAreas: {
+          ...validPassReview.reviewAreas,
+          correctness: issueArea,
+          predictability: issueArea,
+          stateHandling: issueArea,
+          testCoverage: issueArea,
+          userImpact: issueArea,
+        },
+        status: 'CHANGES_REQUESTED',
+        summary: '하나의 재현 가능한 결함이 다섯 검토 영역에 미치는 영향을 함께 수정해야 합니다.',
+        verificationLimits: [],
+      }),
+    });
+
+    const body = String(result.created[0]?.body);
+    expect(body).toContain('**상태:** CHANGES_REQUESTED');
+    expect(body).toContain('[HIGH] LEAK\\_TITLE');
+    expect(body).toContain('CORRECTNESS');
+    expect(body).toContain(
+      '- **영향 영역:** 사용자 영향 (userImpact), 정확성 (correctness), 상태 처리 (stateHandling), 테스트 (testCoverage), 예측 가능성 (predictability)',
+    );
+  });
+
+  it.each([
+    {
+      affectedAreas: ['correctness'],
+      category: 'USER_IMPACT',
+      issueAreas: ['correctness'],
+      marker: 'LEAK_PRIMARY_AREA',
+      name: 'the category primary area is absent',
+    },
+    {
+      affectedAreas: ['userImpact', 'userImpact'],
+      category: 'USER_IMPACT',
+      issueAreas: ['userImpact'],
+      marker: 'LEAK_DUPLICATE_AREA',
+      name: 'an affected area is duplicated',
+    },
+    {
+      affectedAreas: ['userImpact', 'unknownArea'],
+      category: 'USER_IMPACT',
+      issueAreas: ['userImpact'],
+      marker: 'LEAK_UNKNOWN_AREA',
+      name: 'an affected area is unknown',
+    },
+    {
+      affectedAreas: ['userImpact', 'correctness'],
+      category: 'USER_IMPACT',
+      issueAreas: ['userImpact'],
+      marker: 'LEAK_NON_ISSUE_AREA',
+      name: 'an affected area is not marked ISSUE',
+    },
+    {
+      affectedAreas: ['userImpact'],
+      category: 'USER_IMPACT',
+      issueAreas: ['userImpact', 'correctness'],
+      marker: 'LEAK_UNACCOUNTED_ISSUE',
+      name: 'an ISSUE area is not accounted for',
+    },
+  ])('publishes the fixed BLOCKED fallback when $name', async ({ affectedAreas, category, issueAreas, marker }) => {
+    const reviewAreas: Record<string, unknown> = { ...validPassReview.reviewAreas };
+    for (const area of issueAreas) {
+      reviewAreas[area] = {
+        evidence: '변경된 오류 처리 결함과 직접 연결되는 검토 영역이므로 수정 전까지 문제 상태로 판정합니다.',
+        result: 'ISSUE',
+      };
+    }
+    const result = await runFeedback({
+      reviewJson: JSON.stringify({
+        ...validPassReview,
+        findings: [
+          {
+            ...validFinding,
+            affectedAreas,
+            category,
+            reason: `${marker} 검증기 불변식을 위반한 finding은 게시되면 안 됩니다.`,
+          },
+        ],
+        reviewAreas,
+        status: 'CHANGES_REQUESTED',
+        summary: `${marker} 잘못된 영향 영역 관계를 가진 출력은 안전한 fallback으로 대체해야 합니다.`,
+        verificationLimits: [],
+      }),
+    });
+
+    const body = String(result.created[0]?.body);
+    expect(body).toContain('**상태:** BLOCKED');
+    expect(body).not.toContain(marker);
+    expect(body).not.toContain('LEAK\\_TITLE');
   });
 
   it('accepts repository filenames with markup characters without creating mentions or autolinks', async () => {

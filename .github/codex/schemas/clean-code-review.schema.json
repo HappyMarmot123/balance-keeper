@@ -257,8 +257,41 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["category", "severity", "path", "line", "title", "reason", "impact", "recommendation"],
+        "required": [
+          "affectedAreas",
+          "category",
+          "severity",
+          "path",
+          "line",
+          "title",
+          "reason",
+          "impact",
+          "recommendation"
+        ],
         "properties": {
+          "affectedAreas": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 13,
+            "items": {
+              "type": "string",
+              "enum": [
+                "userImpact",
+                "correctness",
+                "stateHandling",
+                "asyncFlow",
+                "accessibility",
+                "testCoverage",
+                "readability",
+                "predictability",
+                "cohesion",
+                "coupling",
+                "architecture",
+                "security",
+                "performance"
+              ]
+            }
+          },
           "category": {
             "type": "string",
             "enum": [

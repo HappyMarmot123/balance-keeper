@@ -164,6 +164,7 @@ jobs:
               'verificationLimits',
             ];
             const findingKeys = [
+              'affectedAreas',
               'category',
               'impact',
               'line',
@@ -280,6 +281,12 @@ jobs:
             const isFinding = (finding) =>
               hasExactKeys(finding, findingKeys) &&
               findingCategories.includes(finding.category) &&
+              Array.isArray(finding.affectedAreas) &&
+              finding.affectedAreas.length > 0 &&
+              finding.affectedAreas.length <= reviewAreaKeys.length &&
+              finding.affectedAreas.every((area) => reviewAreaKeys.includes(area)) &&
+              hasUniqueItems(finding.affectedAreas) &&
+              finding.affectedAreas.includes(findingCategoryToArea[finding.category]) &&
               ['HIGH', 'MEDIUM', 'LOW'].includes(finding.severity) &&
               isRepositoryPath(finding.path, 260) &&
               Number.isSafeInteger(finding.line) &&
@@ -321,9 +328,7 @@ jobs:
               const areaResults = reviewAreaKeys.map((area) => review.reviewAreas[area].result);
               const hasIssue = areaResults.includes('ISSUE');
               const hasNotReviewed = areaResults.includes('NOT_REVIEWED');
-              const findingAreas = review.findings.map(
-                (finding) => findingCategoryToArea[finding.category],
-              );
+              const findingAreas = review.findings.flatMap((finding) => finding.affectedAreas);
               const findingsMatchIssueAreas =
                 findingAreas.every((area) => review.reviewAreas[area].result === 'ISSUE') &&
                 reviewAreaKeys
@@ -464,6 +469,9 @@ jobs:
                     '',
                     `#### ${index + 1}. [${finding.severity}] ${escapeText(finding.title)}`,
                     `- **범주:** ${findingCategoryLabels[finding.category]} (${escapeText(finding.category)})`,
+                    `- **영향 영역:** ${finding.affectedAreas
+                      .map((area) => `${reviewAreaLabels[area]} (${escapeText(area)})`)
+                      .join(', ')}`,
                     `- **위치:** ${renderCode(`${finding.path}:${finding.line}`)}`,
                     `- **이유:** ${escapeText(finding.reason)}`,
                     `- **영향:** ${escapeText(finding.impact)}`,
