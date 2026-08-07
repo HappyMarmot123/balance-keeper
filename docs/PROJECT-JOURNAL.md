@@ -9,8 +9,8 @@
 | 기준일 | 2026-08-07 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T34 구현 장부 정합성 복구 — ACCEPTED, 최신 development 재정합 완료 |
-| 다음 단계 | T34 development PR·병합 후 T38 비배포 릴리스 게이트 |
+| 현재 단계 | T38 비배포 릴리스 게이트 정리 — PASS, 사용자 ACCEPTED 대기 |
+| 다음 단계 | T38 development PR·병합 후 최종 development 통합 확인 |
 
 ---
 
@@ -290,6 +290,7 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-070 | T36은 `/api/road-traffic/current?bbox=minLon,minLat,maxLon,maxLat`의 필수 canonical bbox를 upstream `trafficInfo`의 `type=all`·동일 bbox로 전달한다. 각 축 span은 최대 0.1°, 좌표는 소수 4자리로 정규화하고 cache/query identity에 전부 포함한다. public snapshot은 요청 bounds와 link·node ID, 도로명, provider 방향, speed(`provider-unspecified`), travel time(seconds), 관측시각만 보존하며 좌표·geometry·혼잡등급은 발명하지 않는다. raw/public 2 MiB·10,000 segments에서 자르지 않고 실패하고 Query는 기본 비활성화한다. | APPROVED | ITS 공식 교통소통 페이지는 bbox와 link/node ID·speed·travelTime·createdDate를 제공하지만 segment 좌표는 제공하지 않는다. 2026-08-07 값 미출력 live probe에서 서울 0.1°×0.1°는 HTTP 200 JSON, 4,417 rows, 약 866 KiB였고 0.5°×0.35°는 40,988 rows, 약 8.06 MiB여서 일반 viewport 전달은 안전하지 않다. 사용자가 Vercel 배포를 제외한 나머지 작업 진행을 지시해 T27에서 연기한 current traffic을 이 bounded non-UI vertical slice로 승인했다. |
 | D-071 | T37은 `/api/road-traffic/detectors` 하나의 전국 snapshot cache key로 ITS `/vdsInfo`를 제공한다. detector ID와 공식 확장 `linkIds`별로 그룹화하고 각 관측은 명명된 tuple로 보존해 반복 key 비용을 줄인다. speed·volume·occupancy는 모두 `provider-unspecified`, `-1`과 관찰된 occupancy blank는 `null`, source 14자리 시각은 timezone 없는 문자열로 둔다. raw 6 MiB·30,000 rows와 public 2.5 MiB·30,000 observations를 넘으면 자르지 않고 실패하며 Query는 기본 비활성화한다. | APPROVED | 공식 endpoint는 `apiKey/getType` 외 bbox·ID·page filter가 없어 요청별 cohort route는 서로 다른 cache key마다 동일 전국 fetch를 증폭한다. 2026-08-07 값 미출력 실측은 26,468 rows·약 4.10 MiB, 9,727 detector IDs, detector별 최대 8 lanes, `(vdsId,laneNo)` revision 충돌과 occupancy blank·100 초과 값을 확인했다. 단일 compact normalized snapshot은 이 증폭을 피하면서 public 상한을 fail-closed로 검증할 수 있다. 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 진행하도록 승인했다. |
 | D-072 | T37 실응답에서 확인한 `-1 < occupancy < 0` 값은 오류 sentinel로 추측해 버리지 않고 unit-neutral provider 값으로 보존한다. exact `-1`과 blank만 `null`이며 percentage·congestion 의미는 부여하지 않는다. | ACCEPTED | 첫 strict live smoke가 음수 소수 occupancy 7건을 공개 nonnegative schema에서 거부했다. 값 미출력 집계에서 speed·volume·timestamp·lane·link 경계는 모두 유효했고, official contract는 occupancy scale·sentinel을 정의하지 않는다. 원문 보존이 임의 결측 처리보다 D-071과 일치하며 사용자의 비배포 잔여 작업 오토모드 범위에서 경계 테스트와 재실행을 승인했다. |
+| D-073 | T38은 배포 준비 완료를 선언하는 Task가 아니라 비배포 환경에서 실행 가능한 release gate를 코드로 고정하고 현재 결과를 분류하는 Task다. 코드·offline 회귀·실행 가능한 gate가 통과하면 Task는 완료할 수 있지만, provider access·실제 브라우저·Upstash처럼 현재 환경 밖의 조건은 public release 상태를 `EXTERNAL`로 유지한다. | ACCEPTED | 사용자가 Vercel 배포만 제외하고 나머지 작업을 오토모드로 진행하도록 지시했다. 외부 실패를 임의 mock PASS로 바꾸지 않으면서도 전용 gate 부재와 로컬에서 검증 가능한 경로는 마감한다. |
 
 ---
 
@@ -3470,6 +3471,41 @@ flowchart LR
   - `npm run validate` PASS — Biome 502 files, Vitest 1,964 passed·17 skipped, strict TypeScript, client/server build.
 - Guardrail: `PASS` — 문서만 변경했고 제품 런타임·환경·workflow와 Vercel 배포에는 영향이 없다.
 
+### T38 — 비배포 릴리스 게이트 정리
+
+- 상태: `PASS` — forecast 전용 production-gateway live gate와 offline·전체 회귀는 통과했고 CCTV transport 3/3도 재확인했다. KMA·KOMSA HTTP 403, Upstash 환경 pair 부재와 browser tool 부재를 성공으로 승격하지 않고 public release 조건 `EXTERNAL`로 유지한다. Vercel은 사용자 지시에 따라 범위에서 제외했으며 사용자 `ACCEPTED`를 기다린다.
+- 목적: 누락된 ITS 교통예측 전용 production-gateway live smoke를 추가하고, 기존 외부 gate의 실행 가능성을 확인해 실행 가능한 항목은 검증하며 실패·미실행은 원인 범위와 함께 분류한다.
+- 포함:
+  - `RUN_ITS_ROAD_TRAFFIC_FORECAST_LIVE_SMOKE=1` + server-only `ITS_API_KEY` 전용 one-call MISS→HIT gateway smoke
+  - strict public Entity envelope, 실제 production query shape, 한 번의 provider 호출, credential 비반사를 검증
+  - 기존 CCTV transport, KMA 기상특보, KOMSA 해상교통 live gate 실행과 결과 분류
+  - 환경변수 설정 여부만 기록하고 credential 값·provider 원문·식별자는 출력·저장하지 않음
+  - focused offline·conditional skip·live gate와 전체 `npm run validate`, 독립 변경분 review
+- 제외: Vercel preview/production/rollback/region 비교, Upstash credential 발급, provider 활용신청, 실제 브라우저 HLS 재생, 해상 geometry 발명, UI·지도·runtime 변경.
+- 완료 조건:
+  - 정상: forecast route가 strict MISS 뒤 동일 snapshot HIT를 반환하고 upstream은 정확히 한 번만 호출된다.
+  - 실패: flag 미설정 기본 suite는 skip하지만 명시 실행에서 key가 없으면 실패하며, provider access 오류는 값을 노출하지 않고 실패 상태로 기록된다.
+  - 경계: forecast slot·section/query scope와 serialized credential 비반사, 기존 current/detector/forecast cache 분리를 회귀 검증한다.
+  - 회귀: 새 forecast와 명시적 `RUN_*` gate는 flag 미설정 시 skip하고 기본 CI의 secret 부재 상태에서 외부 호출이 발생하지 않는다. 기존 CCTV credential-only gate 동작은 변경하지 않으며 `npm run validate`가 PASS한다.
+- 외부 조건: KMA·KOMSA provider 200 계약, 실제 Chrome/MSE HLS 재생·teardown, Upstash REST pair와 cross-instance 동작은 관찰 결과에 따라 `EXTERNAL`로 남길 수 있으며 이를 mock 성공으로 바꾸지 않는다.
+- 검증 계획: presence RED → live test GREEN(skip) → 명시적 credential-gated 실행 → focused 통합 → `npm run validate` → 독립 review.
+- RED→GREEN:
+  - forecast 전용 live file의 존재를 요구하는 contract가 실제 파일 부재로 1 test RED였고, production gateway MISS→HIT gate를 추가한 뒤 기본 suite 2 passed·1 skipped로 GREEN했다.
+  - live gate는 `/api/road-traffic/forecast`의 strict public schema와 fixed section/query shape, 동일 snapshot HIT, provider 1회와 serialized credential 비반사를 검증한다.
+  - 독립 리뷰가 explicit RUN flag와 credential 존재를 함께 skip 조건으로 묶어 설정 오류가 exit 0이 되는 문제를 재현했다. RUN flag만 실행을 선택하게 고치고 key 부재 시 명시적 실패를 RED→GREEN으로 고정했다.
+- 실키·외부 gate 결과:
+  - forecast: explicit one-call production gateway 1/1 PASS. MISS→HIT와 upstream 1회를 확인했고 provider 값·ID·credential은 출력·저장하지 않았다.
+  - CCTV: 기존 metadata·bounded JPEG·HLS transport smoke 3/3 PASS. 실제 Chrome/MSE `playing/currentTime/teardown`은 browser tool 부재로 `EXTERNAL_BROWSER`를 유지한다.
+  - KMA 기상특보: production gateway gate는 예상 200 대신 sanitized 502로 실패했고, body를 읽지 않은 bounded direct metadata probe는 HTTP 403·JSON·non-redirect였다. bad key·활용승인·provider 정책 중 정확한 원인은 단정하지 않고 strict empty/active 1/3-call gate를 `EXTERNAL_PROVIDER_ACCESS`로 유지한다.
+  - KOMSA 해상교통: production gateway gate는 예상 200 대신 sanitized 502로 실패했고, body를 읽지 않은 bounded direct metadata probe는 HTTP 403·JSON·non-redirect였다. parser·quota·pagination·geometry PASS를 주장하지 않고 `EXTERNAL_PROVIDER_ACCESS`로 유지한다.
+  - Upstash: 이 실행 환경에 REST URL/token pair가 없어 network integration은 실행하지 않았다. 실제 REST/Lua·cross-instance 동작은 `NOT_RUN_EXTERNAL`이며 injected deterministic test 증거와 구분한다.
+  - Browser: 이 세션에는 in-app browser tool이 없어 새 Chrome/MSE·NAVER map·UI 검증을 실행하지 않았다. T30/T33의 과거 증거와 구분해 `NOT_RUN_EXTERNAL`로 남긴다.
+  - Vercel: preview·production·rollback·region 비교는 사용자 지시로 `EXCLUDED`이며 실패로 분류하지 않는다.
+- focused 회귀: road-traffic Entity/provider/route/runtime/map 20 files, 110 passed·3 live skipped.
+- 전체 회귀: `npm run validate` PASS — Biome 503 files, Vitest 1,966 passed·18 skipped, strict TypeScript, client/server build.
+- 독립 review 2건 PASS — 실행 결과 분류의 과장을 제거했고, explicit gate의 missing credential silent-skip finding을 회귀 테스트와 함께 해소했다. 최신 diff에 추가 finding은 없다.
+- Guardrail: `PASS` — T38 자체 완료와 public release의 `EXTERNAL` 조건을 분리했으며 제품 런타임·UI·배포 구성을 변경하지 않았다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `ACCEPTED` — RED→GREEN, 전체 품질 게이트와 독립 correctness/security 재리뷰가 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
@@ -3810,3 +3846,4 @@ flowchart LR
 | 2026-08-07 | T37 전국 detector snapshot one-call과 current+forecast+detector 통합 108 tests를 통과했다. commit `060e1f8`, PR #34 quality-gate PASS, merge `e7d37b8`로 development 반영 | T37 |
 | 2026-08-07 | T09-R2 multi-area finding 계약을 RED→GREEN하고 focused 58 tests·전체 validate를 통과했다. commit `87af820`, PR #35 quality-gate PASS, merge `bc9ea9e`로 development 반영; Codex jobs는 계속 비활성 | T09-R2 |
 | 2026-08-07 | T34 정본을 최신 development와 재정합해 API 장부를 22 ACCEPTED·2 FEATURE_OFF로 갱신하고 T17 카드, T35~T37·T09-R2 병합 증거와 열린 외부 gate를 복구했다. 전체 1,964 tests·두 build와 독립 감사 PASS | T34 |
+| 2026-08-07 | T38 forecast production-gateway 전용 gate를 RED→GREEN해 실키 1/1과 CCTV transport 3/3을 통과했다. KMA·KOMSA direct HTTP 403, Upstash pair·browser tool 부재는 원인을 발명하지 않고 EXTERNAL/NOT_RUN으로 유지했으며 Vercel은 사용자 지시로 제외했다. focused 110 tests·전체 1,966 tests·두 build·독립 재리뷰 PASS | T38 |
