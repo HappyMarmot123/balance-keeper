@@ -19,7 +19,11 @@ import {
   createVariableSpeedLimitRoute,
   createVmsGuidanceRoute,
 } from '../routes/road-guidance';
-import { createRoadTrafficCurrentRoute, createRoadTrafficForecastRoute } from '../routes/road-traffic';
+import {
+  createRoadTrafficCurrentRoute,
+  createRoadTrafficDetectorsRoute,
+  createRoadTrafficForecastRoute,
+} from '../routes/road-traffic';
 import { createWeatherAlertsRoute, createWeatherForecastRoute, createWeatherRoute } from '../routes/weather';
 import { createGatewayRuntime, type GatewayRuntime } from './createGatewayRuntime';
 import { createJsonGatewayLogger, type GatewayLogWriter } from './jsonGatewayLogger';
@@ -133,6 +137,12 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
     readAdmissionSubject: readTrustedAdmissionSubject,
     serviceKey: itsServiceKey,
   });
+  const roadTrafficDetectorsRoute = createRoadTrafficDetectorsRoute({
+    clock,
+    fetcher: options.fetcher ?? globalThis.fetch,
+    readAdmissionSubject: readTrustedAdmissionSubject,
+    serviceKey: itsServiceKey,
+  });
   const vmsGuidanceRoute = createVmsGuidanceRoute({
     clock,
     fetcher: options.fetcher ?? globalThis.fetch,
@@ -194,6 +204,7 @@ export function createProductionGatewayRuntime(options: CreateProductionGatewayR
       roadEventDisastersRoute,
       roadTrafficCurrentRoute,
       roadTrafficForecastRoute,
+      roadTrafficDetectorsRoute,
       vmsGuidanceRoute,
       safetyNoticeRoute,
       variableSpeedLimitRoute,

@@ -9,8 +9,8 @@
 | 기준일 | 2026-08-03 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T36 viewport-bounded ITS 현재 교통소통 — ACCEPTED, 재기준화 완료 |
-| 다음 단계 | T35 포함 통합 회귀 후 T36 development PR |
+| 현재 단계 | T37 bounded ITS 차량검지 snapshot — ACCEPTED, 재기준화 완료 |
+| 다음 단계 | T35·T36 포함 통합 회귀 후 T37 development PR |
 
 ---
 
@@ -288,6 +288,8 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-068 | provider ID가 없는 ITS incident에서 같은 immutable occurrence key의 동시 행이 `message`·`endDate`처럼 공개 가능한 mutable detail만 다르면 하나의 안정 ID로 보수적으로 병합한다. 모두 같은 값만 보존하고 충돌한 message는 `null`, end는 `null`, 현재 lifecycle은 `unknown`으로 내려 추측을 피한다. provider `eventId`가 있는 disaster 충돌과 immutable field 충돌은 계속 fail-closed다. | APPROVED | 2026-08-07 credential-gated live smoke가 `ITS road events identities conflict`로 502를 재현했다. incident에는 revision timestamp·provider event ID가 없어 어느 행이 최신인지 선택할 근거가 없고, 현재 public Entity가 nullable message/end와 unknown lifecycle을 이미 지원한다. 사용자가 Vercel 배포를 제외한 나머지 작업 진행을 지시해 이 재현 가능한 non-deployment 결함 수정을 승인했다. |
 | D-069 | ITS disaster geometry는 숫자 `locationInfoType`과 일치하는 bare 좌표 또는 strict single `POINT/LINESTRING/POLYGON` WKT만 허용한다. geometry text는 최대 2,000 positions×64 chars, 전체 body는 기존 512 KiB로 이중 제한하며 multi-surface·추가 ring·mismatched keyword는 거부한다. disaster에서만 관찰된 exact `-` end-date sentinel은 unknown end로 정규화한다. | APPROVED | identity 수정 뒤 live smoke가 2,000자를 넘는 bounded `locationInfo`, exact `-` 종료값, strict `POLYGON` wrapper를 순서대로 재현했다. field 경로·길이·문자종류·WKT keyword만 진단하고 원문 값은 보존·출력하지 않았다. 사용자의 non-Vercel 잔여 작업 진행 지시 범위에서 같은 route의 실계약 blocker를 해제하되 기존 좌표·vertex·payload·schema fail-closed 경계를 유지한다. |
 | D-070 | T36은 `/api/road-traffic/current?bbox=minLon,minLat,maxLon,maxLat`의 필수 canonical bbox를 upstream `trafficInfo`의 `type=all`·동일 bbox로 전달한다. 각 축 span은 최대 0.1°, 좌표는 소수 4자리로 정규화하고 cache/query identity에 전부 포함한다. public snapshot은 요청 bounds와 link·node ID, 도로명, provider 방향, speed(`provider-unspecified`), travel time(seconds), 관측시각만 보존하며 좌표·geometry·혼잡등급은 발명하지 않는다. raw/public 2 MiB·10,000 segments에서 자르지 않고 실패하고 Query는 기본 비활성화한다. | APPROVED | ITS 공식 교통소통 페이지는 bbox와 link/node ID·speed·travelTime·createdDate를 제공하지만 segment 좌표는 제공하지 않는다. 2026-08-07 값 미출력 live probe에서 서울 0.1°×0.1°는 HTTP 200 JSON, 4,417 rows, 약 866 KiB였고 0.5°×0.35°는 40,988 rows, 약 8.06 MiB여서 일반 viewport 전달은 안전하지 않다. 사용자가 Vercel 배포를 제외한 나머지 작업 진행을 지시해 T27에서 연기한 current traffic을 이 bounded non-UI vertical slice로 승인했다. |
+| D-071 | T37은 `/api/road-traffic/detectors` 하나의 전국 snapshot cache key로 ITS `/vdsInfo`를 제공한다. detector ID와 공식 확장 `linkIds`별로 그룹화하고 각 관측은 명명된 tuple로 보존해 반복 key 비용을 줄인다. speed·volume·occupancy는 모두 `provider-unspecified`, `-1`과 관찰된 occupancy blank는 `null`, source 14자리 시각은 timezone 없는 문자열로 둔다. raw 6 MiB·30,000 rows와 public 2.5 MiB·30,000 observations를 넘으면 자르지 않고 실패하며 Query는 기본 비활성화한다. | APPROVED | 공식 endpoint는 `apiKey/getType` 외 bbox·ID·page filter가 없어 요청별 cohort route는 서로 다른 cache key마다 동일 전국 fetch를 증폭한다. 2026-08-07 값 미출력 실측은 26,468 rows·약 4.10 MiB, 9,727 detector IDs, detector별 최대 8 lanes, `(vdsId,laneNo)` revision 충돌과 occupancy blank·100 초과 값을 확인했다. 단일 compact normalized snapshot은 이 증폭을 피하면서 public 상한을 fail-closed로 검증할 수 있다. 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 진행하도록 승인했다. |
+| D-072 | T37 실응답에서 확인한 `-1 < occupancy < 0` 값은 오류 sentinel로 추측해 버리지 않고 unit-neutral provider 값으로 보존한다. exact `-1`과 blank만 `null`이며 percentage·congestion 의미는 부여하지 않는다. | ACCEPTED | 첫 strict live smoke가 음수 소수 occupancy 7건을 공개 nonnegative schema에서 거부했다. 값 미출력 집계에서 speed·volume·timestamp·lane·link 경계는 모두 유효했고, official contract는 occupancy scale·sentinel을 정의하지 않는다. 원문 보존이 임의 결측 처리보다 D-071과 일치하며 사용자의 비배포 잔여 작업 오토모드 범위에서 경계 테스트와 재실행을 승인했다. |
 
 ---
 
@@ -3371,6 +3373,7 @@ flowchart LR
   - `npm run validate` PASS — Biome 479 files, Vitest 1897 passed·15 skipped, strict TypeScript, client/server build.
   - `git diff --check` PASS; 변경은 journal, ITS road-events provider와 focused provider test에 한정된다.
   - 독립 재리뷰 2건 모두 `PASS`: incident revision 병합의 결정성·만료 처리, strict WKT closure, 기존 bare polygon 계약, payload·schema·credential 경계를 확인했고 추가 finding은 없었다.
+
 ### T36 — viewport-bounded ITS 현재 교통소통
 
 - 상태: `ACCEPTED` — offline·credential-gated live·전체 validation과 독립 리뷰 3건이 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
@@ -3402,6 +3405,34 @@ flowchart LR
   - `npm run validate` PASS — Biome 491 files, Vitest 1,930 passed·16 skipped, strict TypeScript, client/server build.
   - 독립 FSD/client·공식계약/correctness·server/security 리뷰 3건 최종 `PASS`; geometry 미생성, forecast/map 무변경, bbox/cache/size/secret 경계를 확인했다.
   - `git diff --check` PASS. 변경은 T36 data-only vertical slice와 synthetic tests·저널에 한정되고 Vercel 배포는 수행하지 않았다.
+
+### T37 — bounded ITS 차량검지 snapshot
+
+- 상태: `ACCEPTED` — offline·credential-gated nationwide live·전체 validation과 독립 리뷰가 모두 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다. T36 병합 뒤 shared barrel/runtime 통합 회귀를 거쳐 PR로 게시한다.
+- 목적: 필터·pagination 없는 ITS 차량검지 전국 응답을 임의 절단이나 단위 추론 없이 하나의 bounded·cacheable data snapshot으로 제공한다.
+- dependency·기준선: T26·T27 `ACCEPTED`, `development@7cc8b89`, server-only `ITS_API_KEY`를 재사용한다.
+- 포함:
+  - `/api/road-traffic/detectors` no-query route, 독립 cache·budget·breaker와 production runtime 등록
+  - `road-traffic` Entity의 detector+link group, source-local observation tuple, 세 metric의 nullable/unit-neutral 계약
+  - strict `/vdsInfo` transport·envelope·cardinality·field·duplicate·secret reflection·raw/public size 검증
+  - 기본 비활성 TanStack Query와 explicit one-call live smoke
+- 제외: UI·Widget·지도·geometry·혼잡도·퍼센트·시간당 교통량 추론, client pagination, 요청별 detector ID filter, raw passthrough, 신규 dependency, Vercel 배포.
+- 완료 조건·검증:
+  - 정상: 현재 전국 응답 전부가 안정 정렬·그룹화되고 public snapshot이 2.5 MiB 안에서 strict Entity schema를 통과한다.
+  - 실패: redirect, non-200/MIME/UTF-8/JSON/provider/count/schema, raw 6 MiB·30,000 rows, public 2.5 MiB와 credential reflection을 fail-closed한다.
+  - 경계: object/array/empty, `-1`·blank occupancy, 100 초과 occupancy, multi-link, lane 0, revision timestamp, exact duplicate와 conflicting duplicate를 검증한다.
+  - 회귀: forecast/current와 cache scope가 섞이지 않고 지도 registry는 detector를 등록하지 않으며 focused tests와 `npm run validate`가 PASS한다.
+- `BLOCKED` 조건: 실제 전국 normalized snapshot이 public 상한을 초과함, 공식/실응답 계약을 손실 없이 모델링할 수 없음, live strict parser 실패, 전체 회귀 또는 독립 리뷰 finding 미해소.
+- RED→GREEN:
+  - Entity·Query·provider·route 13건이 public export 부재로 RED였고, detector+ordered-link group과 timestamp/lane observation tuple, no-query singleton cache, strict `/vdsInfo` transport로 GREEN했다.
+  - exact duplicate는 raw count 확인 뒤 한 관측으로 dedupe하고 같은 identity의 metric conflict는 fail-closed한다. 서로 다른 timestamp revision은 전부 보존한다.
+  - 첫 live smoke는 provider의 음수 소수 occupancy 7건을 nonnegative public schema가 거부해 RED였다. D-072에 따라 exact `-1`·blank만 null로 두고 `-1`보다 큰 값은 unit-neutral 원문 숫자로 보존해 재실행을 GREEN했다.
+- 검증 증거:
+  - focused Entity·Query·provider·route·runtime·지도 비등록 7 files 28 tests PASS; raw/stream 6 MiB, aggregate 30,000 observations, public UTF-8 2.5 MiB, exact 200/full URL, malformed encoding/JSON, direct·JSON-escaped credential reflection을 포함한다.
+  - `RUN_ITS_ROAD_TRAFFIC_DETECTORS_LIVE_SMOKE=1` one-call PASS: raw/normalized observations 26,468, detector+link groups 11,274, normalized JSON 2,068,713 bytes, 최종 호출 약 3.03초. provider 값·ID·credential은 출력·저장하지 않았다.
+  - `npm run validate` PASS — Biome 490 files, Vitest 1,905 passed·16 skipped, strict TypeScript, client/server build.
+  - 독립 correctness/security/FSD review 2건 `PASS`; T36 선병합 뒤 current+forecast+detector 통합 회귀만 PR 전 필수 조건으로 남겼다.
+  - 별도 CCTV transport live smoke 3/3 PASS. T27 전용 forecast live smoke 파일은 아직 없어 T38 release-gate Task로 분리한다.
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
@@ -3724,3 +3755,4 @@ flowchart LR
 | 2026-08-03 | T31 최종 commit `4e3490d`를 기준으로 PR #29 생성 후 `quality-gate` PASS, PR `merge` commit `a7688e9`로 development 병합 | T31 |
 | 2026-08-07 | T35 실데이터 502를 재현한 incident revision 충돌과 disaster 응답 drift를 RED→GREEN; 독립 리뷰가 찾은 all-ended 재노출·비폐쇄 WKT Polygon도 경계 테스트로 수정했다. provider 37 tests, credential-gated live 1 test, 전체 1,897 tests·두 build와 독립 재리뷰 2건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 commit·development PR을 진행 | T35 |
 | 2026-08-07 | T36에서 전국 6~8 MiB ITS traffic 응답을 각 축 0.1° bbox로 제한한 current Entity·기본 비활성 Query·strict provider·독립 gateway/runtime을 RED→GREEN했다. 206·credential reflection 리뷰 finding도 회귀로 수정하고 focused 90 tests, live 1 test, 전체 1,930 tests·두 build와 독립 리뷰 3건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 T35 병합 뒤 재기준화한다 | T36 |
+| 2026-08-07 | T37 전국 단일 차량검지 snapshot을 RED→GREEN하고 26,468 observations·11,274 groups·2,068,713 bytes 실키 one-call을 통과했다. 음수 소수 occupancy 7건은 D-072에 따라 unit-neutral 원문값으로 보존했고 focused 28 tests·전체 1,905 tests·두 build·독립 리뷰 2건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 T36 병합 뒤 재기준화한다 | T37 |

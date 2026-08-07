@@ -96,6 +96,7 @@ describe('Korea map layer registry', () => {
     expect(ids.has('disaster-messages')).toBe(false);
     expect(ids.has('maritime-grid')).toBe(false);
     expect(ids.has('road-traffic-forecast')).toBe(false);
+    expect(ids.has('road-traffic-detectors')).toBe(false);
   });
 
   it('includes coordinates exactly on every viewport boundary and excludes the smallest excess', () => {
