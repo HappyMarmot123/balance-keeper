@@ -289,7 +289,7 @@ describe('ITS road events provider', () => {
     );
   });
 
-  it('fails closed when simultaneous incident rows conflict on one immutable occurrence key', async () => {
+  it('collapses simultaneous incident revisions without guessing conflicting mutable details', async () => {
     const fetchIncidents = getFetcher('fetchItsRoadIncidents');
     expect(fetchIncidents).toBeTypeOf('function');
     if (fetchIncidents === undefined) return;
@@ -301,7 +301,128 @@ describe('ITS road events provider', () => {
     incidentRows(input).push(conflictingRevision);
     input.totalCount = String(incidentRows(input).length);
 
-    await expect(fetchIncidents(options(async () => jsonResponse(input)))).rejects.toThrowError(/ITS road events/u);
+    const forward = await fetchIncidents(options(async () => jsonResponse(input)));
+    incidentRows(input).reverse();
+    const reversed = await fetchIncidents(options(async () => jsonResponse(input)));
+    const occurrenceStart = Date.parse('2026-08-03T10:00:00+09:00');
+    const event = forward.events.find(({ startsAt }) => startsAt === occurrenceStart);
+
+    expect(event).toMatchObject({ endsAt: null, lifecycle: 'unknown', message: null });
+    expect(reversed).toEqual(forward);
+  });
+
+  it('does not discard an ended incident revision before resolving a conflicting active revision', async () => {
+    const fetchIncidents = getFetcher('fetchItsRoadIncidents');
+    expect(fetchIncidents).toBeTypeOf('function');
+    if (fetchIncidents === undefined) return;
+    const input = clone(incidentFixture);
+    const endedRevision = clone(incidentRows(input)[0] as Record<string, unknown>);
+    endedRevision.endDate = '20260803150000';
+    incidentRows(input).push(endedRevision);
+    input.totalCount = String(incidentRows(input).length);
+
+    const result = await fetchIncidents(options(async () => jsonResponse(input)));
+    const occurrenceStart = Date.parse('2026-08-03T10:00:00+09:00');
+
+    expect(result.events.find(({ startsAt }) => startsAt === occurrenceStart)).toMatchObject({
+      endsAt: null,
+      lifecycle: 'unknown',
+    });
+  });
+
+  it('discards an incident when every conflicting revision has already ended', async () => {
+    const fetchIncidents = getFetcher('fetchItsRoadIncidents');
+    expect(fetchIncidents).toBeTypeOf('function');
+    if (fetchIncidents === undefined) return;
+    const input = clone(incidentFixture);
+    const row = incidentRows(input)[0] as Record<string, unknown>;
+    row.endDate = '20260803140000';
+    const laterEndedRevision = clone(row);
+    laterEndedRevision.endDate = '20260803150000';
+    incidentRows(input).push(laterEndedRevision);
+    input.totalCount = String(incidentRows(input).length);
+
+    const result = await fetchIncidents(options(async () => jsonResponse(input)));
+    const occurrenceStart = Date.parse('2026-08-03T10:00:00+09:00');
+
+    expect(result.events.find(({ startsAt }) => startsAt === occurrenceStart)).toBeUndefined();
+  });
+
+  it.each([
+    {
+      label: 'message-only conflict',
+      mutate: (row: Record<string, unknown>) => {
+        row.message = '수정된 합성 메시지';
+      },
+      rowIndex: 0,
+      expected: {
+        endsAt: Date.parse('2026-08-03T18:00:00+09:00'),
+        lifecycle: 'active',
+        message: null,
+      },
+    },
+    {
+      label: 'end-only conflict',
+      mutate: (row: Record<string, unknown>) => {
+        row.endDate = '20260803190000';
+      },
+      rowIndex: 0,
+      expected: { endsAt: null, lifecycle: 'unknown', message: '합성 도로 공사' },
+    },
+    {
+      label: 'future scheduled conflict',
+      mutate: (row: Record<string, unknown>) => {
+        row.endDate = '20260803170000';
+      },
+      rowIndex: 1,
+      expected: { endsAt: null, lifecycle: 'scheduled', message: null },
+    },
+  ])('merges an incident $label conservatively', async ({ expected, mutate, rowIndex }) => {
+    const fetchIncidents = getFetcher('fetchItsRoadIncidents');
+    expect(fetchIncidents).toBeTypeOf('function');
+    if (fetchIncidents === undefined) return;
+    const input = clone(incidentFixture);
+    const original = incidentRows(input)[rowIndex] as Record<string, unknown>;
+    const revision = clone(original);
+    mutate(revision);
+    incidentRows(input).push(revision);
+    input.totalCount = String(incidentRows(input).length);
+
+    const result = await fetchIncidents(options(async () => jsonResponse(input)));
+    const startsAt = Date.parse(rowIndex === 0 ? '2026-08-03T10:00:00+09:00' : '2026-08-03T16:00:00+09:00');
+
+    expect(result.events.find((event) => event.startsAt === startsAt)).toMatchObject(expected);
+  });
+
+  it('merges three incident revisions independently of provider row order', async () => {
+    const fetchIncidents = getFetcher('fetchItsRoadIncidents');
+    expect(fetchIncidents).toBeTypeOf('function');
+    if (fetchIncidents === undefined) return;
+    const base = clone(incidentRows(incidentFixture)[0] as Record<string, unknown>);
+    const revisionA = clone(base);
+    revisionA.endDate = '20260803190000';
+    const revisionB = clone(base);
+    revisionB.message = '두 번째 합성 메시지';
+    revisionB.endDate = '20260803200000';
+    const permutations = [
+      [base, revisionA, revisionB],
+      [base, revisionB, revisionA],
+      [revisionA, base, revisionB],
+      [revisionA, revisionB, base],
+      [revisionB, base, revisionA],
+      [revisionB, revisionA, base],
+    ];
+
+    const snapshots = await Promise.all(
+      permutations.map(async (revisions) => {
+        const input = clone(incidentFixture);
+        input.data = [...revisions.map((row) => clone(row)), ...incidentRows(input).slice(1)];
+        input.totalCount = String(incidentRows(input).length);
+        return fetchIncidents(options(async () => jsonResponse(input)));
+      }),
+    );
+
+    expect(snapshots.every((snapshot) => JSON.stringify(snapshot) === JSON.stringify(snapshots[0]))).toBe(true);
   });
 
   it.each([
@@ -317,8 +438,75 @@ describe('ITS road events provider', () => {
     await expect(fetchIncidents(options(async () => jsonResponse(input)))).rejects.toThrowError(/ITS road events/u);
   });
 
+  it('accepts a bounded disaster line whose official geometry text exceeds a generic provider field', async () => {
+    const fetchDisasters = getFetcher('fetchItsRoadDisasters');
+    expect(fetchDisasters).toBeTypeOf('function');
+    if (fetchDisasters === undefined) return;
+    const input = clone(disasterFixture);
+    const row = disasterRows(input)[0] as Record<string, unknown>;
+    const positions = Array.from({ length: 120 }, (_, index) => `${127 + index / 10_000} ${37 + index / 10_000}`);
+    row.locationInfoType = '2';
+    row.locationInfo = positions.join(', ');
+
+    const result = await fetchDisasters(options(async () => jsonResponse(input)));
+    const line = result.events
+      .map(({ geometry }) => geometry as { kind?: string; path?: readonly unknown[] })
+      .find(({ kind, path }) => kind === 'line' && path?.length === 120);
+
+    expect((row.locationInfo as string).length).toBeGreaterThan(2_000);
+    expect(line?.kind).toBe('line');
+    expect(line?.path).toHaveLength(120);
+  });
+
+  it('treats the observed disaster end-date hyphen sentinel as an unknown end', async () => {
+    const fetchDisasters = getFetcher('fetchItsRoadDisasters');
+    expect(fetchDisasters).toBeTypeOf('function');
+    if (fetchDisasters === undefined) return;
+    const input = clone(disasterFixture);
+    const row = disasterRows(input)[0] as Record<string, unknown>;
+    row.endDate = '-';
+
+    const result = await fetchDisasters(options(async () => jsonResponse(input)));
+    const startsAt = Date.parse('2026-08-03T11:00:00+09:00');
+
+    expect(result.events.find((event) => event.startsAt === startsAt)).toMatchObject({
+      endsAt: null,
+      lifecycle: 'unknown',
+    });
+  });
+
+  it('accepts strict WKT polygon geometry when it matches the provider geometry type', async () => {
+    const fetchDisasters = getFetcher('fetchItsRoadDisasters');
+    expect(fetchDisasters).toBeTypeOf('function');
+    if (fetchDisasters === undefined) return;
+    const input = clone(disasterFixture);
+    const row = disasterRows(input)[0] as Record<string, unknown>;
+    row.locationInfoType = '3';
+    row.locationInfo = 'POLYGON ((127.00 37.50, 127.10 37.50, 127.05 37.60, 127.00 37.50))';
+
+    const result = await fetchDisasters(options(async () => jsonResponse(input)));
+    const area = result.events
+      .map(({ geometry }) => geometry as { kind?: string; ring?: readonly unknown[] })
+      .find(({ kind, ring }) => kind === 'area' && ring?.length === 4);
+
+    expect(area?.kind).toBe('area');
+    expect(area?.ring?.[0]).toEqual(area?.ring?.at(-1));
+  });
+
+  it('rejects an unclosed WKT polygon ring', async () => {
+    const fetchDisasters = getFetcher('fetchItsRoadDisasters');
+    expect(fetchDisasters).toBeTypeOf('function');
+    if (fetchDisasters === undefined) return;
+    const input = clone(disasterFixture);
+    const row = disasterRows(input)[0] as Record<string, unknown>;
+    row.locationInfoType = '3';
+    row.locationInfo = 'POLYGON ((127.00 37.50, 127.10 37.50, 127.05 37.60))';
+
+    await expect(fetchDisasters(options(async () => jsonResponse(input)))).rejects.toThrowError(/ITS road events/u);
+  });
+
   it.each([
-    ['WKT wrapper', 'locationInfo', 'POINT (127.02 37.52)'],
+    ['mismatched WKT wrapper', 'locationInfo', 'POLYGON ((127.00 37.50, 127.10 37.50, 127.05 37.60))'],
     ['nonblank legacy geometry', 'locationGeometry', '127.02 37.52'],
     ['invalid geometry type', 'locationInfoType', 'Point'],
     ['malformed pair', 'locationInfo', '127.02'],

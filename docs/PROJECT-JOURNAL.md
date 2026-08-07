@@ -9,8 +9,8 @@
 | 기준일 | 2026-08-03 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T33 회귀/릴리스 증빙 — PASS 완료(운영 배포 증빙은 별도 범위) |
-| 다음 단계 | 배포 제외 조건으로 다음 목표: 배포 미실시 기반 오프라인 회귀 증빙 정합성 유지 |
+| 현재 단계 | T35 ITS 사건 실데이터 identity 충돌 복구 — ACCEPTED, PR 준비 |
+| 다음 단계 | T35 development 병합 후 T36 현재 교통소통 재기준화 |
 
 ---
 
@@ -285,6 +285,8 @@ Balance Keeper는 대한민국과 주변 지역의 공공·시장·재난·교�
 | D-065 | T28은 `road-event` Entity와 독립 `/api/road-events/incidents`, `/api/road-events/disasters` route로 구현하고 Query는 T30 전 기본 비활성화한다. severity는 provider 근거가 없으므로 `provider-unspecified`, blank 종료는 `unknown`, 명시적으로 종료된 항목은 공개 snapshot에서 제외한다. disaster geometry는 공식 최신 계약인 숫자 `1\|2\|3` + WKT 없는 `X Y,...`로 바로잡는다. `dangerousCarInfo`는 기간·bbox 필터 없이 과거 정밀 좌표까지 반환하고 lifecycle·보존·재배포 계약이 불충분하므로 공개 route 없이 `FEATURE_OFF`로 유지한다. | ACCEPTED | 2026-08-03 값 미출력 live gate에서 전국 event 272건·약 108 KiB, dangerous-car 143건·약 26 KiB, 최근 7일 disaster 4건·약 2 KiB를 확인했다. disaster는 `locationInfoType=1`, bare 단일 좌표, `startDate` 14자리와 문서와 다른 `endDate` 12자리를 반환해 T26 WKT validator 오해를 해소했다. dangerous-car에는 오래된 기록과 current/ended flag가 함께 있어 정밀 위치를 public relay할 안전한 근거가 없다. 사용자의 오토모드 지시를 이 명확한 최소 안전 범위의 연속 승인으로 기록한다. |
 | D-066 | T29는 새 `road-guidance` Entity에 VMS·주의운전·VSL의 서로 다른 strict snapshot을 두고, `/api/road-guidance/vms`, `/api/road-guidance/safety-notices`, `/api/road-guidance/variable-speed-limits`를 독립 cache·budget·breaker로 제공한다. VMS는 sign별 `messageNo` page를 `|` line으로 정규화하고 blank page는 빈 표출로 보존한다. 주의운전은 recipient `rev*`를 폐기하고, blank `occrrncId`를 거부하지 않는 provider/composite notice identity를 쓰며 timestamp·lifecycle·severity를 발명하지 않는다. VMS·VSL의 실응답 mixed axis는 각 row가 한국 경계에서 단 한 방향으로만 해석될 때 `[longitude, latitude]`로 정규화한다. VSL 속도는 `provider-unspecified` 단위로 보존하고 active/reduced 상태를 추론하지 않으며 source 14자리 시각은 timezone 없는 문자열로만 보존한다. 세 provider는 raw 2 MiB·5,000 rows, public 2 MiB 상한에서 잘라내지 않고 실패하며 Query는 T30 전 기본 비활성이다. | ACCEPTED | 공식 HTML·JS와 2026-08-03 값 미출력 preflight에서 VMS 약 821 KiB/3,232 rows/1,409 signs, 주의운전 약 626 KiB/1,546 rows, VSL 약 839 KiB/3,903 rows를 확인했다. VMS·VSL은 한 response 안에 두 좌표축이 섞였고, 주의운전은 80% 이상의 ID가 blank이며 recipient 확장으로 row가 증폭됐다. VSL 공식 단위 `시/km`는 불명확하고 status/end가 없으므로 숫자 비교로 상태를 만들 수 없다. 사용자의 오토모드 지시에 따라 이 최소 안전 범위를 연속 승인한다. |
 | D-067 | T30은 공식 WGS84 좌표·geometry가 있는 CCTV, AirKorea 측정소, KMA+USGS 지진, ITS 돌발·도로재난, VMS·주의운전·VSL의 8개 layer만 `widgets/korea-map` registry로 통합한다. 활성화 뒤 zoom gate와 viewport 필터를 먼저 적용하고 layer당 100 overlay·전역 240 overlay·geometry vertex 4,000 상한을 넘으면 임의 `slice` 없이 해당 layer를 숨겨 확대 또는 다른 layer 해제를 안내한다. point는 marker title/click과 단일 접근 가능 rail, line/area는 실제 polyline/polygon과 동일 rail을 사용한다. 좌표가 없는 기상특보·재난문자·MTIS grid·ITS 교통예측과 KMA `nx/ny`에는 centroid나 geometry를 발명하지 않는다. | ACCEPTED | T07·T10~T29의 public 계약과 실제 cardinality를 재감사했다. 약 6,800개 road-guidance point와 event당 최대 2,000개 vertex를 전국 DOM marker로 렌더링할 수 없고, 기존 CCTV의 `slice(0,100)`을 다중 layer에 반복하면 일부 표시가 전체처럼 오해될 수 있다. RED→GREEN, 전체 회귀, 좁은 화면·데스크톱 브라우저 검증과 correctness·FSD·UI 독립 리뷰가 PASS했다. 사용자의 오토모드 지시와 다음 Task 전 일시정지 요청에 따라 T30을 ACCEPTED로 닫는다. |
+| D-068 | provider ID가 없는 ITS incident에서 같은 immutable occurrence key의 동시 행이 `message`·`endDate`처럼 공개 가능한 mutable detail만 다르면 하나의 안정 ID로 보수적으로 병합한다. 모두 같은 값만 보존하고 충돌한 message는 `null`, end는 `null`, 현재 lifecycle은 `unknown`으로 내려 추측을 피한다. provider `eventId`가 있는 disaster 충돌과 immutable field 충돌은 계속 fail-closed다. | APPROVED | 2026-08-07 credential-gated live smoke가 `ITS road events identities conflict`로 502를 재현했다. incident에는 revision timestamp·provider event ID가 없어 어느 행이 최신인지 선택할 근거가 없고, 현재 public Entity가 nullable message/end와 unknown lifecycle을 이미 지원한다. 사용자가 Vercel 배포를 제외한 나머지 작업 진행을 지시해 이 재현 가능한 non-deployment 결함 수정을 승인했다. |
+| D-069 | ITS disaster geometry는 숫자 `locationInfoType`과 일치하는 bare 좌표 또는 strict single `POINT/LINESTRING/POLYGON` WKT만 허용한다. geometry text는 최대 2,000 positions×64 chars, 전체 body는 기존 512 KiB로 이중 제한하며 multi-surface·추가 ring·mismatched keyword는 거부한다. disaster에서만 관찰된 exact `-` end-date sentinel은 unknown end로 정규화한다. | APPROVED | identity 수정 뒤 live smoke가 2,000자를 넘는 bounded `locationInfo`, exact `-` 종료값, strict `POLYGON` wrapper를 순서대로 재현했다. field 경로·길이·문자종류·WKT keyword만 진단하고 원문 값은 보존·출력하지 않았다. 사용자의 non-Vercel 잔여 작업 진행 지시 범위에서 같은 route의 실계약 blocker를 해제하되 기존 좌표·vertex·payload·schema fail-closed 경계를 유지한다. |
 
 ---
 
@@ -3340,6 +3342,35 @@ flowchart LR
 - Codex 리뷰 workflow는 `if: false`로 비활성 상태가 유지됨. 오토 리뷰 의존 회귀는 제외하고 quality-gate 기반 회귀만 정합성 판단.
 - 미완료 항목: 운영 배포 범위( preview/rollback/region 비교 )는 본 작업 범위 제외. 배포 연계가 필요할 때 별도 Task로 분리하여 진행.
 
+### T35 — ITS 사건 실데이터 identity 충돌 복구
+
+- 상태: `ACCEPTED` — offline·credential-gated live·전체 validation과 독립 변경분 review가 모두 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
+- 목적: `/api/road-events/incidents`가 provider ID 없는 동시 revision 행 때문에 전체 502가 되는 실데이터 회귀를 추측 없이 복구한다.
+- 의존성: T28·T30 `ACCEPTED`.
+- 포함:
+  - 같은 incident occurrence key의 exact duplicate와 mutable-detail conflict를 결정적으로 병합
+  - 충돌 detail을 nullable/unknown public 계약으로 낮추고 안정 ID·geometry·startsAt·category 유지
+  - disaster provider ID conflict와 immutable/schema/size/secret 경계 fail-closed 유지
+  - offline RED→GREEN, credential-gated road-events live smoke, route/runtime·map regression과 전체 `npm run validate`
+- 제외: ITS current traffic·detector, 새 Entity field, 지도 레이아웃, Vercel 배포, provider raw body·credential 출력.
+- 완료 조건:
+  - 정상: exact duplicate와 같은 detail revision은 기존처럼 한 사건으로 정규화된다.
+  - 실패: disaster conflict와 immutable occurrence가 다른 행은 임의 병합하지 않는다.
+  - 경계: message/end가 각각 같거나 충돌하는 조합, future scheduled occurrence, 입력 순서 역전에서 결과가 동일하다.
+  - 회귀: live smoke가 strict Entity를 통과하고 기존 gateway·지도·전체 validation이 PASS한다.
+- 검증 계획: 기존 conflict test를 보수적 병합 기대의 RED로 전환해 실제 실패 확인 → 최소 구현 → focused provider/route/runtime/map tests → gated live → `npm run validate` → 독립 review.
+- RED→GREEN:
+  - 동일 immutable incident key의 conflicting revision fixture가 기존 `identities conflict`를 재현했고, mutable detail을 보수적으로 병합한 뒤 입력 순서 역전과 ended-before-merge 경계가 PASS했다.
+  - live 재검증에서 disaster geometry >2,000 chars, exact `-` end sentinel, strict `POLYGON` wrapper를 순차적으로 재현했다. 각 차이를 별도 RED로 고정하고 D-069의 좁은 parser로 GREEN 처리했다.
+  - 독립 리뷰가 비폐쇄 WKT Polygon 허용과 서로 다른 과거 종료값만 가진 incident가 unknown으로 되살아나는 두 경계를 재현했다. 각각 WKT wrapper에만 ring closure를 강제하고, 모든 revision이 종료된 그룹은 최신 과거 종료값을 보존해 최종 만료 filter가 제거하도록 RED→GREEN했다.
+  - 진단은 schema field path·length·digit 여부·WKT keyword만 사용했고 provider 원문·URL·credential은 출력·저장하지 않았다. 임시 진단 문구는 최종 코드에서 제거했다.
+- 검증 증거:
+  - 최종 provider file 37 tests PASS. message-only·end-only·future scheduled·all-ended·active+ended와 3-revision 6개 입력 순열을 포함한다.
+  - `RUN_ITS_ROAD_EVENTS_LIVE_SMOKE=1` + 추적 제외 local credential로 incidents·disasters strict Entity smoke 1/1 PASS.
+  - `npm run validate` PASS — Biome 479 files, Vitest 1897 passed·15 skipped, strict TypeScript, client/server build.
+  - `git diff --check` PASS; 변경은 journal, ITS road-events provider와 focused provider test에 한정된다.
+  - 독립 재리뷰 2건 모두 `PASS`: incident revision 병합의 결정성·만료 처리, strict WKT closure, 기존 bare polygon 계약, payload·schema·credential 경계를 확인했고 추가 finding은 없었다.
+
 ### T09-R2 — Codex feedback multi-area finding contract
 
 - 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
@@ -3659,3 +3690,4 @@ flowchart LR
 | 2026-08-03 | T30 feature commit `d284761`, PR #28의 quality-gate SUCCESS를 확인하고 merge commit `9e67988`로 development에 병합·동기화했다. T31은 시작하지 않는다 | T30→PAUSED |
 | 2026-08-03 | `feature/t31-dashboard-grid`에서 DashboardShell panel 소유권을 `PanelGrid`로 이전해 composition contract를 재배치. `DashboardShell` 슬롯 9개 contract와 class contract를 widget-level 테스트로 고정하고, 관련 pages contract는 shell 참조를 줄여 정비성/회귀 탐지 지점을 축소 | T31 |
 | 2026-08-03 | T31 최종 commit `4e3490d`를 기준으로 PR #29 생성 후 `quality-gate` PASS, PR `merge` commit `a7688e9`로 development 병합 | T31 |
+| 2026-08-07 | T35 실데이터 502를 재현한 incident revision 충돌과 disaster 응답 drift를 RED→GREEN; 독립 리뷰가 찾은 all-ended 재노출·비폐쇄 WKT Polygon도 경계 테스트로 수정했다. provider 37 tests, credential-gated live 1 test, 전체 1,897 tests·두 build와 독립 재리뷰 2건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 commit·development PR을 진행 | T35 |
