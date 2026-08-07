@@ -27,6 +27,7 @@ export const ITS_ROAD_EVENTS_MAX_RESPONSE_BYTES = 512 * 1024;
 
 const boundedTextSchema = (maximum: number) => z.string().max(maximum);
 const providerTextSchema = boundedTextSchema(2_000);
+const geometryTextSchema = boundedTextSchema(ROAD_EVENT_MAX_GEOMETRY_POSITIONS * 64);
 const coordinateScalarSchema = z.union([z.number().finite(), z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/u)]);
 const countScalarSchema = z.union([z.number().int().nonnegative().safe(), z.string().regex(/^\d+$/u)]);
 const resultCodeSchema = z.union([z.number().int().safe(), z.string().min(1).max(32)]);
@@ -61,10 +62,10 @@ const disasterRowSchema = z
     lanesBlocked: providerTextSchema.nullable(),
     lanesBlockType: providerTextSchema,
     linkId: providerTextSchema,
-    LocationInfo: providerTextSchema.optional(),
+    LocationInfo: geometryTextSchema.optional(),
     locationGeometry: providerTextSchema.nullable().optional(),
     LocationInfoType: geometryTypeScalarSchema.optional(),
-    locationInfo: providerTextSchema.optional(),
+    locationInfo: geometryTextSchema.optional(),
     locationInfoType: geometryTypeScalarSchema.optional(),
     message: boundedTextSchema(ROAD_EVENT_MAX_MESSAGE_LENGTH).refine((value) => value.trim().length > 0),
     roadDrcType: providerTextSchema.nullable().optional(),
@@ -306,7 +307,7 @@ const parseKstTimestamp = (value: string, allowMinutePrecision: boolean): number
 };
 
 const parseEndTimestamp = (value: string | null, allowMinutePrecision: boolean): number | null => {
-  if (value === null || value.trim() === '') {
+  if (value === null || value.trim() === '' || (allowMinutePrecision && value === '-')) {
     return null;
   }
   return parseKstTimestamp(value, allowMinutePrecision);
@@ -330,11 +331,26 @@ const toPosition = (longitudeValue: number | string, latitudeValue: number | str
 
 const coordinateTokenPattern = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/u;
 
-const parseCoordinateSequence = (input: string): readonly RoadEventPosition[] => {
-  if (/\b(?:POINT|LINESTRING|POLYGON)\b/iu.test(input)) {
+const unwrapCoordinateSequence = (input: string, type: '1' | '2' | '3'): string => {
+  if (!/\b(?:POINT|LINESTRING|POLYGON)\b/iu.test(input)) {
+    return input;
+  }
+  const pattern =
+    type === '1'
+      ? /^\s*POINT\s*\(\s*([^()]+)\s*\)\s*$/iu
+      : type === '2'
+        ? /^\s*LINESTRING\s*\(\s*([^()]+)\s*\)\s*$/iu
+        : /^\s*POLYGON\s*\(\(\s*([^()]+)\s*\)\)\s*$/iu;
+  const coordinates = input.match(pattern)?.[1];
+  if (coordinates === undefined) {
     throw new ItsRoadEventsProviderError('ITS road events disaster geometry is invalid');
   }
-  return input.split(',').map((pair) => {
+  return coordinates;
+};
+
+const parseCoordinateSequence = (input: string, type: '1' | '2' | '3'): readonly RoadEventPosition[] => {
+  const coordinates = unwrapCoordinateSequence(input, type);
+  return coordinates.split(',').map((pair) => {
     const tokens = pair.trim().split(/\s+/u);
     if (tokens.length !== 2 || !tokens.every((token) => coordinateTokenPattern.test(token))) {
       throw new ItsRoadEventsProviderError('ITS road events disaster geometry is invalid');
@@ -351,13 +367,23 @@ const parseCoordinateSequence = (input: string): readonly RoadEventPosition[] =>
 const countDistinctPositions = (positions: readonly RoadEventPosition[]): number =>
   new Set(positions.map(([longitude, latitude]) => `${longitude}\u0000${latitude}`)).size;
 
+const isClosedRing = (positions: readonly RoadEventPosition[]): boolean => {
+  const first = positions[0];
+  const last = positions.at(-1);
+  return first !== undefined && last !== undefined && first[0] === last[0] && first[1] === last[1];
+};
+
 const toDisasterGeometry = (row: DisasterRow): RoadEventGeometry => {
   const type = (row.locationInfoType ?? row.LocationInfoType)?.toString();
   const geometryText = row.locationInfo ?? row.LocationInfo;
   if (type === undefined || geometryText === undefined) {
     throw new ItsRoadEventsProviderError('ITS road events disaster geometry is invalid');
   }
-  const positions = parseCoordinateSequence(geometryText);
+  if (type !== '1' && type !== '2' && type !== '3') {
+    throw new ItsRoadEventsProviderError('ITS road events disaster geometry is invalid');
+  }
+  const isWktPolygon = type === '3' && /^\s*POLYGON\b/iu.test(geometryText);
+  const positions = parseCoordinateSequence(geometryText, type);
   if (positions.length > ROAD_EVENT_MAX_GEOMETRY_POSITIONS) {
     throw new ItsRoadEventsProviderError('ITS road events disaster geometry is invalid');
   }
@@ -372,6 +398,9 @@ const toDisasterGeometry = (row: DisasterRow): RoadEventGeometry => {
     return { kind: 'line', path: positions };
   }
   if (type === '3' && positions.length >= 3 && countDistinctPositions(positions) >= 3) {
+    if (isWktPolygon && !isClosedRing(positions)) {
+      throw new ItsRoadEventsProviderError('ITS road events disaster geometry is invalid');
+    }
     return { kind: 'area', ring: positions };
   }
   throw new ItsRoadEventsProviderError('ITS road events disaster geometry is invalid');
@@ -431,14 +460,11 @@ const isTerminalDisasterStatus = (eventType: string, status: string | null): boo
   }
 };
 
-const normalizeIncident = (row: IncidentRow, now: number): RoadEvent | null => {
+const normalizeIncident = (row: IncidentRow, now: number): RoadEvent => {
   const startsAt = parseKstTimestamp(row.startDate, false);
   const endsAt = parseEndTimestamp(row.endDate, false);
   if (endsAt !== null && endsAt <= startsAt) {
     throw new ItsRoadEventsProviderError('ITS road events timestamp is invalid');
-  }
-  if (endsAt !== null && endsAt <= now) {
-    return null;
   }
   const geometry = { kind: 'point' as const, position: toPosition(row.coordX, row.coordY) };
   const message = row.message.trim() || null;
@@ -490,12 +516,43 @@ const normalizeDisaster = (row: DisasterRow, now: number, startDate: string, end
   };
 };
 
-const deduplicateAndSort = (events: readonly RoadEvent[]): readonly RoadEvent[] => {
+const mergeIncidentRevisions = (left: RoadEvent, right: RoadEvent, now: number): RoadEvent => {
+  const { endsAt: leftEndsAt, lifecycle: leftLifecycle, message: leftMessage, ...leftIdentity } = left;
+  const { endsAt: rightEndsAt, lifecycle: rightLifecycle, message: rightMessage, ...rightIdentity } = right;
+  if (JSON.stringify(leftIdentity) !== JSON.stringify(rightIdentity)) {
+    throw new ItsRoadEventsProviderError('ITS road events identities conflict');
+  }
+
+  const bothRevisionsEnded = leftEndsAt !== null && rightEndsAt !== null && leftEndsAt <= now && rightEndsAt <= now;
+  const endsAt =
+    leftEndsAt === rightEndsAt ? leftEndsAt : bothRevisionsEnded ? Math.max(leftEndsAt, rightEndsAt) : null;
+  return {
+    ...leftIdentity,
+    endsAt,
+    lifecycle:
+      leftLifecycle === 'scheduled' && rightLifecycle === 'scheduled'
+        ? 'scheduled'
+        : endsAt === null
+          ? 'unknown'
+          : 'active',
+    message: leftMessage === rightMessage ? leftMessage : null,
+  };
+};
+
+const deduplicateAndSort = (
+  channel: RoadEventChannel,
+  events: readonly RoadEvent[],
+  now: number,
+): readonly RoadEvent[] => {
   const byId = new Map<string, RoadEvent>();
   for (const event of events) {
     const existing = byId.get(event.id);
     if (existing !== undefined && JSON.stringify(existing) !== JSON.stringify(event)) {
-      throw new ItsRoadEventsProviderError('ITS road events identities conflict');
+      if (channel !== 'incidents') {
+        throw new ItsRoadEventsProviderError('ITS road events identities conflict');
+      }
+      byId.set(event.id, mergeIncidentRevisions(existing, event, now));
+      continue;
     }
     byId.set(event.id, event);
   }
@@ -688,7 +745,7 @@ const fetchRoadEvents = async (
     if (parsed.rows.length !== parsed.totalCount) {
       throw new ItsRoadEventsProviderError('ITS road events response count is inconsistent');
     }
-    events = parsed.rows.map((row) => normalizeIncident(row, options.now)).filter((event) => event !== null);
+    events = parsed.rows.map((row) => normalizeIncident(row, options.now));
   } else {
     const parsed = parseProviderBody(input, disasterRowSchema);
     if (parsed.rows.length !== parsed.totalCount || request.disasterWindow === undefined) {
@@ -708,7 +765,9 @@ const fetchRoadEvents = async (
 
   const result = roadEventSnapshotSchema.safeParse({
     channel,
-    events: deduplicateAndSort(events),
+    events: deduplicateAndSort(channel, events, options.now).filter(
+      ({ endsAt }) => endsAt === null || endsAt > options.now,
+    ),
     generatedAt: options.now,
   });
   if (!result.success) {
