@@ -9,8 +9,8 @@
 | 기준일 | 2026-08-03 (Asia/Seoul) |
 | 새 저장소 기준선 | `f92ee53 chore: add project skills` |
 | 레거시 참조 | `C:\Users\SR83\test\balance-keeper-legacy` |
-| 현재 단계 | T37 bounded ITS 차량검지 snapshot — ACCEPTED, 재기준화 완료 |
-| 다음 단계 | T35·T36 포함 통합 회귀 후 T37 development PR |
+| 현재 단계 | T09-R2 Codex feedback multi-area finding contract — ACCEPTED, 최신 development 재기준화 |
+| 다음 단계 | T09-R2 통합 회귀·development PR 후 T34 정본 재정합 |
 
 ---
 
@@ -3436,10 +3436,24 @@ flowchart LR
 
 ### T09-R2 — Codex feedback multi-area finding contract
 
-- 상태: `PROPOSED` — T10-R1과 섞지 않는 후속 CI Task
+- 상태: `ACCEPTED` — RED→GREEN, 전체 품질 게이트와 독립 correctness/security 재리뷰가 통과했고, 사용자가 Vercel 배포를 제외한 잔여 작업을 오토모드로 끝까지 진행하도록 지시했다.
 - 목적: 하나의 재현 가능한 finding이 여러 review area에 영향을 줄 때 valid `CHANGES_REQUESTED`를 fallback `BLOCKED`로 숨기지 않도록 schema·prompt·validator 불변식을 정렬한다.
-- 포함 후보: PR #3 actual output fixture RED, finding category와 primary ISSUE area 일치, 추가 영향 area 허용 또는 prompt의 primary-area 단일화, fallback 안전성 회귀.
-- 제외: T10 제품 bugfix와 동일 commit/PR, review write 권한·모델·secret 정책 변경.
+- 포함:
+  - PR #3 형태의 단일 finding·복수 ISSUE area를 재현하는 계약 RED
+  - finding의 primary `category`와 별도 `affectedAreas`를 schema·prompt·validator에서 일관되게 검증
+  - 모든 ISSUE area가 적어도 하나의 finding 영향 영역으로 설명되고, primary area 누락·알 수 없는 area·중복 area는 fail-closed
+  - 유효한 복수 영향 finding의 PR comment 렌더링과 기존 PASS·BLOCKED fallback 보안 회귀
+- 제외: Codex review job 재활성화, 모델·권한·Secret·write 정책 변경, T10 제품 코드, 원격 Actions 실행.
+- 완료 조건: focused architecture test와 `npm run validate`가 통과하고, workflow의 두 Codex 관련 job은 계속 `if: false`이며 유효하지 않은 출력은 고정 `BLOCKED`로 안전하게 축약된다.
+- RED·GREEN:
+  - PR #3 형태의 단일 `CORRECTNESS` finding과 다섯 `ISSUE` area가 기존 validator에서 고정 `BLOCKED`로 바뀌는 실패를 재현했다.
+  - required `affectedAreas`를 추가해 category 주 영역 포함, 모든 ISSUE area coverage와 non-ISSUE·unknown·duplicate 거부를 수동 validator에서 강제하고, 유효한 영향 영역을 PR comment에 함께 표시한다.
+  - OpenAI Structured Outputs 공식 지원 subset에 `uniqueItems`가 없음을 확인해 output schema에는 지원되는 `minItems`·`maxItems`·enum만 두고 중복 거부는 validator와 prompt에서 유지했다.
+- 검증:
+  - focused architecture `58/58 PASS`; 정상 multi-area, primary 누락, unknown·duplicate, non-ISSUE 영향, 미설명 ISSUE와 원문 비노출 fallback을 포함한다.
+  - `npm run validate` PASS — Biome 479 files, Vitest 1,893 passed·15 skipped, strict TypeScript, client/server build.
+  - 독립 재리뷰 PASS — 비활성 `codex-review`·`post-feedback`, 최소 권한, PASS/BLOCKED·HTML/mention 보안 계약에 새 회귀가 없다.
+- Guardrail: `PASS` — 원격 Codex 실행은 의도적으로 비활성 상태라 수행하지 않았고, 이번 변경은 재활성화 시 사용할 출력 계약만 정렬한다.
 
 ### T09-R3 — Codex 리뷰 비활성화 계약 정렬
 
@@ -3756,3 +3770,4 @@ flowchart LR
 | 2026-08-07 | T35 실데이터 502를 재현한 incident revision 충돌과 disaster 응답 drift를 RED→GREEN; 독립 리뷰가 찾은 all-ended 재노출·비폐쇄 WKT Polygon도 경계 테스트로 수정했다. provider 37 tests, credential-gated live 1 test, 전체 1,897 tests·두 build와 독립 재리뷰 2건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 commit·development PR을 진행 | T35 |
 | 2026-08-07 | T36에서 전국 6~8 MiB ITS traffic 응답을 각 축 0.1° bbox로 제한한 current Entity·기본 비활성 Query·strict provider·독립 gateway/runtime을 RED→GREEN했다. 206·credential reflection 리뷰 finding도 회귀로 수정하고 focused 90 tests, live 1 test, 전체 1,930 tests·두 build와 독립 리뷰 3건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 T35 병합 뒤 재기준화한다 | T36 |
 | 2026-08-07 | T37 전국 단일 차량검지 snapshot을 RED→GREEN하고 26,468 observations·11,274 groups·2,068,713 bytes 실키 one-call을 통과했다. 음수 소수 occupancy 7건은 D-072에 따라 unit-neutral 원문값으로 보존했고 focused 28 tests·전체 1,905 tests·두 build·독립 리뷰 2건 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 T36 병합 뒤 재기준화한다 | T37 |
+| 2026-08-07 | T09-R2에서 단일 finding·복수 ISSUE area가 fallback BLOCKED로 숨겨지는 계약을 RED로 재현하고 `affectedAreas` schema·prompt·validator·comment를 정렬했다. OpenAI Structured Outputs 미지원 `uniqueItems`는 제거하고 수동 중복 검증을 유지했으며 focused 58 tests·전체 1,893 tests·두 build·독립 재리뷰 PASS. 사용자의 비배포 잔여 작업 오토모드 지시로 ACCEPTED하고 제품 Task 병합 뒤 재기준화한다 | T09-R2 |
